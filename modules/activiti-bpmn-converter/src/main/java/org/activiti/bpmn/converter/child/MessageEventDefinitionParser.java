@@ -38,7 +38,7 @@ public class MessageEventDefinitionParser extends BaseChildElementParser {
     eventDefinition.setMessageRef(xtr.getAttributeValue(null, ATTRIBUTE_MESSAGE_REF));
     
     if(StringUtils.isEmpty(eventDefinition.getMessageRef())) {
-      model.addProblem("attribute 'messageRef' is required", xtr);
+      model.addWarning("attribute 'messageRef' is required", xtr);
     } else {
       
       int indexOfP = eventDefinition.getMessageRef().indexOf(':');
