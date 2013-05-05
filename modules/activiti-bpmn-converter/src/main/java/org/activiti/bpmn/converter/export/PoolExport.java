@@ -34,7 +34,9 @@ public class PoolExport implements BpmnXMLConstants {
         if(StringUtils.isNotEmpty(pool.getName())) {
           xtw.writeAttribute(ATTRIBUTE_NAME, pool.getName());
         }
-        xtw.writeAttribute(ATTRIBUTE_PROCESS_REF, pool.getProcessRef());
+        if (pool.getProcessRef() != null) {
+        	xtw.writeAttribute(ATTRIBUTE_PROCESS_REF, pool.getProcessRef());
+        }
         xtw.writeEndElement();
       }
       
