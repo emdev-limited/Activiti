@@ -184,8 +184,17 @@ public class BpmnJsonConverter implements EditorJsonConstants, StencilConstants,
     if (model.getPools().size() > 0) {
       for (Pool pool : model.getPools()) {
         GraphicInfo graphicInfo = model.getGraphicInfo(pool.getId());
-        ObjectNode poolNode = BpmnJsonConverterUtil.createChildShape(pool.getId(), STENCIL_POOL, 
-            graphicInfo.getX() + graphicInfo.getWidth(), graphicInfo.getY() + graphicInfo.getHeight(), graphicInfo.getX(), graphicInfo.getY());
+        ObjectNode poolNode = null;
+        
+        if (graphicInfo != null) {
+	        poolNode = BpmnJsonConverterUtil.createChildShape(pool.getId(), STENCIL_POOL, 
+	            graphicInfo.getX() + graphicInfo.getWidth(), graphicInfo.getY() + graphicInfo.getHeight(), graphicInfo.getX(), graphicInfo.getY());
+        } else {
+        	// pool graphic is not defined
+        	poolNode = BpmnJsonConverterUtil.createChildShape(pool.getId(), STENCIL_POOL, 0, 0, 0, 0);
+        	
+        }
+        
         shapesArrayNode.add(poolNode);
         ObjectNode poolPropertiesNode = objectMapper.createObjectNode();
         poolPropertiesNode.put(PROPERTY_OVERRIDE_ID, pool.getId());
@@ -206,9 +215,17 @@ public class BpmnJsonConverter implements EditorJsonConstants, StencilConstants,
         	  // in this case we should add one
         	  
         	  String laneId = "lane_" + process.getId();
-        	  ObjectNode laneNode = BpmnJsonConverterUtil.createChildShape(laneId, STENCIL_LANE, 
-        			  graphicInfo.getWidth(), graphicInfo.getHeight(), 
-        			  0, 0);
+        	  ObjectNode laneNode = null;
+        	  
+        	  if (graphicInfo != null) {
+	        	  laneNode = BpmnJsonConverterUtil.createChildShape(laneId, STENCIL_LANE, 
+	        			  graphicInfo.getWidth(), graphicInfo.getHeight(), 
+	        			  0, 0);
+        	  } else {
+	        	  laneNode = BpmnJsonConverterUtil.createChildShape(laneId, STENCIL_LANE, 
+	        			  0, 0, 
+	        			  0, 0);
+        	  }
         	  
         	  	laneShapesArrayNode.add(laneNode);
 	            ObjectNode lanePropertiesNode = objectMapper.createObjectNode();
@@ -226,8 +243,13 @@ public class BpmnJsonConverter implements EditorJsonConstants, StencilConstants,
 		                Class<? extends BaseBpmnJsonConverter> converter = convertersToJsonMap.get(flowElement.getClass());
 		                if (converter != null) {
 		                  try {
-		                    converter.newInstance().convertToJson(flowElement, this, model, elementShapesArrayNode, 
-		                        graphicInfo.getX(), graphicInfo.getY());
+		                	if (graphicInfo != null) {
+			                    converter.newInstance().convertToJson(flowElement, this, model, elementShapesArrayNode, 
+			                        graphicInfo.getX(), graphicInfo.getY());
+		                	} else {
+			                    converter.newInstance().convertToJson(flowElement, this, model, elementShapesArrayNode, 
+				                        0, 0);
+		                	}
 		                  } catch (Exception e) {
 		                    LOGGER.error("Error converting {}", flowElement, e);
 		                  }
@@ -282,8 +304,13 @@ public class BpmnJsonConverter implements EditorJsonConstants, StencilConstants,
         		  Class<? extends BaseBpmnJsonConverter> converter = convertersToJsonMap.get(flowElement.getClass());
                   if (converter != null) {
                     try {
-                      converter.newInstance().convertToJson(flowElement, this, model, shapesArrayNode, 
-                    		  poolGraphicInfo.getX(), poolGraphicInfo.getY());
+                      if (poolGraphicInfo != null) {	
+	                      converter.newInstance().convertToJson(flowElement, this, model, shapesArrayNode, 
+	                    		  poolGraphicInfo.getX(), poolGraphicInfo.getY());
+                      } else {
+	                      converter.newInstance().convertToJson(flowElement, this, model, shapesArrayNode, 
+	                    		  0, 0);
+                      }
                     } catch (Exception e) {
                       LOGGER.error("Error converting {}", flowElement, e);
                     }
