@@ -8,7 +8,7 @@
   <artifactId>activiti-root</artifactId>
 
   <packaging>pom</packaging>
-  <version>5.12.1</version>
+  <version>5.12.1-emdev.1</version>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spring.framework.version>3.1.2.RELEASE</spring.framework.version>
@@ -886,17 +886,20 @@
     </profile>
   </profiles>
   
-  <distributionManagement>
-    <snapshotRepository>
-      <id>alfresco.snapshot.repo</id>
-      <url>https://maven.alfresco.com/nexus/content/repositories/activiti-snapshots/</url>
-      <uniqueVersion>false</uniqueVersion>
-    </snapshotRepository>
-    <repository>
-      <id>alfresco.release.repo</id>
-      <url>https://artifacts.alfresco.com/nexus/content/repositories/activiti-releases/</url>
-    </repository>
-  </distributionManagement>
+	<distributionManagement>
+		<repository>
+			<id>emdev-public</id>
+			<name>EmDev Private</name>
+			<url>http://build.emdev.ru/nexus/content/repositories/emdev-public</url>
+			<layout>default</layout>
+		</repository>
+		<snapshotRepository>
+			<id>public-snapshots</id>
+			<name>Public Snapshots</name>
+			<url>http://build.emdev.ru/nexus/content/repositories/public-snapshots/</url>
+			<layout>default</layout>
+		</snapshotRepository>
+	</distributionManagement>
 
   <!-- Various information, not used by the build -->
 
@@ -977,6 +980,18 @@
       <organization>Mimacom</organization>
       <url>http://mimacom.com</url> 
     </developer>
+    
+    <developer>
+      <name>Alexey Kakunin</name>
+      <organization>EmDev Limited</organization>
+      <url>http://www.emdev.ru</url> 
+    </developer>
+    <developer>
+      <name>Andrey Filippov</name>
+      <organization>EmDev Limited</organization>
+      <url>http://www.emdev.ru</url> 
+    </developer>
+    
   </developers>
   <issueManagement>
     <system>JIRA</system>
@@ -986,8 +1001,9 @@
     <system>Bamboo</system>
     <url>http://bamboo.ci.codehaus.org/browse/ACT</url>
   </ciManagement>
+  
   <scm>
-    <connection>scm:git:https://github.com/Activiti/Activiti.git</connection>
-    <developerConnection>scm:git:https://github.com/Activiti/Activiti.git</developerConnection>
+    <connection>scm:git:https://github.com/emdev-limited/Activiti.git</connection>
+    <developerConnection>scm:git:https://github.com/emdev-limited/Activiti.git</developerConnection>
   </scm>
 </project>
