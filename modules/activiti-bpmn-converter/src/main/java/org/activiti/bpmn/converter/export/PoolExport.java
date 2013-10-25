@@ -15,7 +15,10 @@ package org.activiti.bpmn.converter.export;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.activiti.bpmn.constants.BpmnXMLConstants;
+import org.activiti.bpmn.converter.BaseBpmnXMLConverter;
+import org.activiti.bpmn.converter.MessageFlowXMLConverter;
 import org.activiti.bpmn.model.BpmnModel;
+import org.activiti.bpmn.model.MessageFlow;
 import org.activiti.bpmn.model.Pool;
 import org.apache.commons.lang3.StringUtils;
 
@@ -36,6 +39,13 @@ public class PoolExport implements BpmnXMLConstants {
         }
         xtw.writeEndElement();
       }
+      
+      // write message flows
+      BaseBpmnXMLConverter converter = new MessageFlowXMLConverter();
+      for (MessageFlow messageFlow : model.getMessageFlows()) {
+    	converter.convertToXML(xtw, messageFlow, model);  
+      }
+      
       xtw.writeEndElement();
     }
   }
