@@ -12,6 +12,7 @@
  */
 package org.activiti.engine.impl.bpmn.behavior;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -28,20 +29,30 @@ import org.activiti.engine.delegate.Expression;
 import org.activiti.engine.delegate.TaskListener;
 import org.activiti.engine.delegate.event.ActivitiEventType;
 import org.activiti.engine.delegate.event.impl.ActivitiEventBuilder;
+import org.activiti.engine.identity.User;
 import org.activiti.engine.impl.bpmn.helper.SkipExpressionUtil;
 import org.activiti.engine.impl.calendar.BusinessCalendar;
-import org.activiti.engine.impl.calendar.DueDateBusinessCalendar;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.el.ExpressionManager;
+import org.activiti.engine.impl.identity.Authentication;
 import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
 import org.activiti.engine.impl.persistence.entity.TaskEntity;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.impl.task.TaskDefinition;
+import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
+import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.notifications.ChannelException;
+import com.liferay.portal.kernel.notifications.ChannelHubManagerUtil;
+import com.liferay.portal.kernel.notifications.NotificationEvent;
+import com.liferay.portal.kernel.notifications.NotificationEventFactoryUtil;
+import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.workflow.WorkflowTaskManagerUtil;
 
 /**
  * activity implementation for the user task.
@@ -53,6 +64,9 @@ public class UserTaskActivityBehavior extends TaskActivityBehavior {
   private static final long serialVersionUID = 1L;
   
   private static final Logger LOGGER = LoggerFactory.getLogger(UserTaskActivityBehavior.class);
+  
+  private static final String WORKFLOW_TASKS_PORTLET_ID = "150";
+  private static final String SO_PORTLET_ID				=  "6_WAR_soportlet";
 
   protected String userTaskId;
   protected TaskDefinition taskDefinition;
@@ -231,14 +245,24 @@ public class UserTaskActivityBehavior extends TaskActivityBehavior {
   @SuppressWarnings({ "unchecked", "rawtypes" })
   protected void handleAssignments(Expression assigneeExpression, Expression ownerExpression, Set<Expression> candidateUserExpressions,
       Set<Expression> candidateGroupExpressions, TaskEntity task, ActivityExecution execution) {
+	  
+	// to send SO notification we need to extract workflow context, get
+	// users to send to..
+	Map<String,Object> workflowContext = Context.getProcessEngineConfiguration().getRuntimeService().getVariables(execution.getId());
+	LOGGER.debug("User task for companyId = " + (String) workflowContext.get("companyId"));
+	long companyId = Long.valueOf((String) workflowContext.get("companyId"));  
     
     if (assigneeExpression != null) {
-      Object assigneeExpressionValue = assigneeExpression.getValue(execution);
-      String assigneeValue = null;
-      if (assigneeExpressionValue != null) {
-        assigneeValue = assigneeExpressionValue.toString();
-      }
-      task.setAssignee(assigneeValue, true, false);
+    	String userId = (String) taskDefinition.getAssigneeExpression()
+				.getValue(execution);
+		task.setAssignee(userId, true, false);
+		try {
+			List<Long> receiverUserIds = new ArrayList<Long>();
+			receiverUserIds.add(Long.valueOf(userId));
+			sendPortalNotification(task, receiverUserIds, workflowContext, false);
+		} catch (ChannelException e) {
+			LOGGER.error("Could not send portal notification to user", e);
+		}
     }
     
     if (ownerExpression != null) {
@@ -251,17 +275,40 @@ public class UserTaskActivityBehavior extends TaskActivityBehavior {
     }
 
     if (candidateGroupExpressions != null && !candidateGroupExpressions.isEmpty()) {
+      List<User> users = new ArrayList<User>();
       for (Expression groupIdExpr : candidateGroupExpressions) {
         Object value = groupIdExpr.getValue(execution);
         if (value instanceof String) {
           List<String> candidates = extractCandidates((String) value);
           task.addCandidateGroups(candidates);
+          users.addAll(resolveUsersForGroups(companyId, candidates));
         } else if (value instanceof Collection) {
           task.addCandidateGroups((Collection) value);
+          users.addAll(resolveUsersForGroups(companyId, (Collection) value));
         } else {
           throw new ActivitiIllegalArgumentException("Expression did not resolve to a string or collection of strings");
         }
       }
+      try {
+			long[] pooledActorsIds = WorkflowTaskManagerUtil.getPooledActorsIds(companyId, Long.valueOf(task.getId()));
+			List<Long> receiverUserIds = null;
+			if (pooledActorsIds == null || pooledActorsIds.length == 0) {
+				//try to use users list
+				receiverUserIds = new ArrayList<Long>(users.size());
+				for (User user : users) {
+					receiverUserIds.add(Long.valueOf(user.getId()));
+				}
+			} else {
+				receiverUserIds = new ArrayList<Long>(Arrays.asList(ArrayUtils.toObject(pooledActorsIds)));
+			}
+			try {
+				sendPortalNotification(task, receiverUserIds, workflowContext, true);
+			} catch (ChannelException e) {
+				LOGGER.error("Could not send portal notification to group", e);
+			}
+		} catch (Exception e) {
+			LOGGER.error("Could not send portal notification to group", e);
+		}
     }
 
     if (candidateUserExpressions != null && !candidateUserExpressions.isEmpty()) {
@@ -366,6 +413,57 @@ public class UserTaskActivityBehavior extends TaskActivityBehavior {
     }
     return activeValues;
   }
+  
+  protected void sendPortalNotification(TaskEntity task, List<Long> receiverUserIds, Map<String,Object> workflowContext, boolean isGroup) throws ChannelException {
+		String currentUserId = Authentication.getAuthenticatedUserId();
+		JSONObject notificationEventJSONObject = JSONFactoryUtil.createJSONObject();
+		
+		long companyId = Long.valueOf((String) workflowContext.get("companyId"));
+
+		notificationEventJSONObject.put("body", task.getName());
+      notificationEventJSONObject.put("groupId", (String) workflowContext.get("groupId"));
+      notificationEventJSONObject.put("entryClassName", (String) workflowContext.get("entryClassName"));
+		notificationEventJSONObject.put("entryId", (String) workflowContext.get("entryClassPK"));
+		// workflow tasks portlet id
+		notificationEventJSONObject.put("portletId", WORKFLOW_TASKS_PORTLET_ID);
+		notificationEventJSONObject.put("userId", currentUserId);
+		notificationEventJSONObject.put("taskId", task.getId());
+		notificationEventJSONObject.put("taskName", task.getName());
+		notificationEventJSONObject.put("isGroup", isGroup);
+		
+		String title = StringPool.BLANK;
+		if (isGroup) {
+			title = "New workflow task \"" + task.getName() + "\" has been assigned to your role";
+		} else {
+			title = "New workflow task \"" + task.getName() + "\" has been assigned to you";
+		}
+		// FIXME localize notifications
+		for (Long receiverUserId : receiverUserIds) {
+			if (receiverUserId.toString().equals(currentUserId)) {
+				// do not send notification in case action was performed by same user
+				LOGGER.debug("User " + receiverUserId + " skipped from sending notification since it is current user");
+				continue;
+			}
+			
+			LOGGER.debug("Before sending notification receiverUserId = " + receiverUserId);
+			notificationEventJSONObject.put("title", title);
+			NotificationEvent notificationEvent = NotificationEventFactoryUtil.createNotificationEvent(
+					System.currentTimeMillis(), SO_PORTLET_ID, notificationEventJSONObject);
+			notificationEvent.setDeliveryRequired(0);
+			ChannelHubManagerUtil.sendNotificationEvent(companyId, receiverUserId, notificationEvent);
+			LOGGER.debug("Notification for receiverUserId = " + receiverUserId + " sent");
+		}
+	}
+  
+  private List<User> resolveUsersForGroups(long companyId, Collection groupNames) {
+		List<User> users = new ArrayList<User>();
+		for (Object name : groupNames) {
+			String groupName = (String) name;
+			users.addAll(org.activiti.engine.impl.util.WorkflowUtil.findUsersByGroup(companyId, groupName));
+		}
+		return users;
+		
+	}
   
   // getters and setters //////////////////////////////////////////////////////
   
