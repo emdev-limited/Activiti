@@ -50,6 +50,8 @@ import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.impl.pvm.delegate.ExecutionListenerExecution;
 import org.activiti.engine.impl.pvm.delegate.SignallableActivityBehavior;
 import org.activiti.engine.impl.pvm.process.ActivityImpl;
+import org.activiti.engine.impl.pvm.process.Lane;
+import org.activiti.engine.impl.pvm.process.LaneSet;
 import org.activiti.engine.impl.pvm.process.ProcessDefinitionImpl;
 import org.activiti.engine.impl.pvm.process.ScopeImpl;
 import org.activiti.engine.impl.pvm.process.TransitionImpl;
@@ -256,6 +258,12 @@ public class ExecutionEntity extends VariableScopeImpl implements ActivityExecut
   
   protected List<VariableInstanceEntity> queryVariables;
   
+//EMDEV - swimlanes support
+ protected String laneName = null;
+ 
+ protected String laneSetName = null;
+ // end of swimlanes support
+  
   public ExecutionEntity(ActivityImpl activityImpl) {
     this.startingExecution = new StartingExecution(activityImpl);
   }
@@ -377,6 +385,22 @@ public class ExecutionEntity extends VariableScopeImpl implements ActivityExecut
           }
           eventSubscriptionEntity.insert();
         }        
+      }
+    }
+    
+    // lane and laneSet
+    List<LaneSet> laneSets = processDefinition.getLaneSets();
+    if (laneSets != null) {
+      for (LaneSet laneSet : laneSets) {
+        List<Lane> lanes = laneSet.getLanes();
+        for (Lane lane : lanes) {
+          List<String> flowNodeIds = lane.getFlowNodeIds();
+          if (flowNodeIds.indexOf(activityId) >= 0 && lane.getName() != null) {
+        	laneSetName = laneSet.getName();
+            laneName = lane.getName();
+            break;
+          }
+        }
       }
     }
   }
@@ -1722,6 +1746,15 @@ public class ExecutionEntity extends VariableScopeImpl implements ActivityExecut
 
     getIdentityLinks().removeAll(identityLinks);
 
+  }
+  
+  // EMDEV - swimlanes support
+  public String getCurrentLaneSetName() {
+	return laneName;
+  }
+	  
+  public String getCurrentLaneName() {
+	return laneName;
   }
   
 }

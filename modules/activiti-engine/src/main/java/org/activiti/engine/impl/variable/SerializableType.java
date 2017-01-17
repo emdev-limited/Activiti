@@ -102,7 +102,7 @@ public class SerializableType extends ByteArrayType {
   public Object deserialize(byte[] bytes, ValueFields valueFields) {
     ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
     try {
-      ObjectInputStream ois = createObjectInputStream(bais);
+      ObjectInputStream ois = new CustomObjectInputStream(bais);
       Object deserializedObject = ois.readObject();
 
       return deserializedObject;

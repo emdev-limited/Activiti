@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.activiti.engine.ActivitiException;
+import org.activiti.engine.ImplicitListeners;
 import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.delegate.DelegateExecution;
 import org.activiti.engine.delegate.DelegateTask;
@@ -744,6 +745,28 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
         }
       }
     }
+    
+ // fire implicit listeners
+  	ProcessEngineConfiguration cfg = Context.getProcessEngineConfiguration();
+  	if (!(cfg instanceof ImplicitListeners))
+  		return;
+  	
+  	List<TaskListener> taskEventListeners = ((ImplicitListeners) cfg).getImplicitUserTaskListenersFor(taskEventName);
+     if (taskEventListeners != null) {
+       for (TaskListener taskListener : taskEventListeners) {
+         ExecutionEntity execution = getExecution();
+         if (execution != null) {
+           setEventName(taskEventName);
+         }
+         try {
+           Context.getProcessEngineConfiguration()
+             .getDelegateInterceptor()
+             .handleInvocation(new TaskListenerInvocation(taskListener, (DelegateTask)this));
+         }catch (Exception e) {
+           throw new ActivitiException("Exception while invoking TaskListener: "+e.getMessage(), e);
+         }
+       }
+     }
   }
   
   @Override
