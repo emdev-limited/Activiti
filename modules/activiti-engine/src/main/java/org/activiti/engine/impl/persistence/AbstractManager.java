@@ -13,6 +13,7 @@
 
 package org.activiti.engine.impl.persistence;
 
+import org.activiti.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.db.DbSqlSession;
 import org.activiti.engine.impl.db.PersistentObject;
@@ -21,6 +22,7 @@ import org.activiti.engine.impl.interceptor.Session;
 import org.activiti.engine.impl.persistence.entity.AttachmentEntityManager;
 import org.activiti.engine.impl.persistence.entity.ByteArrayEntityManager;
 import org.activiti.engine.impl.persistence.entity.DeploymentEntityManager;
+import org.activiti.engine.impl.persistence.entity.EventSubscriptionEntityManager;
 import org.activiti.engine.impl.persistence.entity.ExecutionEntityManager;
 import org.activiti.engine.impl.persistence.entity.GroupIdentityManager;
 import org.activiti.engine.impl.persistence.entity.HistoricActivityInstanceEntityManager;
@@ -34,6 +36,7 @@ import org.activiti.engine.impl.persistence.entity.IdentityLinkEntityManager;
 import org.activiti.engine.impl.persistence.entity.MembershipIdentityManager;
 import org.activiti.engine.impl.persistence.entity.ModelEntityManager;
 import org.activiti.engine.impl.persistence.entity.ProcessDefinitionEntityManager;
+import org.activiti.engine.impl.persistence.entity.ProcessDefinitionInfoEntityManager;
 import org.activiti.engine.impl.persistence.entity.ResourceEntityManager;
 import org.activiti.engine.impl.persistence.entity.TaskEntityManager;
 import org.activiti.engine.impl.persistence.entity.UserIdentityManager;
@@ -78,6 +81,10 @@ public abstract class AbstractManager implements Session {
     return getSession(ProcessDefinitionEntityManager.class);
   }
   
+  protected ProcessDefinitionInfoEntityManager getProcessDefinitionInfoManager() {
+    return getSession(ProcessDefinitionInfoEntityManager.class);
+  }
+  
   protected ModelEntityManager getModelManager() {
     return getSession(ModelEntityManager.class);
   }
@@ -92,6 +99,10 @@ public abstract class AbstractManager implements Session {
 
   protected IdentityLinkEntityManager getIdentityLinkManager() {
     return getSession(IdentityLinkEntityManager.class);
+  }
+  
+  protected EventSubscriptionEntityManager getEventSubscriptionManager() {
+  	return (getSession(EventSubscriptionEntityManager.class));
   }
 
   protected VariableInstanceEntityManager getVariableInstanceManager() {
@@ -144,6 +155,10 @@ public abstract class AbstractManager implements Session {
   
   protected HistoryManager getHistoryManager() {
     return getSession(HistoryManager.class);
+  }
+  
+  protected ProcessEngineConfigurationImpl getProcessEngineConfiguration() {
+  	return Context.getProcessEngineConfiguration();
   }
   
   public void close() {

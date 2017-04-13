@@ -14,11 +14,11 @@
 
 package org.activiti.engine.impl.persistence.entity;
 
+import org.activiti.engine.impl.context.Context;
+import org.activiti.engine.impl.db.PersistentObject;
+
 import java.io.Serializable;
 import java.util.Date;
-
-import org.activiti.engine.impl.db.PersistentObject;
-import org.activiti.engine.impl.util.ClockUtil;
 
 /**
  * @author Christian Stettler
@@ -30,6 +30,10 @@ public abstract class HistoricScopeInstanceEntity implements PersistentObject, S
   protected String id;
   protected String processInstanceId;
   protected String processDefinitionId;
+  protected String processDefinitionKey;
+  protected String processDefinitionName;
+  protected Integer processDefinitionVersion;
+  protected String deploymentId;
   protected Date startTime;
   protected Date endTime;
   protected Long durationInMillis;
@@ -37,7 +41,7 @@ public abstract class HistoricScopeInstanceEntity implements PersistentObject, S
 
   public void markEnded(String deleteReason) {
     this.deleteReason = deleteReason;
-    this.endTime = ClockUtil.getCurrentTime();
+    this.endTime = Context.getProcessEngineConfiguration().getClock().getCurrentTime();
     this.durationInMillis = endTime.getTime() - startTime.getTime();
   }
   
@@ -48,6 +52,18 @@ public abstract class HistoricScopeInstanceEntity implements PersistentObject, S
   }
   public String getProcessDefinitionId() {
     return processDefinitionId;
+  }
+  public String getProcessDefinitionKey() {
+    return processDefinitionKey;
+  }
+  public String getProcessDefinitionName() {
+    return processDefinitionName;
+  }
+  public Integer getProcessDefinitionVersion() {
+    return processDefinitionVersion;
+  }
+  public String getDeploymentId() {
+    return deploymentId;
   }
   public Date getStartTime() {
     return startTime;
@@ -69,6 +85,18 @@ public abstract class HistoricScopeInstanceEntity implements PersistentObject, S
   }
   public void setProcessDefinitionId(String processDefinitionId) {
     this.processDefinitionId = processDefinitionId;
+  }
+  public void setProcessDefinitionKey(String processDefinitionKey) {
+    this.processDefinitionKey = processDefinitionKey;
+  }
+  public void setProcessDefinitionName(String processDefinitionName) {
+    this.processDefinitionName = processDefinitionName;
+  }
+  public void setProcessDefinitionVersion(Integer processDefinitionVersion) {
+    this.processDefinitionVersion = processDefinitionVersion;
+  }
+  public void setDeploymentId(String deploymentId) {
+    this.deploymentId = deploymentId;
   }
   public void setStartTime(Date startTime) {
     this.startTime = startTime;

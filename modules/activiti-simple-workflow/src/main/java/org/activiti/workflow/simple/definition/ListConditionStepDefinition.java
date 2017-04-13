@@ -18,7 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
 
 
 /**
@@ -26,7 +29,7 @@ import org.codehaus.jackson.annotate.JsonTypeName;
  */
 @SuppressWarnings("unchecked")
 @JsonTypeName("list")
-public class ListConditionStepDefinition<T> extends AbstractStepDefinitionContainer<ListConditionStepDefinition<T>> implements StepDefinition {
+public class ListConditionStepDefinition<T> extends AbstractStepDefinitionContainer<ListConditionStepDefinition<T>> implements StepDefinition, NamedStepDefinition {
 
   private static final long serialVersionUID = 1L;
   
@@ -34,6 +37,8 @@ public class ListConditionStepDefinition<T> extends AbstractStepDefinitionContai
   protected List<ConditionDefinition> conditions = new ArrayList<ConditionDefinition>();
   protected String name;
   protected Map<String, Object> parameters = new HashMap<String, Object>();
+
+	protected String description;
   
   public ListConditionStepDefinition() {
     super();
@@ -61,6 +66,16 @@ public class ListConditionStepDefinition<T> extends AbstractStepDefinitionContai
   }
   
   @Override
+  public String getDescription() {
+	  return description;
+  }
+
+	@Override
+  public void setDescription(String description) {
+	  this.description = description;
+  }
+  
+  @Override
   public ListConditionStepDefinition<T> clone() {
     ListConditionStepDefinition<T> clone = new ListConditionStepDefinition<T>();
     clone.setValues(this);
@@ -80,14 +95,14 @@ public class ListConditionStepDefinition<T> extends AbstractStepDefinitionContai
     setParameters(new HashMap<String, Object>(otherDefinition.getParameters()));
     
     steps = new ArrayList<StepDefinition>();
-    if (definition.getSteps() != null && definition.getSteps().size() > 0) {
+    if (definition.getSteps() != null && !definition.getSteps().isEmpty()) {
       for (StepDefinition stepDefinition : definition.getSteps()) {
         steps.add(stepDefinition.clone());
       }
     }
     
     conditions = new ArrayList<ConditionDefinition>();
-    if (definition.getConditions() != null && definition.getConditions().size() > 0) {
+    if (definition.getConditions() != null && !definition.getConditions().isEmpty()) {
       for (ConditionDefinition condition : definition.getConditions()) {
         conditions.add(condition.clone());
       }
@@ -111,6 +126,7 @@ public class ListConditionStepDefinition<T> extends AbstractStepDefinitionContai
   }
 
   @Override
+  @JsonSerialize(include=Inclusion.NON_EMPTY)
   public Map<String, Object> getParameters() {
     return parameters;
   }

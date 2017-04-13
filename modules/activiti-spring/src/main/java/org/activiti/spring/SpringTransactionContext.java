@@ -16,8 +16,12 @@ package org.activiti.spring;
 
 import org.activiti.engine.impl.cfg.TransactionContext;
 import org.activiti.engine.impl.cfg.TransactionListener;
+import org.activiti.engine.impl.cfg.TransactionPropagation;
 import org.activiti.engine.impl.cfg.TransactionState;
+import org.activiti.engine.impl.interceptor.Command;
+import org.activiti.engine.impl.interceptor.CommandConfig;
 import org.activiti.engine.impl.interceptor.CommandContext;
+import org.activiti.engine.impl.interceptor.CommandExecutor;
 import org.springframework.core.Ordered;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -30,105 +34,119 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 public class SpringTransactionContext implements TransactionContext {
 
-  protected PlatformTransactionManager transactionManager;
-  protected CommandContext commandContext;
-  protected Integer transactionSynchronizationAdapterOrder;
-  
-  public SpringTransactionContext(PlatformTransactionManager transactionManager, CommandContext commandContext) {
-    this(transactionManager, commandContext, null);
-  }
-  
-  public SpringTransactionContext(PlatformTransactionManager transactionManager, CommandContext commandContext, Integer transactionSynchronizationAdapterOrder) {
-    this.transactionManager = transactionManager;
-    this.commandContext = commandContext;
-    if(transactionSynchronizationAdapterOrder != null) {
-      this.transactionSynchronizationAdapterOrder = transactionSynchronizationAdapterOrder;
-    } else {
-      // Revert to default, which is a high number as the behaviour prior to adding the order would
-      // case the TransactionSynchronizationAdapter to be called AFTER all Adapters that implement Ordered
-      this.transactionSynchronizationAdapterOrder = Integer.MAX_VALUE;
+    protected PlatformTransactionManager transactionManager;
+    protected CommandContext commandContext;
+    protected Integer transactionSynchronizationAdapterOrder;
+
+    public SpringTransactionContext(PlatformTransactionManager transactionManager, CommandContext commandContext) {
+        this(transactionManager, commandContext, null);
     }
-  }
 
-  public void commit() {
-    // Do nothing, transaction is managed by spring
-  }
+    public SpringTransactionContext(PlatformTransactionManager transactionManager, CommandContext commandContext, Integer transactionSynchronizationAdapterOrder) {
+        this.transactionManager = transactionManager;
+        this.commandContext = commandContext;
+        if (transactionSynchronizationAdapterOrder != null) {
+            this.transactionSynchronizationAdapterOrder = transactionSynchronizationAdapterOrder;
+        } else {
+            // Revert to default, which is a high number as the behaviour prior to adding the order would
+            // case the TransactionSynchronizationAdapter to be called AFTER all Adapters that implement Ordered
+            this.transactionSynchronizationAdapterOrder = Integer.MAX_VALUE;
+        }
+    }
 
-  public void rollback() {
-    // Just in case the rollback isn't triggered by an
-    // exception, we mark the current transaction rollBackOnly.
-    transactionManager.getTransaction(null).setRollbackOnly();
-  }
+    public void commit() {
+        // Do nothing, transaction is managed by spring
+    }
 
-  public void addTransactionListener(final TransactionState transactionState, final TransactionListener transactionListener) {
-    if (transactionState.equals(TransactionState.COMMITTING)) {
-      
-      TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-        @Override
+    public void rollback() {
+        // Just in case the rollback isn't triggered by an
+        // exception, we mark the current transaction rollBackOnly.
+        transactionManager.getTransaction(null).setRollbackOnly();
+    }
+
+    public void addTransactionListener(final TransactionState transactionState, final TransactionListener transactionListener) {
+        if (transactionState.equals(TransactionState.COMMITTING)) {
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                @Override
+                public void beforeCommit(boolean readOnly) {
+                    transactionListener.execute(commandContext);
+                }
+            });
+
+        } else if (transactionState.equals(TransactionState.COMMITTED)) {
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                @Override
+                public void afterCommit() {
+                  CommandExecutor commandExecutor = commandContext.getProcessEngineConfiguration().getCommandExecutor(); 
+                  CommandConfig commandConfig = new CommandConfig(false, TransactionPropagation.REQUIRES_NEW); 
+                  commandExecutor.execute(commandConfig, new Command<Void>() {
+                    public Void execute(CommandContext commandContext) {
+                      transactionListener.execute(commandContext);
+                      return null;
+                    }
+                  });
+                }
+            });
+
+        } else if (transactionState.equals(TransactionState.ROLLINGBACK)) {
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                @Override
+                public void beforeCompletion() {
+                    transactionListener.execute(commandContext);
+                }
+            });
+
+        } else if (transactionState.equals(TransactionState.ROLLED_BACK)) {
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (TransactionSynchronization.STATUS_ROLLED_BACK == status) {
+                      CommandExecutor commandExecutor = commandContext.getProcessEngineConfiguration().getCommandExecutor(); 
+                      CommandConfig commandConfig = new CommandConfig(false, TransactionPropagation.REQUIRES_NEW); 
+                      commandExecutor.execute(commandConfig, new Command<Void>() {
+                        public Void execute(CommandContext commandContext) {
+                          transactionListener.execute(commandContext);
+                          return null;
+                        }
+                      });
+                    }
+                }
+            });
+        }
+    }
+
+    protected abstract class TransactionSynchronizationAdapter implements TransactionSynchronization, Ordered {
+
+        public void suspend() {
+        }
+
+        public void resume() {
+        }
+
+        public void flush() {
+        }
+
         public void beforeCommit(boolean readOnly) {
-          transactionListener.execute(commandContext);
         }
-      });
-      
-    } else if (transactionState.equals(TransactionState.COMMITTED)) {
-    
-      TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-        @Override
-        public void afterCommit() {
-          transactionListener.execute(commandContext);
-        }
-      });
-      
-    } else if (transactionState.equals(TransactionState.ROLLINGBACK)) {
-      
-      TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-        @Override
+
         public void beforeCompletion() {
-          transactionListener.execute(commandContext);
         }
-      });
-      
-    } else if (transactionState.equals(TransactionState.ROLLED_BACK)) {
-      
-      TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-        @Override
+
+        public void afterCommit() {
+        }
+
         public void afterCompletion(int status) {
-          if(TransactionSynchronization.STATUS_ROLLED_BACK == status) {
-            transactionListener.execute(commandContext);
-          }
         }
-      });
-    }
-  }
-  
-  protected abstract class TransactionSynchronizationAdapter implements TransactionSynchronization, Ordered {
 
-    public void suspend() {
-    }
+        @Override
+        public int getOrder() {
+            return transactionSynchronizationAdapterOrder;
+        }
 
-    public void resume() {
     }
-
-    public void flush() {
-    }
-
-    public void beforeCommit(boolean readOnly) {
-    }
-
-    public void beforeCompletion() {
-    }
-
-    public void afterCommit() {
-    }
-
-    public void afterCompletion(int status) {
-    }  
-    
-    @Override
-    public int getOrder() {
-     return transactionSynchronizationAdapterOrder;
-    }
-    
-  }
 
 }

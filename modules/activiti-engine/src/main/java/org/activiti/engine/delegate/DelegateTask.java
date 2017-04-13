@@ -16,8 +16,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Set;
 
-import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
+import org.activiti.engine.task.DelegationState;
 import org.activiti.engine.task.IdentityLink;
 import org.activiti.engine.task.IdentityLinkType;
 
@@ -67,12 +67,27 @@ public interface DelegateTask extends VariableScope {
   
   /** The id of the activity in the process defining this task or null if this is not related to a process */
   String getTaskDefinitionKey();
+
+  /** Indicated whether this task is suspended or not. */
+  boolean isSuspended();
+
+  /** The tenant identifier of this task */
+  String getTenantId();
+
+  /** The form key for the user task */
+  String getFormKey();
+
+  /** Change the form key of the task */
+  void setFormKey(String formKey);
   
   /** Returns the execution currently at the task. */
   DelegateExecution getExecution();
   
   /** Returns the event name which triggered the task listener to fire for this task. */
   String getEventName();
+
+  /** The current {@link org.activiti.engine.task.DelegationState} for this task. */
+  DelegationState getDelegationState();
   
   /** Adds the given user as a candidate user to this task. */
   void addCandidateUser(String userId);
@@ -103,6 +118,12 @@ public interface DelegateTask extends VariableScope {
   
   /** Change due date of the task. */
   void setDueDate(Date dueDate);
+  
+  /** The category of the task. This is an optional field and allows to 'tag' tasks as belonging to a certain category. */
+  String getCategory();
+	
+  /** Change the category of the task. This is an optional field and allows to 'tag' tasks as belonging to a certain category. */
+  void setCategory(String category);
   
   /**
    * Involves a user with a task. The type of identity link is defined by the given identityLinkType.

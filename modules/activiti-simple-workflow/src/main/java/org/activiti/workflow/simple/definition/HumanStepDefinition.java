@@ -19,8 +19,9 @@ import java.util.List;
 import org.activiti.workflow.simple.definition.HumanStepAssignment.HumanStepAssignmentType;
 import org.activiti.workflow.simple.definition.form.FormDefinition;
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-import org.codehaus.jackson.annotate.JsonIgnore;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
 /**
  * Defines a step that must be executed by a human actor.
@@ -28,7 +29,7 @@ import org.codehaus.jackson.annotate.JsonTypeName;
  * @author Joram Barrez
  */
 @JsonTypeName("human-step")
-public class HumanStepDefinition extends AbstractNamedStepDefinition {
+public class HumanStepDefinition extends AbstractNamedStepDefinition implements FormStepDefinition {
 
   private static final long serialVersionUID = 1L;
   
@@ -71,9 +72,13 @@ public class HumanStepDefinition extends AbstractNamedStepDefinition {
     return form;
   }
 
-  public HumanStepDefinition setForm(FormDefinition form) {
+  public HumanStepDefinition addForm(FormDefinition form) {
     this.form = form;
     return this;
+  }
+  
+  public void setForm(FormDefinition form) {
+    this.form = form;
   }
   
   public HumanStepAssignment getAssignment() {
@@ -106,10 +111,10 @@ public class HumanStepDefinition extends AbstractNamedStepDefinition {
     
     HumanStepDefinition stepDefinition = (HumanStepDefinition) otherDefinition;
     setAssignee(stepDefinition.getAssignee());
-    if (stepDefinition.getCandidateGroups() != null && stepDefinition.getCandidateGroups().size() > 0) {
+    if (stepDefinition.getCandidateGroups() != null && !stepDefinition.getCandidateGroups().isEmpty()) {
       setCandidateGroups(new ArrayList<String>(stepDefinition.getCandidateGroups()));
     }
-    if (stepDefinition.getCandidateUsers() != null && stepDefinition.getCandidateUsers().size() > 0) {
+    if (stepDefinition.getCandidateUsers() != null && !stepDefinition.getCandidateUsers().isEmpty()) {
       setCandidateUsers(new ArrayList<String>(stepDefinition.getCandidateUsers()));
     }
     setDescription(stepDefinition.getDescription());

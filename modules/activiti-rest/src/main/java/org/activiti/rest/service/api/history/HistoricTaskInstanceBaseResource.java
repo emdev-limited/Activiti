@@ -18,21 +18,19 @@ import java.util.List;
 import java.util.Map;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
+import org.activiti.engine.HistoryService;
 import org.activiti.engine.history.HistoricTaskInstanceQuery;
 import org.activiti.engine.impl.HistoricTaskInstanceQueryProperty;
 import org.activiti.engine.query.QueryProperty;
-import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.common.api.DataResponse;
-import org.activiti.rest.common.api.SecuredResource;
 import org.activiti.rest.service.api.RestResponseFactory;
 import org.activiti.rest.service.api.engine.variable.QueryVariable;
-import org.activiti.rest.service.application.ActivitiRestServicesApplication;
-import org.restlet.data.Form;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Tijs Rademakers
  */
-public class HistoricTaskInstanceBaseResource extends SecuredResource {
+public class HistoricTaskInstanceBaseResource {
 
   private static Map<String, QueryProperty> allowedSortProperties = new HashMap<String, QueryProperty>();
 
@@ -52,10 +50,20 @@ public class HistoricTaskInstanceBaseResource extends SecuredResource {
     allowedSortProperties.put("name", HistoricTaskInstanceQueryProperty.TASK_NAME);
     allowedSortProperties.put("owner", HistoricTaskInstanceQueryProperty.TASK_OWNER);
     allowedSortProperties.put("priority", HistoricTaskInstanceQueryProperty.TASK_PRIORITY);
+    allowedSortProperties.put("tenantId", HistoricTaskInstanceQueryProperty.TENANT_ID_);
+    
+    // Duplicate usage of HistoricTaskInstanceQueryProperty.START, to keep naming consistent and keep backwards-compatibility
+    allowedSortProperties.put("startTime", HistoricTaskInstanceQueryProperty.START);
   }
+  
+  @Autowired
+  protected RestResponseFactory restResponseFactory;
+  
+  @Autowired
+  protected HistoryService historyService;
 
-  protected DataResponse getQueryResponse(HistoricTaskInstanceQueryRequest queryRequest, Form urlQuery) {
-    HistoricTaskInstanceQuery query = ActivitiUtil.getHistoryService().createHistoricTaskInstanceQuery();
+  protected DataResponse getQueryResponse(HistoricTaskInstanceQueryRequest queryRequest, Map<String,String> allRequestParams, String serverRootUrl) {
+    HistoricTaskInstanceQuery query = historyService.createHistoricTaskInstanceQuery();
 
     // Populate query based on request
     if (queryRequest.getTaskId() != null) {
@@ -105,6 +113,9 @@ public class HistoricTaskInstanceBaseResource extends SecuredResource {
     }
     if (queryRequest.getTaskDefinitionKeyLike() != null) {
     	query.taskDefinitionKeyLike(queryRequest.getTaskDefinitionKeyLike());
+    }
+    if (queryRequest.getTaskCategory() != null) {
+      query.taskCategory(queryRequest.getTaskCategory());
     }
     if (queryRequest.getTaskDeleteReason() != null) {
       query.taskDeleteReason(queryRequest.getTaskDeleteReason());
@@ -211,13 +222,28 @@ public class HistoricTaskInstanceBaseResource extends SecuredResource {
     if (queryRequest.getProcessVariables() != null) {
       addProcessVariables(query, queryRequest.getProcessVariables());
     }
+    
+    if(queryRequest.getTenantId() != null) {
+    	query.taskTenantId(queryRequest.getTenantId());
+    }
+    
+    if(queryRequest.getTenantIdLike() != null) {
+    	query.taskTenantIdLike(queryRequest.getTenantIdLike());
+    }
+    
+    if(Boolean.TRUE.equals(queryRequest.getWithoutTenantId())) {
+    	query.taskWithoutTenantId();
+    }
 
-    return new HistoricTaskInstancePaginateList(this).paginateList(urlQuery, query, "taskInstanceId", allowedSortProperties);
+    if(queryRequest.getTaskCandidateGroup() != null) {
+      query.taskCandidateGroup(queryRequest.getTaskCandidateGroup());
+    }
+    
+    return new HistoricTaskInstancePaginateList(restResponseFactory, serverRootUrl).paginateList(
+        allRequestParams, queryRequest, query, "taskInstanceId", allowedSortProperties);
   }
 
   protected void addTaskVariables(HistoricTaskInstanceQuery taskInstanceQuery, List<QueryVariable> variables) {
-    RestResponseFactory responseFactory = getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
-    
     for (QueryVariable variable : variables) {
       if (variable.getVariableOperation() == null) {
         throw new ActivitiIllegalArgumentException("Variable operation is missing for variable: " + variable.getName());
@@ -228,7 +254,7 @@ public class HistoricTaskInstanceBaseResource extends SecuredResource {
 
       boolean nameLess = variable.getName() == null;
 
-      Object actualValue = responseFactory.getVariableValue(variable);
+      Object actualValue = restResponseFactory.getVariableValue(variable);
 
       // A value-only query is only possible using equals-operator
       if (nameLess) {
@@ -295,8 +321,6 @@ public class HistoricTaskInstanceBaseResource extends SecuredResource {
   }
   
   protected void addProcessVariables(HistoricTaskInstanceQuery taskInstanceQuery, List<QueryVariable> variables) {
-    RestResponseFactory responseFactory = getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
-    
     for (QueryVariable variable : variables) {
       if (variable.getVariableOperation() == null) {
         throw new ActivitiIllegalArgumentException("Variable operation is missing for variable: " + variable.getName());
@@ -307,7 +331,7 @@ public class HistoricTaskInstanceBaseResource extends SecuredResource {
 
       boolean nameLess = variable.getName() == null;
 
-      Object actualValue = responseFactory.getVariableValue(variable);
+      Object actualValue = restResponseFactory.getVariableValue(variable);
 
       // A value-only query is only possible using equals-operator
       if (nameLess) {

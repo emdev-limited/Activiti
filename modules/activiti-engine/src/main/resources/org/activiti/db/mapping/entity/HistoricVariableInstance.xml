@@ -21,7 +21,7 @@
   <!-- HISTORIC PROCESS VARIABLE INSERT -->
   
   <insert id="insertHistoricVariableInstance" parameterType="org.activiti.engine.impl.persistence.entity.HistoricVariableInstanceEntity">
-    insert into ${prefix}ACT_HI_VARINST (ID_, PROC_INST_ID_, EXECUTION_ID_, TASK_ID_, NAME_, REV_, VAR_TYPE_, BYTEARRAY_ID_, DOUBLE_, LONG_ , TEXT_, TEXT2_)
+    insert into ${prefix}ACT_HI_VARINST (ID_, PROC_INST_ID_, EXECUTION_ID_, TASK_ID_, NAME_, REV_, VAR_TYPE_, BYTEARRAY_ID_, DOUBLE_, LONG_ , TEXT_, TEXT2_, CREATE_TIME_, LAST_UPDATED_TIME_)
     values (
       #{id, jdbcType=VARCHAR},
       #{processInstanceId, jdbcType=VARCHAR},
@@ -34,8 +34,54 @@
       #{doubleValue, jdbcType=DOUBLE},
       #{longValue, jdbcType=BIGINT},
       #{textValue, jdbcType=VARCHAR},
-      #{textValue2, jdbcType=VARCHAR}
+      #{textValue2, jdbcType=VARCHAR},
+      #{createTime, jdbcType=TIMESTAMP},
+      #{lastUpdatedTime, jdbcType=TIMESTAMP}
     )
+  </insert>
+
+  <insert id="bulkInsertHistoricVariableInstance" parameterType="java.util.List">
+    insert into ${prefix}ACT_HI_VARINST (ID_, PROC_INST_ID_, EXECUTION_ID_, TASK_ID_, NAME_, REV_, VAR_TYPE_, BYTEARRAY_ID_, DOUBLE_, LONG_ , TEXT_, TEXT2_, CREATE_TIME_, LAST_UPDATED_TIME_)
+    values 
+      <foreach collection="list" item="historicVariable" index="index" separator=",">
+        (#{historicVariable.id, jdbcType=VARCHAR},
+         #{historicVariable.processInstanceId, jdbcType=VARCHAR},
+         #{historicVariable.executionId, jdbcType=VARCHAR},
+         #{historicVariable.taskId, jdbcType=VARCHAR},
+         #{historicVariable.variableName, jdbcType=VARCHAR},
+         #{historicVariable.revision, jdbcType=VARCHAR},
+         #{historicVariable.variableType, jdbcType=VARCHAR},
+         #{historicVariable.byteArrayRef, typeHandler=ByteArrayRefTypeHandler},
+         #{historicVariable.doubleValue, jdbcType=DOUBLE},
+         #{historicVariable.longValue, jdbcType=BIGINT},
+         #{historicVariable.textValue, jdbcType=VARCHAR},
+         #{historicVariable.textValue2, jdbcType=VARCHAR},
+         #{historicVariable.createTime, jdbcType=TIMESTAMP},
+         #{historicVariable.lastUpdatedTime, jdbcType=TIMESTAMP})
+       </foreach>
+  </insert>
+
+  <insert id="bulkInsertHistoricVariableInstance_oracle" parameterType="java.util.List">
+    INSERT ALL 
+      <foreach collection="list" item="historicVariable" index="index">
+      INTO ${prefix}ACT_HI_VARINST (ID_, PROC_INST_ID_, EXECUTION_ID_, TASK_ID_, NAME_, REV_,
+      VAR_TYPE_, BYTEARRAY_ID_, DOUBLE_, LONG_ , TEXT_, TEXT2_, CREATE_TIME_, LAST_UPDATED_TIME_) VALUES 
+          (#{historicVariable.id, jdbcType=VARCHAR},
+           #{historicVariable.processInstanceId, jdbcType=VARCHAR},
+           #{historicVariable.executionId, jdbcType=VARCHAR},
+           #{historicVariable.taskId, jdbcType=VARCHAR},
+           #{historicVariable.variableName, jdbcType=VARCHAR},
+           #{historicVariable.revision, jdbcType=VARCHAR},
+           #{historicVariable.variableType, jdbcType=VARCHAR},
+           #{historicVariable.byteArrayRef, typeHandler=ByteArrayRefTypeHandler},
+           #{historicVariable.doubleValue, jdbcType=DOUBLE},
+           #{historicVariable.longValue, jdbcType=BIGINT},
+           #{historicVariable.textValue, jdbcType=VARCHAR},
+           #{historicVariable.textValue2, jdbcType=VARCHAR},
+           #{historicVariable.createTime, jdbcType=TIMESTAMP},
+           #{historicVariable.lastUpdatedTime, jdbcType=TIMESTAMP})
+       </foreach>
+    SELECT * FROM dual
   </insert>
 
   <!-- HISTORIC PROCESS VARIABLE UPDATE -->
@@ -48,7 +94,8 @@
       LONG_ = #{longValue, jdbcType=BIGINT},
       TEXT_ = #{textValue, jdbcType=VARCHAR},
       TEXT2_ = #{textValue2, jdbcType=VARCHAR},
-      VAR_TYPE_ = #{variableType, jdbcType=VARCHAR}
+      VAR_TYPE_ = #{variableType, jdbcType=VARCHAR},
+      LAST_UPDATED_TIME_ = #{lastUpdatedTime, jdbcType=TIMESTAMP}
     where ID_ = #{id, jdbcType=VARCHAR}
       and REV_ = #{revision, jdbcType=INTEGER}
   </update>
@@ -57,6 +104,13 @@
 
   <delete id="deleteHistoricVariableInstance" parameterType="org.activiti.engine.impl.persistence.entity.HistoricVariableInstanceEntity">
     delete from ${prefix}ACT_HI_VARINST where ID_ = #{id} and REV_ = #{revision}
+  </delete>
+  
+  <delete id="bulkDeleteHistoricVariableInstance" parameterType="java.util.Collection">
+    delete from ${prefix}ACT_HI_VARINST where 
+    <foreach item="variable" collection="list" index="index" separator=" or ">
+        ID_ = #{variable.id, jdbcType=VARCHAR}
+    </foreach>
   </delete>
   
   <!-- HISTORIC PROCESS VARIABLE RESULTMAP -->
@@ -73,6 +127,8 @@
     <result property="textValue" column="TEXT_" jdbcType="VARCHAR" />
     <result property="textValue2" column="TEXT2_" jdbcType="VARCHAR" />
     <result property="longValue" column="LONG_" jdbcType="BIGINT" />
+    <result property="createTime" column="CREATE_TIME_" jdbcType="TIMESTAMP" />
+    <result property="lastUpdatedTime" column="LAST_UPDATED_TIME_" jdbcType="TIMESTAMP" />
   </resultMap>
   
   <!-- HISTORIC VARIABLE SELECT -->
@@ -97,10 +153,25 @@
         RES.ID_ = #{id}
       </if>
       <if test="processInstanceId != null">
-        RES.PROC_INST_ID_ = #{processInstanceId}
+        and RES.PROC_INST_ID_ = #{processInstanceId}
+      </if>
+      <if test="executionId != null">
+        and RES.EXECUTION_ID_ = #{executionId}
+      </if>
+      <if test="executionIds != null and !executionIds.isEmpty()">
+          and RES.EXECUTION_ID_ in
+          <foreach item="item" index="index" collection="executionIds" open="(" separator="," close=")">
+            #{item}
+          </foreach>
       </if>
       <if test="taskId != null">
         and RES.TASK_ID_ = #{taskId}
+      </if>
+      <if test="taskIds != null and !taskIds.isEmpty()">
+          and RES.TASK_ID_ in
+          <foreach item="item" index="index" collection="taskIds" open="(" separator="," close=")">
+            #{item}
+          </foreach>
       </if>
       <if test="excludeTaskRelated">
         and RES.TASK_ID_ is NULL
@@ -109,7 +180,7 @@
         and RES.NAME_ = #{variableName}
       </if>
       <if test="variableNameLike != null">
-        and RES.NAME_ like #{variableNameLike}
+        and RES.NAME_ like #{variableNameLike}${wildcardEscapeClause}
       </if>
       
       <!-- PLEASE NOTE: If you change anything have a look into the Execution, the same query object is used there! -->
@@ -121,18 +192,24 @@
         <if test="queryVariableValue.textValue != null &amp;&amp; queryVariableValue.longValue == null &amp;&amp; queryVariableValue.doubleValue == null">
         and RES.TEXT_
         <choose>
-          <when test="queryVariableValue.operator.equals('LIKE')">LIKE</when>
+          <when test="queryVariableValue.operator.equals('LIKE') || queryVariableValue.operator.equals('LIKE_IGNORE_CASE')">LIKE</when>
           <otherwise><include refid="executionVariableOperator" /></otherwise>
         </choose>
           #{queryVariableValue.textValue}
+          <choose>
+            <when test="queryVariableValue.operator.equals('LIKE') || queryVariableValue.operator.equals('LIKE_IGNORE_CASE')">${wildcardEscapeClause}</when>
+          </choose>
         </if>
         <if test="queryVariableValue.textValue2 != null">
         and RES.TEXT2_
         <choose>
-          <when test="queryVariableValue.operator.equals('LIKE')">LIKE</when>
+          <when test="queryVariableValue.operator.equals('LIKE') || queryVariableValue.operator.equals('LIKE_IGNORE_CASE')">LIKE</when>
           <otherwise><include refid="executionVariableOperator" /></otherwise>
         </choose>
           #{queryVariableValue.textValue2}
+          <choose>
+            <when test="queryVariableValue.operator.equals('LIKE') || queryVariableValue.operator.equals('LIKE_IGNORE_CASE')">${wildcardEscapeClause}</when>
+          </choose>
         </if>
         <if test="queryVariableValue.longValue != null">
         and RES.LONG_

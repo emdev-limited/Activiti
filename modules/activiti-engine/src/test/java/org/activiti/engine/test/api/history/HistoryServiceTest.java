@@ -26,7 +26,8 @@ import java.util.Map;
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.history.HistoricProcessInstance;
 import org.activiti.engine.history.HistoricProcessInstanceQuery;
-import org.activiti.engine.impl.persistence.entity.HistoricProcessInstanceEntity;
+import org.activiti.engine.history.HistoricTaskInstance;
+import org.activiti.engine.history.HistoricTaskInstanceQuery;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
 import org.activiti.engine.impl.util.CollectionUtil;
 import org.activiti.engine.runtime.ProcessInstance;
@@ -34,6 +35,8 @@ import org.activiti.engine.task.Task;
 import org.activiti.engine.task.TaskQuery;
 import org.activiti.engine.test.Deployment;
 import org.activiti.engine.test.api.runtime.ProcessInstanceQueryTest;
+
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @author Frederik Heremans
@@ -142,7 +145,7 @@ public class HistoryServiceTest extends PluggableActivitiTestCase {
     HistoricProcessInstance historicProcessInstance = historyService.createHistoricProcessInstanceQuery().processDefinitionKey(processDefinitionKey)
             .singleResult();
     assertNotNull(historicProcessInstance);
-    assertTrue(historicProcessInstance.getProcessDefinitionId().startsWith(processDefinitionKey));
+    assertTrue(historicProcessInstance.getProcessDefinitionKey().equals(processDefinitionKey));
     assertEquals("theStart", historicProcessInstance.getStartActivityId());
 
     // now complete the task to end the process instance
@@ -157,9 +160,40 @@ public class HistoryServiceTest extends PluggableActivitiTestCase {
             .singleResult();
     HistoricProcessInstance historicProcessInstanceSuper = historyService.createHistoricProcessInstanceQuery().processDefinitionKey("orderProcess")
             .singleResult();
-    assertEquals(historicProcessInstanceSuper.getId(), ((HistoricProcessInstanceEntity) historicProcessInstanceSub).getSuperProcessInstanceId());
+    assertEquals(historicProcessInstanceSuper.getId(), historicProcessInstanceSub.getSuperProcessInstanceId());
   }
 
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
+  public void testHistoricProcessInstanceQueryByProcessDefinitionName() {
+
+    String processDefinitionKey = "oneTaskProcess";
+    String processDefinitionName = "The One Task Process";
+    runtimeService.startProcessInstanceByKey(processDefinitionKey);
+    
+    assertEquals(processDefinitionName, historyService.createHistoricProcessInstanceQuery().processDefinitionName(processDefinitionName).list().get(0).getProcessDefinitionName());
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().processDefinitionName(processDefinitionName).list().size());
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().processDefinitionName(processDefinitionName).count());
+    assertEquals(0, historyService.createHistoricProcessInstanceQuery().processDefinitionName("invalid").list().size());
+    assertEquals(0, historyService.createHistoricProcessInstanceQuery().processDefinitionName("invalid").count());
+    assertEquals(processDefinitionName, historyService.createHistoricProcessInstanceQuery().or().processDefinitionName(processDefinitionName).processDefinitionId("invalid").endOr().list().get(0).getProcessDefinitionName());
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().or().processDefinitionName(processDefinitionName).processDefinitionId("invalid").endOr().list().size());
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().or().processDefinitionName(processDefinitionName).processDefinitionId("invalid").endOr().count());
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
+  public void testHistoricProcessInstanceQueryByProcessDefinitionCategory() {
+    String processDefinitionKey = "oneTaskProcess";
+    String processDefinitionCategory = "ExamplesCategory";
+    runtimeService.startProcessInstanceByKey(processDefinitionKey);
+    
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().processDefinitionCategory(processDefinitionCategory).list().size());
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().processDefinitionCategory(processDefinitionCategory).count());
+    assertEquals(0, historyService.createHistoricProcessInstanceQuery().processDefinitionCategory("invalid").list().size());
+    assertEquals(0, historyService.createHistoricProcessInstanceQuery().processDefinitionCategory("invalid").count());
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().or().processDefinitionCategory(processDefinitionCategory).processDefinitionId("invalid").endOr().list().size());
+    assertEquals(1, historyService.createHistoricProcessInstanceQuery().or().processDefinitionCategory(processDefinitionCategory).processDefinitionId("invalid").endOr().count());
+  }
+  
   @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml", "org/activiti/engine/test/api/runtime/oneTaskProcess2.bpmn20.xml" })
   public void testHistoricProcessInstanceQueryByProcessInstanceIds() {
     HashSet<String> processInstanceIds = new HashSet<String>();
@@ -199,6 +233,307 @@ public class HistoryServiceTest extends PluggableActivitiTestCase {
     } catch (ActivitiIllegalArgumentException re) {
       assertTextPresent("Set of process instance ids is null", re.getMessage());
     }
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
+  public void testHistoricProcessInstanceQueryForDelete() {
+    String processInstanceId = runtimeService.startProcessInstanceByKey("oneTaskProcess").getId();
+    runtimeService.deleteProcessInstance(processInstanceId, null);
+
+    HistoricProcessInstanceQuery processInstanceQuery = historyService.createHistoricProcessInstanceQuery().processInstanceId(processInstanceId);
+    assertEquals(1, processInstanceQuery.count());
+    HistoricProcessInstance processInstance = processInstanceQuery.singleResult();
+    assertEquals(processInstanceId, processInstance.getId());
+    assertEquals("ACTIVITY_DELETED", processInstance.getDeleteReason());
+
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().processInstanceId(processInstanceId).deleted();
+    assertEquals(1, processInstanceQuery.count());
+    processInstance = processInstanceQuery.singleResult();
+    assertEquals(processInstanceId, processInstance.getId());
+    assertEquals("ACTIVITY_DELETED", processInstance.getDeleteReason());
+    
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().processInstanceId(processInstanceId).notDeleted();
+    assertEquals(0, processInstanceQuery.count());
+    
+    historyService.deleteHistoricProcessInstance(processInstanceId);
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().processInstanceId(processInstanceId);
+    assertEquals(0, processInstanceQuery.count());
+    
+    processInstanceId = runtimeService.startProcessInstanceByKey("oneTaskProcess").getId();
+    runtimeService.deleteProcessInstance(processInstanceId, "custom message");
+    
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().processInstanceId(processInstanceId);
+    assertEquals(1, processInstanceQuery.count());
+    processInstance = processInstanceQuery.singleResult();
+    assertEquals(processInstanceId, processInstance.getId());
+    assertEquals("custom message", processInstance.getDeleteReason());
+
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().processInstanceId(processInstanceId).deleted();
+    assertEquals(1, processInstanceQuery.count());
+    processInstance = processInstanceQuery.singleResult();
+    assertEquals(processInstanceId, processInstance.getId());
+    assertEquals("custom message", processInstance.getDeleteReason());
+    
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().processInstanceId(processInstanceId).notDeleted();
+    assertEquals(0, processInstanceQuery.count());
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml", "org/activiti/engine/test/api/runtime/oneTaskProcess2.bpmn20.xml" })
+  public void testHistoricProcessInstanceQueryByDeploymentId() {
+    org.activiti.engine.repository.Deployment deployment = repositoryService.createDeploymentQuery().singleResult();
+    HashSet<String> processInstanceIds = new HashSet<String>();
+    for (int i = 0; i < 4; i++) {
+      processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess", i + "").getId());
+    }
+    processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess2", "1").getId());
+
+    HistoricProcessInstanceQuery processInstanceQuery = historyService.createHistoricProcessInstanceQuery().deploymentId(deployment.getId());
+    assertEquals(5, processInstanceQuery.count());
+    assertEquals(deployment.getId(), processInstanceQuery.list().get(0).getDeploymentId());
+
+    List<HistoricProcessInstance> processInstances = processInstanceQuery.list();
+    assertNotNull(processInstances);
+    assertEquals(5, processInstances.size());
+    
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().deploymentId("invalid");
+    assertEquals(0, processInstanceQuery.count());
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml", "org/activiti/engine/test/api/runtime/oneTaskProcess2.bpmn20.xml" })
+  public void testHistoricProcessInstanceQueryByDeploymentIdIn() {
+    org.activiti.engine.repository.Deployment deployment = repositoryService.createDeploymentQuery().singleResult();
+    HashSet<String> processInstanceIds = new HashSet<String>();
+    for (int i = 0; i < 4; i++) {
+      processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess", i + "").getId());
+    }
+    processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess2", "1").getId());
+
+    List<String> deploymentIds = new ArrayList<String>();
+    deploymentIds.add(deployment.getId());
+    deploymentIds.add("invalid");
+    HistoricProcessInstanceQuery processInstanceQuery = historyService.createHistoricProcessInstanceQuery().deploymentIdIn(deploymentIds);
+    assertEquals(5, processInstanceQuery.count());
+
+    List<HistoricProcessInstance> processInstances = processInstanceQuery.list();
+    assertNotNull(processInstances);
+    assertEquals(5, processInstances.size());
+    
+    deploymentIds = new ArrayList<String>();
+    deploymentIds.add("invalid");
+    processInstanceQuery = historyService.createHistoricProcessInstanceQuery().deploymentIdIn(deploymentIds);
+    assertEquals(0, processInstanceQuery.count());
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml", "org/activiti/engine/test/api/runtime/oneTaskProcess2.bpmn20.xml" })
+  public void testHistoricTaskInstanceQueryByDeploymentId() {
+    org.activiti.engine.repository.Deployment deployment = repositoryService.createDeploymentQuery().singleResult();
+    HashSet<String> processInstanceIds = new HashSet<String>();
+    for (int i = 0; i < 4; i++) {
+      processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess", i + "").getId());
+    }
+    processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess2", "1").getId());
+
+    HistoricTaskInstanceQuery taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().deploymentId(deployment.getId());
+    assertEquals(5, taskInstanceQuery.count());
+
+    List<HistoricTaskInstance> taskInstances = taskInstanceQuery.list();
+    assertNotNull(taskInstances);
+    assertEquals(5, taskInstances.size());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().deploymentId("invalid");
+    assertEquals(0, taskInstanceQuery.count());
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml", "org/activiti/engine/test/api/runtime/oneTaskProcess2.bpmn20.xml" })
+  public void testHistoricTaskInstanceQueryByDeploymentIdIn() {
+    org.activiti.engine.repository.Deployment deployment = repositoryService.createDeploymentQuery().singleResult();
+    HashSet<String> processInstanceIds = new HashSet<String>();
+    for (int i = 0; i < 4; i++) {
+      processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess", i + "").getId());
+    }
+    processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess2", "1").getId());
+
+    List<String> deploymentIds = new ArrayList<String>();
+    deploymentIds.add(deployment.getId());
+    HistoricTaskInstanceQuery taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().deploymentIdIn(deploymentIds);
+    assertEquals(5, taskInstanceQuery.count());
+
+    List<HistoricTaskInstance> taskInstances = taskInstanceQuery.list();
+    assertNotNull(taskInstances);
+    assertEquals(5, taskInstances.size());
+    
+    deploymentIds.add("invalid");
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().deploymentIdIn(deploymentIds);
+    assertEquals(5, taskInstanceQuery.count());
+    
+    deploymentIds = new ArrayList<String>();
+    deploymentIds.add("invalid");
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().deploymentIdIn(deploymentIds);
+    assertEquals(0, taskInstanceQuery.count());
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml", "org/activiti/engine/test/api/runtime/oneTaskProcess2.bpmn20.xml" })
+  public void testHistoricTaskInstanceOrQueryByDeploymentId() {
+    org.activiti.engine.repository.Deployment deployment = repositoryService.createDeploymentQuery().singleResult();
+    HashSet<String> processInstanceIds = new HashSet<String>();
+    for (int i = 0; i < 4; i++) {
+      processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess", i + "").getId());
+    }
+    processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess2", "1").getId());
+
+    HistoricTaskInstanceQuery taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().or().deploymentId(deployment.getId()).endOr();
+    assertEquals(5, taskInstanceQuery.count());
+
+    List<HistoricTaskInstance> taskInstances = taskInstanceQuery.list();
+    assertNotNull(taskInstances);
+    assertEquals(5, taskInstances.size());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().or().deploymentId("invalid").endOr();
+    assertEquals(0, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().or().taskDefinitionKey("theTask").deploymentId("invalid").endOr();
+    assertEquals(5, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().taskDefinitionKey("theTask").or().deploymentId("invalid").endOr();
+    assertEquals(0, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery()
+        .or()
+          .taskDefinitionKey("theTask")
+          .deploymentId("invalid")
+        .endOr()
+        .or()
+          .processDefinitionKey("oneTaskProcess")
+          .processDefinitionId("invalid")
+        .endOr();
+    assertEquals(4, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery()
+        .or()
+          .taskDefinitionKey("theTask")
+          .deploymentId("invalid")
+        .endOr()
+        .or()
+          .processDefinitionKey("oneTaskProcess2")
+          .processDefinitionId("invalid")
+        .endOr();
+    assertEquals(1, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery()
+        .or()
+          .taskDefinitionKey("theTask")
+          .deploymentId("invalid")
+        .endOr()
+        .or()
+          .processDefinitionKey("oneTaskProcess")
+          .processDefinitionId("invalid")
+        .endOr()
+        .processInstanceBusinessKey("1");
+    assertEquals(1, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery()
+        .or()
+          .taskDefinitionKey("theTask")
+          .deploymentId("invalid")
+        .endOr()
+        .or()
+          .processDefinitionKey("oneTaskProcess2")
+          .processDefinitionId("invalid")
+        .endOr()
+        .processInstanceBusinessKey("1");
+    assertEquals(1, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery()
+        .or()
+          .taskDefinitionKey("theTask")
+          .deploymentId("invalid")
+        .endOr()
+        .or()
+          .processDefinitionKey("oneTaskProcess2")
+          .processDefinitionId("invalid")
+        .endOr()
+        .processInstanceBusinessKey("2");
+    assertEquals(0, taskInstanceQuery.count());
+  }
+  
+  @Deployment(resources = { "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml", "org/activiti/engine/test/api/runtime/oneTaskProcess2.bpmn20.xml" })
+  public void testHistoricTaskInstanceOrQueryByDeploymentIdIn() {
+    org.activiti.engine.repository.Deployment deployment = repositoryService.createDeploymentQuery().singleResult();
+    HashSet<String> processInstanceIds = new HashSet<String>();
+    for (int i = 0; i < 4; i++) {
+      processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess", i + "").getId());
+    }
+    processInstanceIds.add(runtimeService.startProcessInstanceByKey("oneTaskProcess2", "1").getId());
+
+    List<String> deploymentIds = new ArrayList<String>();
+    deploymentIds.add(deployment.getId());
+    HistoricTaskInstanceQuery taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().or().deploymentIdIn(deploymentIds).processDefinitionId("invalid").endOr();
+    assertEquals(5, taskInstanceQuery.count());
+
+    List<HistoricTaskInstance> taskInstances = taskInstanceQuery.list();
+    assertNotNull(taskInstances);
+    assertEquals(5, taskInstances.size());
+    
+    deploymentIds.add("invalid");
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().or().deploymentIdIn(deploymentIds).processDefinitionId("invalid").endOr();
+    assertEquals(5, taskInstanceQuery.count());
+    
+    deploymentIds = new ArrayList<String>();
+    deploymentIds.add("invalid");
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().or().deploymentIdIn(deploymentIds).processDefinitionId("invalid").endOr();
+    assertEquals(0, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().or().taskDefinitionKey("theTask").deploymentIdIn(deploymentIds).endOr();
+    assertEquals(5, taskInstanceQuery.count());
+    
+    taskInstanceQuery = historyService.createHistoricTaskInstanceQuery().taskDefinitionKey("theTask").or().deploymentIdIn(deploymentIds).endOr();
+    assertEquals(0, taskInstanceQuery.count());
+  }
+  
+  @Deployment(resources={"org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml"})
+  public void testLocalizeTasks() throws Exception {
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
+    
+    List<HistoricTaskInstance> tasks = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).list();
+    assertEquals(1, tasks.size());
+    assertEquals("my task", tasks.get(0).getName());
+    assertNull(tasks.get(0).getDescription());
+    
+    ObjectNode infoNode = dynamicBpmnService.changeLocalizationName("en-GB", "theTask", "My localized name");
+    dynamicBpmnService.changeLocalizationDescription("en-GB".toString(), "theTask", "My localized description", infoNode);
+    dynamicBpmnService.saveProcessDefinitionInfo(processInstance.getProcessDefinitionId(), infoNode);
+    
+    tasks = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).list();
+    assertEquals(1, tasks.size());
+    assertEquals("my task", tasks.get(0).getName());
+    assertNull(tasks.get(0).getDescription());
+    
+    tasks = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).locale("en-GB").list();
+    assertEquals(1, tasks.size());
+    assertEquals("My localized name", tasks.get(0).getName());
+    assertEquals("My localized description", tasks.get(0).getDescription());
+    
+    tasks = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).listPage(0, 10);
+    assertEquals(1, tasks.size());
+    assertEquals("my task", tasks.get(0).getName());
+    assertNull(tasks.get(0).getDescription());
+    
+    tasks = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).locale("en-GB").listPage(0, 10);
+    assertEquals(1, tasks.size());
+    assertEquals("My localized name", tasks.get(0).getName());
+    assertEquals("My localized description", tasks.get(0).getDescription());
+    
+    HistoricTaskInstance task = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).singleResult();
+    assertEquals("my task", task.getName());
+    assertNull(task.getDescription());
+    
+    task = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).locale("en-GB").singleResult();
+    assertEquals("My localized name", task.getName());
+    assertEquals("My localized description", task.getDescription());
+    
+    task = historyService.createHistoricTaskInstanceQuery().processDefinitionId(processInstance.getProcessDefinitionId()).singleResult();
+    assertEquals("my task", task.getName());
+    assertNull(task.getDescription());
   }
 
   @Deployment(resources = { "org/activiti/engine/test/api/runtime/concurrentExecution.bpmn20.xml" })
@@ -361,7 +696,7 @@ public class HistoryServiceTest extends PluggableActivitiTestCase {
     
     // Pass in null-value, should cause exception
     try {
-      instance = historyService.createHistoricProcessInstanceQuery().variableValueEqualsIgnoreCase("upper", null).singleResult();
+      historyService.createHistoricProcessInstanceQuery().variableValueEqualsIgnoreCase("upper", null).singleResult();
       fail("Exception expected");
     } catch(ActivitiIllegalArgumentException ae) {
       assertEquals("value is null", ae.getMessage());
@@ -369,7 +704,7 @@ public class HistoryServiceTest extends PluggableActivitiTestCase {
     
     // Pass in null name, should cause exception
     try {
-      instance = historyService.createHistoricProcessInstanceQuery().variableValueEqualsIgnoreCase(null, "abcdefg").singleResult();
+      historyService.createHistoricProcessInstanceQuery().variableValueEqualsIgnoreCase(null, "abcdefg").singleResult();
       fail("Exception expected");
     } catch(ActivitiIllegalArgumentException ae) {
       assertEquals("name is null", ae.getMessage());

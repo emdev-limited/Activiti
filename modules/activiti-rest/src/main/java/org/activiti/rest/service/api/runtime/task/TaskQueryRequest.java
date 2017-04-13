@@ -16,15 +16,18 @@ package org.activiti.rest.service.api.runtime.task;
 import java.util.Date;
 import java.util.List;
 
+import org.activiti.rest.common.api.PaginateRequest;
 import org.activiti.rest.service.api.engine.variable.QueryVariable;
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.codehaus.jackson.annotate.JsonTypeInfo.Id;
+
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
 
 /**
  * @author Frederik Heremans
+ * @author Joram Barrez
  */
-public class TaskQueryRequest {
+public class TaskQueryRequest extends PaginateRequest {
 
   private String name;
   private String nameLike;
@@ -41,10 +44,13 @@ public class TaskQueryRequest {
   private String delegationState;
   private String candidateUser;
   private String candidateGroup;
+  private List<String> candidateGroupIn;
   private String involvedUser;
   private String processInstanceId;
   private String processInstanceBusinessKey;
   private String processInstanceBusinessKeyLike;
+  private List<String> processInstanceIdIn;
+  private String processDefinitionId;
   private String processDefinitionKey;
   private String processDefinitionName;
   private String processDefinitionKeyLike;
@@ -63,7 +69,12 @@ public class TaskQueryRequest {
   private Boolean active;
   private Boolean includeTaskLocalVariables;
   private Boolean includeProcessVariables;
-  
+  private String tenantId;
+  private String tenantIdLike;
+  private Boolean withoutTenantId;
+  private String candidateOrAssigned;
+  private String category;
+
   private List<QueryVariable> taskVariables;
   private List<QueryVariable> processInstanceVariables;
   
@@ -186,6 +197,14 @@ public class TaskQueryRequest {
     this.candidateGroup = candidateGroup;
   }
   
+  public List<String> getCandidateGroupIn() {
+	return candidateGroupIn;
+  }
+	  
+  public void setCandidateGroupIn(List<String> candidateGroupIn) {
+	this.candidateGroupIn = candidateGroupIn;
+  }
+
   public String getInvolvedUser() {
     return involvedUser;
   }
@@ -201,7 +220,15 @@ public class TaskQueryRequest {
   public void setProcessInstanceId(String processInstanceId) {
     this.processInstanceId = processInstanceId;
   }
-  
+
+  public List<String> getProcessInstanceIdIn() {
+    return processInstanceIdIn;
+  }
+
+  public void setProcessInstanceIdIn(List<String> processInstanceIdIn) {
+      this.processInstanceIdIn = processInstanceIdIn;
+  }
+
   public String getProcessInstanceBusinessKey() {
     return processInstanceBusinessKey;
   }
@@ -363,6 +390,14 @@ public class TaskQueryRequest {
 	  return withoutDueDate;
   }
   
+  public String getProcessDefinitionId() {
+    return processDefinitionId;
+  }
+
+  public void setProcessDefinitionId(String processDefinitionId) {
+    this.processDefinitionId = processDefinitionId;
+  }
+
   public String getProcessDefinitionKey() {
 	  return processDefinitionKey;
   }
@@ -378,4 +413,45 @@ public class TaskQueryRequest {
   public void setProcessDefinitionName(String processDefinitionName) {
 	  this.processDefinitionName = processDefinitionName;
   }
+  
+  public void setTenantId(String tenantId) {
+	  this.tenantId = tenantId;
+  }
+  
+  public String getTenantId() {
+	  return tenantId;
+  }
+  
+  public void setTenantIdLike(String tenantIdLike) {
+	  this.tenantIdLike = tenantIdLike;
+  }
+  
+  public String getTenantIdLike() {
+	  return tenantIdLike;
+  }
+  
+  public void setWithoutTenantId(Boolean withoutTenantId) {
+	  this.withoutTenantId = withoutTenantId;
+  }
+  
+  public Boolean getWithoutTenantId() {
+	  return withoutTenantId;
+  }
+
+  public String getCandidateOrAssigned() {
+    return candidateOrAssigned;
+  }
+
+  public void setCandidateOrAssigned(String candidateOrAssigned) {
+    this.candidateOrAssigned = candidateOrAssigned;
+  }
+
+  public String getCategory() {
+    return category;
+  }
+
+  public void setCategory(String category) {
+    this.category = category;
+  }
+
 }

@@ -13,17 +13,15 @@
 package org.activiti.bpmn.model;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author Tijs Rademakers
  */
-public class SendTask extends Task {
+public class SendTask extends TaskWithFieldExtensions {
 
   protected String type;
   protected String implementationType;
   protected String operationRef;
-  protected List<FieldExtension> fieldExtensions = new ArrayList<FieldExtension>();
   
   public String getType() {
     return type;
@@ -43,10 +41,24 @@ public class SendTask extends Task {
   public void setOperationRef(String operationRef) {
     this.operationRef = operationRef;
   }
-  public List<FieldExtension> getFieldExtensions() {
-    return fieldExtensions;
+  
+  public SendTask clone() {
+    SendTask clone = new SendTask();
+    clone.setValues(this);
+    return clone;
   }
-  public void setFieldExtensions(List<FieldExtension> fieldExtensions) {
-    this.fieldExtensions = fieldExtensions;
+  
+  public void setValues(SendTask otherElement) {
+    super.setValues(otherElement);
+    setType(otherElement.getType());
+    setImplementationType(otherElement.getImplementationType());
+    setOperationRef(otherElement.getOperationRef());
+    
+    fieldExtensions = new ArrayList<FieldExtension>();
+    if (otherElement.getFieldExtensions() != null && !otherElement.getFieldExtensions().isEmpty()) {
+      for (FieldExtension extension : otherElement.getFieldExtensions()) {
+        fieldExtensions.add(extension.clone());
+      }
+    }
   }
 }

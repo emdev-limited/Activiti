@@ -19,22 +19,25 @@ import org.activiti.engine.impl.event.CompensationEventHandler;
 
 /**
  * @author Daniel Meyer
+ * @author Joram Barrez
  */
 public class CompensateEventSubscriptionEntity extends EventSubscriptionEntity {
   
   private static final long serialVersionUID = 1L;
-  
-  @SuppressWarnings("unused") // used by mybatis
+
   private CompensateEventSubscriptionEntity() {
   }
 
   private CompensateEventSubscriptionEntity(ExecutionEntity executionEntity) {
     super(executionEntity);
-    eventType=CompensationEventHandler.EVENT_HANDLER_TYPE;    
+    eventType=CompensationEventHandler.EVENT_HANDLER_TYPE;
   }
   
   public static CompensateEventSubscriptionEntity createAndInsert(ExecutionEntity executionEntity) {
-    CompensateEventSubscriptionEntity eventSubscription = new CompensateEventSubscriptionEntity(executionEntity);    
+    CompensateEventSubscriptionEntity eventSubscription = new CompensateEventSubscriptionEntity(executionEntity);
+    if (executionEntity.getTenantId() != null) {
+    	eventSubscription.setTenantId(executionEntity.getTenantId());
+    }
     eventSubscription.insert();
     return eventSubscription;
   }

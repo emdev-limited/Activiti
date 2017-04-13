@@ -13,6 +13,8 @@
 
 package org.activiti.engine.task;
 
+import java.util.Date;
+
 import org.activiti.engine.TaskService;
 
 
@@ -52,4 +54,14 @@ public interface Attachment {
    * {@link TaskService#createAttachment(String, String, String, String, String, java.io.InputStream) uploaded with an input stream}, 
    * then this method returns null and the content can be fetched with {@link TaskService#getAttachmentContent(String)}. */
   String getUrl();
+  
+  /** reference to the user who created this attachment. */
+  String getUserId();
+
+  /** timestamp when this attachment was created */
+  Date getTime();
+  
+  /** timestamp when this attachment was created */
+  void setTime(Date time);
+
 }

@@ -15,6 +15,7 @@ package org.activiti.explorer.ui.login;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.activiti.engine.ActivitiException;
 import org.activiti.engine.IdentityService;
 import org.activiti.engine.ProcessEngines;
 import org.activiti.explorer.ExplorerApp;
@@ -24,6 +25,8 @@ import org.activiti.explorer.NotificationManager;
 import org.activiti.explorer.ViewManager;
 import org.activiti.explorer.identity.LoggedInUser;
 import org.activiti.explorer.ui.mainlayout.ExplorerLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.vaadin.ui.CustomLayout;
 import com.vaadin.ui.LoginForm.LoginEvent;
@@ -36,6 +39,8 @@ import com.vaadin.ui.LoginForm.LoginListener;
 public class LoginPage extends CustomLayout {
   
   private static final long serialVersionUID = 1L;
+  
+  protected static final Logger LOGGER = LoggerFactory.getLogger(LoginPage.class);
   
   protected transient IdentityService identityService = ProcessEngines.getDefaultProcessEngine().getIdentityService();
   
@@ -56,7 +61,7 @@ public class LoginPage extends CustomLayout {
       try {
         initTemplateContentsFromInputStream(loginHtmlStream);
       } catch (IOException e) {
-        throw new RuntimeException("Error while loading login page template from classpath resource", e);
+        throw new ActivitiException("Error while loading login page template from classpath resource", e);
       }
     } else {
       setTemplateName(ExplorerLayout.CUSTOM_LAYOUT_LOGIN);
@@ -105,7 +110,7 @@ public class LoginPage extends CustomLayout {
           notificationManager.showErrorNotification(Messages.LOGIN_FAILED_HEADER, i18nManager.getMessage(Messages.LOGIN_FAILED_INVALID));
         }
       } catch (Exception e) {
-        e.printStackTrace();
+        LOGGER.error("Error at login", e);
       }
     }
   }

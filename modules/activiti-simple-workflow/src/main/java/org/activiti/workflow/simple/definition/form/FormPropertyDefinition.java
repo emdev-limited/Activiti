@@ -15,9 +15,11 @@ package org.activiti.workflow.simple.definition.form;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.codehaus.jackson.annotate.JsonTypeInfo;
-import org.codehaus.jackson.annotate.JsonTypeInfo.As;
-import org.codehaus.jackson.annotate.JsonTypeInfo.Id;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
 /**
  * Defines one property in a {@link FormDefinition}.
@@ -29,8 +31,11 @@ import org.codehaus.jackson.annotate.JsonTypeInfo.Id;
 public abstract class FormPropertyDefinition {
 
   protected String name;
+  protected String displayName;
   protected boolean mandatory;
   protected boolean writable;
+  protected String type;
+  protected String value;
   
   protected Map<String, Object> parameters = new HashMap<String, Object>(); 
   
@@ -42,7 +47,15 @@ public abstract class FormPropertyDefinition {
     this.name = propertyName;
   }
 
-  public boolean isMandatory() {
+  public String getDisplayName() {
+	return displayName;
+  }
+
+  public void setDisplayName(String displayName) {
+	this.displayName = displayName;
+  }
+
+public boolean isMandatory() {
     return mandatory;
   }
 
@@ -58,10 +71,28 @@ public abstract class FormPropertyDefinition {
 	  this.writable = writable;
   }
   
-  public void setParameters(Map<String, Object> parameters) {
+  public String getType() {
+	return type;
+  }
+
+  public void setType(String type) {
+	this.type = type;
+  }
+  
+  
+  public String getValue() {
+	return value;
+  }
+
+  public void setValue(String value) {
+	this.value = value;
+  }
+
+public void setParameters(Map<String, Object> parameters) {
 	  this.parameters = parameters;
   }
   
+  @JsonInclude(Include.NON_EMPTY)
   public Map<String, Object> getParameters() {
 	  return parameters;
   }
@@ -72,14 +103,14 @@ public abstract class FormPropertyDefinition {
   public abstract FormPropertyDefinition clone();
   
   /**
-   * Sets the properties of this {@link ProcessDefinition} instance based in the
+   * Sets the properties of this {@link FormPropertyDefinition} instance based in the
    * properties present in the given definition. 
    */
   public abstract void setValues(FormPropertyDefinition otherDefinition);
   
   protected Map<String, Object> cloneParameters() {
   	Map<String, Object> result = new HashMap<String, Object>();
-  	if(parameters != null && parameters.size() > 0) {
+  	if(parameters != null && !parameters.isEmpty()) {
   		result.putAll(parameters);
   	}
   	return result;

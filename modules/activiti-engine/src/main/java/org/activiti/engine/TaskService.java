@@ -17,11 +17,12 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.activiti.engine.impl.persistence.entity.VariableInstance;
 import org.activiti.engine.query.NativeQuery;
 import org.activiti.engine.task.Attachment;
 import org.activiti.engine.task.Comment;
-import org.activiti.engine.task.DelegationState;
 import org.activiti.engine.task.Event;
 import org.activiti.engine.task.IdentityLink;
 import org.activiti.engine.task.IdentityLinkType;
@@ -189,6 +190,17 @@ public interface TaskService {
    * @throws ActivitiObjectNotFoundException when no task exists with the given id.
    */
   void complete(String taskId, Map<String, Object> variables);
+  
+  /**
+   * Called when the task is successfully executed, 
+   * and the required task paramaters are given by the end-user.
+   * @param taskId the id of the task to complete, cannot be null.
+   * @param variables task parameters. May be null or empty.
+   * @param localScope If true, the provided variables will be stored task-local, 
+   * 									 instead of process instance wide (which is the default for {@link #complete(String, Map)}).
+   * @throws ActivitiObjectNotFoundException when no task exists with the given id.
+   */
+  void complete(String taskId, Map<String, Object> variables, boolean localScope);
 
   /**
    * Changes the assignee of the given task to the given userId.
@@ -335,12 +347,18 @@ public interface TaskService {
 
   /** get a variables and search in the task scope and if available also the execution scopes. */
   Object getVariable(String taskId, String variableName);
+
+  /** get a variables and search in the task scope and if available also the execution scopes. */
+  <T> T getVariable(String taskId, String variableName, Class<T> variableClass);
   
   /** checks whether or not the task has a variable defined with the given name, in the task scope and if available also the execution scopes. */
   boolean hasVariable(String taskId, String variableName);
 
   /** checks whether or not the task has a variable defined with the given name. */
   Object getVariableLocal(String taskId, String variableName);
+
+  /** checks whether or not the task has a variable defined with the given name. */
+  <T> T getVariableLocal(String taskId, String variableName, Class<T> variableClass);
   
   /** checks whether or not the task has a variable defined with the given name, local task scope only. */
   boolean hasVariableLocal(String taskId, String variableName);
@@ -360,6 +378,9 @@ public interface TaskService {
 
   /** get a variable on a task */
   Map<String, Object> getVariablesLocal(String taskId, Collection<String> variableNames);
+  
+  /** get all variables and search only in the task scope. */
+  List<VariableInstance> getVariableInstancesLocalByTaskIds(Set<String> taskIds);
   
   /**
    * Removes the variable from the task.
@@ -422,6 +443,9 @@ public interface TaskService {
 
   /** The comments related to the given process instance. */
   List<Comment> getProcessInstanceComments(String processInstanceId);
+
+  /** The comments related to the given process instance. */
+  List<Comment> getProcessInstanceComments(String processInstanceId, String type);
 
   /** Add a new attachment to a task and/or a process instance and use an input stream to provide the content */
   Attachment createAttachment(String attachmentType, String taskId, String processInstanceId, String attachmentName, String attachmentDescription, InputStream content);

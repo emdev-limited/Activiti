@@ -4,14 +4,14 @@ import java.util.Calendar;
 import java.util.Collections;
 
 import org.activiti.engine.ActivitiException;
+import org.activiti.engine.impl.cmd.ChangeDeploymentTenantIdCmd;
 import org.activiti.engine.runtime.Job;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseRestTestCase;
+import org.activiti.rest.service.BaseSpringRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.restlet.data.Status;
-import org.restlet.resource.ClientResource;
-import org.restlet.resource.ResourceException;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.methods.HttpGet;
 
 /**
  * Test for all REST-operations related to the Job collection and a single
@@ -19,7 +19,7 @@ import org.restlet.resource.ResourceException;
  * 
  * @author Frederik Heremans
  */
-public class JobCollectionResourceTest extends BaseRestTestCase {
+public class JobCollectionResourceTest extends BaseSpringRestTestCase {
   
   @Deployment(resources = {"org/activiti/rest/service/api/management/JobCollectionResourceTest.testTimerProcess.bpmn20.xml"})
   public void testGetJobs() throws Exception {
@@ -85,34 +85,27 @@ public class JobCollectionResourceTest extends BaseRestTestCase {
     assertResultsPresentInDataResponse(url, asyncJob.getId());
     
     // Fetch using executable
-    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?executable=true";
-    assertResultsPresentInDataResponse(url, asyncJob.getId());
+//    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?executable=true";
+//    assertResultsPresentInDataResponse(url, asyncJob.getId());
     
     // Fetch using timers only
     url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?timersOnly=true";
     assertResultsPresentInDataResponse(url, timerJob.getId());
     
     // Combining messagesOnly with timersOnly should result in exception
-    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION)
-            + "?timersOnly=true&messagesOnly=true");
-    try {
-      client.get();
-      fail("Exception expected");
-    } catch(ResourceException expected) {
-      assertEquals(Status.CLIENT_ERROR_BAD_REQUEST, expected.getStatus());
-      assertEquals("Only one of 'timersOnly' or 'messagesOnly' can be provided.", expected.getStatus().getDescription());
-    }
+    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
+        RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?timersOnly=true&messagesOnly=true"), HttpStatus.SC_BAD_REQUEST));
     
     // Fetch using dueBefore
     url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?dueBefore=" + getISODateString(inAnHour.getTime());
-    assertResultsPresentInDataResponse(url, timerJob.getId());
+    assertResultsPresentInDataResponse(url, timerJob.getId(), asyncJob.getId());
     
     url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?dueBefore=" + getISODateString(hourAgo.getTime());
     assertResultsPresentInDataResponse(url);
     
     // Fetch using dueAfter
     url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?dueAfter=" + getISODateString(hourAgo.getTime());
-    assertResultsPresentInDataResponse(url, timerJob.getId());
+    assertResultsPresentInDataResponse(url, timerJob.getId(), asyncJob.getId());
     
     url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?dueAfter=" + getISODateString(inAnHour.getTime());
     assertResultsPresentInDataResponse(url);
@@ -122,11 +115,37 @@ public class JobCollectionResourceTest extends BaseRestTestCase {
     assertResultsPresentInDataResponse(url, timerJob.getId());
     
     // Fetch with exceptionMessage
-    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?exceptionMessage=" + timerJob.getExceptionMessage();
+    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?exceptionMessage=" + encode(timerJob.getExceptionMessage());
     assertResultsPresentInDataResponse(url, timerJob.getId());
     
     // Fetch with empty exceptionMessage
     url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?exceptionMessage=";
     assertResultsPresentInDataResponse(url);
+    
+    // Without tenant id, before tenant update
+    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?withoutTenantId=true";
+    assertResultsPresentInDataResponse(url, timerJob.getId(), asyncJob.getId());
+    
+    // Set tenant on deployment
+    managementService.executeCommand(new ChangeDeploymentTenantIdCmd(deploymentId, "myTenant"));
+
+    // Without tenant id, after tenant update
+    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?withoutTenantId=true";
+    assertResultsPresentInDataResponse(url);
+    
+    // Tenant id
+    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?tenantId=myTenant";
+    assertResultsPresentInDataResponse(url, timerJob.getId(), asyncJob.getId());
+    
+    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?tenantId=anotherTenant";
+    assertResultsPresentInDataResponse(url);
+    
+    // Tenant id like
+    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?tenantIdLike=" + encode("%enant");
+    assertResultsPresentInDataResponse(url, timerJob.getId(), asyncJob.getId());
+    
+    url = RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_COLLECTION) + "?tenantIdLike=anotherTenant";
+    assertResultsPresentInDataResponse(url);
+    
   }
 }

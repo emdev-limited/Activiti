@@ -20,8 +20,9 @@ import org.activiti.bpmn.model.EventDefinition;
 import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.SignalEventDefinition;
 import org.activiti.bpmn.model.ThrowEvent;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ObjectNode;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @author Tijs Rademakers
@@ -44,8 +45,8 @@ public class ThrowEventJsonConverter extends BaseBpmnJsonConverter {
     convertersToJsonMap.put(ThrowEvent.class, ThrowEventJsonConverter.class);
   }
   
-  protected String getStencilId(FlowElement flowElement) {
-    ThrowEvent throwEvent = (ThrowEvent) flowElement;
+  protected String getStencilId(BaseElement baseElement) {
+    ThrowEvent throwEvent = (ThrowEvent) baseElement;
     List<EventDefinition> eventDefinitions = throwEvent.getEventDefinitions();
     if (eventDefinitions.size() != 1) {
       // return none event as default;
@@ -60,8 +61,8 @@ public class ThrowEventJsonConverter extends BaseBpmnJsonConverter {
     }
   }
 
-  protected void convertElementToJson(ObjectNode propertiesNode, FlowElement flowElement) {
-    ThrowEvent throwEvent = (ThrowEvent) flowElement;
+  protected void convertElementToJson(ObjectNode propertiesNode, BaseElement baseElement) {
+    ThrowEvent throwEvent = (ThrowEvent) baseElement;
     addEventProperties(throwEvent, propertiesNode);
   }
   

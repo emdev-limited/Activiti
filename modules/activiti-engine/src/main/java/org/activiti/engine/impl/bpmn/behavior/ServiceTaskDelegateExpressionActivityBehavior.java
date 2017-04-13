@@ -15,11 +15,13 @@ package org.activiti.engine.impl.bpmn.behavior;
 import java.util.List;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
+import org.activiti.engine.DynamicBpmnConstants;
 import org.activiti.engine.delegate.BpmnError;
 import org.activiti.engine.delegate.Expression;
 import org.activiti.engine.delegate.JavaDelegate;
-import org.activiti.engine.impl.bpmn.helper.ClassDelegate;
+import org.activiti.engine.impl.bpmn.helper.DelegateExpressionUtil;
 import org.activiti.engine.impl.bpmn.helper.ErrorPropagation;
+import org.activiti.engine.impl.bpmn.helper.SkipExpressionUtil;
 import org.activiti.engine.impl.bpmn.parser.FieldDeclaration;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.delegate.ActivityBehaviorInvocation;
@@ -27,6 +29,9 @@ import org.activiti.engine.impl.delegate.JavaDelegateInvocation;
 import org.activiti.engine.impl.pvm.delegate.ActivityBehavior;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.impl.pvm.delegate.SignallableActivityBehavior;
+import org.apache.commons.lang3.StringUtils;
+
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 
 /**
@@ -40,19 +45,22 @@ import org.activiti.engine.impl.pvm.delegate.SignallableActivityBehavior;
  */
 public class ServiceTaskDelegateExpressionActivityBehavior extends TaskActivityBehavior {
   
+  protected String serviceTaskId;
   protected Expression expression;
+  protected Expression skipExpression;
   private final List<FieldDeclaration> fieldDeclarations;
-  
-  public ServiceTaskDelegateExpressionActivityBehavior(Expression expression, List<FieldDeclaration> fieldDeclarations) {
+
+  public ServiceTaskDelegateExpressionActivityBehavior(String serviceTaskId, Expression expression, Expression skipExpression, List<FieldDeclaration> fieldDeclarations) {
+    this.serviceTaskId = serviceTaskId;
     this.expression = expression;
+    this.skipExpression = skipExpression;
     this.fieldDeclarations = fieldDeclarations;
   }
 
   @Override
   public void signal(ActivityExecution execution, String signalName, Object signalData) throws Exception {
-    Object delegate = expression.getValue(execution);
+    Object delegate = DelegateExpressionUtil.resolveDelegateExpression(expression, execution, fieldDeclarations);
     if( delegate instanceof SignallableActivityBehavior){
-      ClassDelegate.applyFieldDeclaration(fieldDeclarations, delegate);
       ((SignallableActivityBehavior) delegate).signal( execution , signalName , signalData);
     }
   }
@@ -60,27 +68,40 @@ public class ServiceTaskDelegateExpressionActivityBehavior extends TaskActivityB
 	public void execute(ActivityExecution execution) throws Exception {
 
     try {
+      boolean isSkipExpressionEnabled = SkipExpressionUtil.isSkipExpressionEnabled(execution, skipExpression); 
+      if (!isSkipExpressionEnabled || 
+              (isSkipExpressionEnabled && !SkipExpressionUtil.shouldSkipFlowElement(execution, skipExpression))) {
+        
+        if (Context.getProcessEngineConfiguration().isEnableProcessDefinitionInfoCache()) {
+          ObjectNode taskElementProperties = Context.getBpmnOverrideElementProperties(serviceTaskId, execution.getProcessDefinitionId());
+          if (taskElementProperties != null && taskElementProperties.has(DynamicBpmnConstants.SERVICE_TASK_DELEGATE_EXPRESSION)) {
+            String overrideExpression = taskElementProperties.get(DynamicBpmnConstants.SERVICE_TASK_DELEGATE_EXPRESSION).asText();
+            if (StringUtils.isNotEmpty(overrideExpression) && overrideExpression.equals(expression.getExpressionText()) == false) {
+              expression = Context.getProcessEngineConfiguration().getExpressionManager().createExpression(overrideExpression);
+            }
+          }
+        }
+        
+        Object delegate = DelegateExpressionUtil.resolveDelegateExpression(expression, execution, fieldDeclarations);
+        if (delegate instanceof ActivityBehavior) {
 
-      // Note: we can't cache the result of the expression, because the
-      // execution can change: eg. delegateExpression='${mySpringBeanFactory.randomSpringBean()}'
-      Object delegate = expression.getValue(execution);
-      ClassDelegate.applyFieldDeclaration(fieldDeclarations, delegate);
+          if(delegate instanceof AbstractBpmnActivityBehavior){
+            ((AbstractBpmnActivityBehavior) delegate).setMultiInstanceActivityBehavior(getMultiInstanceActivityBehavior());
+          }
 
-      if (delegate instanceof ActivityBehavior) {
-        Context.getProcessEngineConfiguration()
-          .getDelegateInterceptor()
-          .handleInvocation(new ActivityBehaviorInvocation((ActivityBehavior) delegate, execution));
+          Context.getProcessEngineConfiguration().getDelegateInterceptor()
+                  .handleInvocation(new ActivityBehaviorInvocation((ActivityBehavior) delegate, execution));
 
-      } else if (delegate instanceof JavaDelegate) {
-        Context.getProcessEngineConfiguration()
-          .getDelegateInterceptor()
-          .handleInvocation(new JavaDelegateInvocation((JavaDelegate) delegate, execution));
-        leave(execution);
+        } else if (delegate instanceof JavaDelegate) {
+          Context.getProcessEngineConfiguration().getDelegateInterceptor().handleInvocation(new JavaDelegateInvocation((JavaDelegate) delegate, execution));
+          leave(execution);
 
+        } else {
+          throw new ActivitiIllegalArgumentException("Delegate expression " + expression + " did neither resolve to an implementation of "
+                  + ActivityBehavior.class + " nor " + JavaDelegate.class);
+        }
       } else {
-        throw new ActivitiIllegalArgumentException("Delegate expression " + expression
-                + " did neither resolve to an implementation of " + ActivityBehavior.class
-                + " nor " + JavaDelegate.class);
+        leave(execution);
       }
     } catch (Exception exc) {
 

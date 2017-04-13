@@ -19,23 +19,21 @@ import java.util.Map;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
+import org.activiti.engine.RuntimeService;
 import org.activiti.engine.impl.ProcessInstanceQueryProperty;
 import org.activiti.engine.query.QueryProperty;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.runtime.ProcessInstanceQuery;
-import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.common.api.DataResponse;
-import org.activiti.rest.common.api.SecuredResource;
 import org.activiti.rest.service.api.RestResponseFactory;
 import org.activiti.rest.service.api.engine.variable.QueryVariable;
 import org.activiti.rest.service.api.engine.variable.QueryVariable.QueryVariableOperation;
-import org.activiti.rest.service.application.ActivitiRestServicesApplication;
-import org.restlet.data.Form;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Frederik Heremans
  */
-public class BaseProcessInstanceResource extends SecuredResource {
+public class BaseProcessInstanceResource {
 
   private static Map<String, QueryProperty> allowedSortProperties = new HashMap<String, QueryProperty>();
 
@@ -43,10 +41,19 @@ public class BaseProcessInstanceResource extends SecuredResource {
     allowedSortProperties.put("processDefinitionId", ProcessInstanceQueryProperty.PROCESS_DEFINITION_ID);
     allowedSortProperties.put("processDefinitionKey", ProcessInstanceQueryProperty.PROCESS_DEFINITION_KEY);
     allowedSortProperties.put("id", ProcessInstanceQueryProperty.PROCESS_INSTANCE_ID);
+    allowedSortProperties.put("tenantId", ProcessInstanceQueryProperty.TENANT_ID);
   }
 
-  protected DataResponse getQueryResponse(ProcessInstanceQueryRequest queryRequest, Form urlQuery) {
-    ProcessInstanceQuery query = ActivitiUtil.getRuntimeService().createProcessInstanceQuery();
+  @Autowired
+  protected RestResponseFactory restResponseFactory;
+  
+  @Autowired
+  protected RuntimeService runtimeService;
+  
+  protected DataResponse getQueryResponse(ProcessInstanceQueryRequest queryRequest, 
+      Map<String, String> requestParams) {
+    
+    ProcessInstanceQuery query = runtimeService.createProcessInstanceQuery();
 
     // Populate query based on request
     if (queryRequest.getProcessInstanceId() != null) {
@@ -88,13 +95,24 @@ public class BaseProcessInstanceResource extends SecuredResource {
     if (queryRequest.getVariables() != null) {
       addVariables(query, queryRequest.getVariables());
     }
+    
+    if(queryRequest.getTenantId() != null) {
+    	query.processInstanceTenantId(queryRequest.getTenantId());
+    }
+    
+    if(queryRequest.getTenantIdLike() != null) {
+    	query.processInstanceTenantIdLike(queryRequest.getTenantIdLike());
+    }
+    
+    if(Boolean.TRUE.equals(queryRequest.getWithoutTenantId())) {
+    	query.processInstanceWithoutTenantId();
+    }
 
-    return new ProcessInstancePaginateList(this).paginateList(urlQuery, query, "id", allowedSortProperties);
+    return new ProcessInstancePaginateList(restResponseFactory)
+        .paginateList(requestParams, queryRequest, query, "id", allowedSortProperties);
   }
 
   protected void addVariables(ProcessInstanceQuery processInstanceQuery, List<QueryVariable> variables) {
-    RestResponseFactory responseFactory = getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
-    
     for (QueryVariable variable : variables) {
       if (variable.getVariableOperation() == null) {
         throw new ActivitiIllegalArgumentException("Variable operation is missing for variable: " + variable.getName());
@@ -105,7 +123,7 @@ public class BaseProcessInstanceResource extends SecuredResource {
 
       boolean nameLess = variable.getName() == null;
 
-      Object actualValue = responseFactory.getVariableValue(variable);
+      Object actualValue = restResponseFactory.getVariableValue(variable);
 
       // A value-only query is only possible using equals-operator
       if (nameLess && variable.getVariableOperation() != QueryVariableOperation.EQUALS) {
@@ -152,18 +170,31 @@ public class BaseProcessInstanceResource extends SecuredResource {
                   + actualValue.getClass().getName());
         }
         break;
-        
+
+      case LIKE_IGNORE_CASE:
+        if (actualValue instanceof String) {
+          processInstanceQuery.variableValueLikeIgnoreCase(variable.getName(), (String) actualValue);
+        } else {
+          throw new ActivitiIllegalArgumentException("Only string variable values are supported for like ignore case, but was: "
+                  + actualValue.getClass().getName());
+        }
+        break;
+
       case GREATER_THAN:
         processInstanceQuery.variableValueGreaterThan(variable.getName(), actualValue);
+        break;
         
       case GREATER_THAN_OR_EQUALS:
         processInstanceQuery.variableValueGreaterThanOrEqual(variable.getName(), actualValue);
+        break;
         
       case LESS_THAN:
         processInstanceQuery.variableValueLessThan(variable.getName(), actualValue);
+        break;
         
       case LESS_THAN_OR_EQUALS:
         processInstanceQuery.variableValueLessThanOrEqual(variable.getName(), actualValue);
+        break;
         
       default:
         throw new ActivitiIllegalArgumentException("Unsupported variable query operation: " + variable.getVariableOperation());
@@ -171,16 +202,11 @@ public class BaseProcessInstanceResource extends SecuredResource {
     }
   }
   
-  protected ProcessInstance getProcessInstanceFromRequest() {
-    String processInstanceId = getAttribute("processInstanceId");
-    if (processInstanceId == null) {
-      throw new ActivitiIllegalArgumentException("The processInstanceId cannot be null");
-    }
-    
-   ProcessInstance processInstance = ActivitiUtil.getRuntimeService().createProcessInstanceQuery()
+  protected ProcessInstance getProcessInstanceFromRequest(String processInstanceId) { 
+    ProcessInstance processInstance = runtimeService.createProcessInstanceQuery()
            .processInstanceId(processInstanceId).singleResult();
     if (processInstance == null) {
-      throw new ActivitiObjectNotFoundException("Could not find a process instance with id '" + processInstanceId + "'.", ProcessInstance.class);
+      throw new ActivitiObjectNotFoundException("Could not find a process instance with id '" + processInstanceId + "'.");
     }
     return processInstance;
   }

@@ -18,10 +18,27 @@ import java.util.List;
 /**
  * @author Tijs Rademakers
  */
-public class FlowNode extends FlowElement {
+public abstract class FlowNode extends FlowElement {
 
+  protected boolean asynchronous;
+  protected boolean notExclusive;
   protected List<SequenceFlow> incomingFlows = new ArrayList<SequenceFlow>();
   protected List<SequenceFlow> outgoingFlows = new ArrayList<SequenceFlow>();
+
+  public boolean isAsynchronous() {
+    return asynchronous;
+  }
+
+  public void setAsynchronous(boolean asynchronous) {
+    this.asynchronous = asynchronous;
+  }
+  
+  public boolean isNotExclusive() {
+    return notExclusive;
+  }
+  public void setNotExclusive(boolean notExclusive) {
+    this.notExclusive = notExclusive;
+  }
 
   public List<SequenceFlow> getIncomingFlows() {
     return incomingFlows;
@@ -37,5 +54,11 @@ public class FlowNode extends FlowElement {
 
   public void setOutgoingFlows(List<SequenceFlow> outgoingFlows) {
     this.outgoingFlows = outgoingFlows;
+  }
+  
+  public void setValues(FlowNode otherNode) {
+    super.setValues(otherNode);
+    setAsynchronous(otherNode.isAsynchronous());
+    setNotExclusive(otherNode.isNotExclusive());
   }
 }

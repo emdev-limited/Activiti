@@ -1,12 +1,15 @@
 package org.activiti.editor.language;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import org.activiti.bpmn.converter.BpmnXMLConverter;
 import org.activiti.bpmn.model.BoundaryEvent;
 import org.activiti.bpmn.model.BpmnModel;
-import org.activiti.bpmn.model.FlowElement;
+import org.activiti.bpmn.model.ErrorEventDefinition;
+import org.activiti.bpmn.model.MessageEventDefinition;
+import org.activiti.bpmn.model.SignalEventDefinition;
+import org.activiti.bpmn.model.TimerEventDefinition;
 import org.junit.Test;
 
 
@@ -22,7 +25,6 @@ public class BoundaryEventConverterTest extends AbstractConverterTest {
   public void doubleConversionValidation() throws Exception {
     BpmnModel bpmnModel = readJsonFile();
     bpmnModel = convertToJsonAndBack(bpmnModel);
-    System.out.println("xml " + new String(new BpmnXMLConverter().convertToXML(bpmnModel), "utf-8"));
     validateModel(bpmnModel);
   }
   
@@ -33,23 +35,29 @@ public class BoundaryEventConverterTest extends AbstractConverterTest {
 
   private void validateModel(BpmnModel model) {
     
-    FlowElement errorElement = model.getMainProcess().getFlowElement("errorEvent");
-    assertTrue(errorElement instanceof BoundaryEvent);
-    
-    FlowElement signalElement = model.getMainProcess().getFlowElement("signalEvent");
-    assertTrue(signalElement instanceof BoundaryEvent);
-    
-    FlowElement timerElement = model.getMainProcess().getFlowElement("timerEvent");
-    assertTrue(timerElement instanceof BoundaryEvent);
-    
-    BoundaryEvent errorEvent  = (BoundaryEvent) errorElement;
-    assertTrue(errorEvent.isCancelActivity()); //always true
-    
-    BoundaryEvent signalEvent  = (BoundaryEvent) signalElement;
-    assertFalse(signalEvent.isCancelActivity());
-    
-    BoundaryEvent timerEvent  = (BoundaryEvent) timerElement;
-    assertFalse(timerEvent.isCancelActivity());
+    BoundaryEvent errorElement = (BoundaryEvent)model.getMainProcess().getFlowElement("errorEvent");
+    ErrorEventDefinition errorEvent = (ErrorEventDefinition)extractEventDefinition(errorElement);
+    assertTrue(errorElement.isCancelActivity()); //always true
+    assertEquals("errorRef", errorEvent.getErrorCode());
+    assertEquals("sid-F21E9F4D-EA19-44DF-B1D3-14663A809CAE", errorElement.getAttachedToRefId());
+
+    BoundaryEvent signalElement = (BoundaryEvent)model.getMainProcess().getFlowElement("signalEvent");
+    SignalEventDefinition signalEvent = (SignalEventDefinition)extractEventDefinition(signalElement);
+    assertFalse(signalElement.isCancelActivity());
+    assertEquals("signalRef", signalEvent.getSignalRef());
+    assertEquals("sid-F21E9F4D-EA19-44DF-B1D3-14663A809CAE", errorElement.getAttachedToRefId());
+
+    BoundaryEvent messageElement = (BoundaryEvent)model.getMainProcess().getFlowElement("messageEvent");
+    MessageEventDefinition messageEvent = (MessageEventDefinition)extractEventDefinition(messageElement);
+    assertFalse(messageElement.isCancelActivity());
+    assertEquals("messageRef", messageEvent.getMessageRef());
+    assertEquals("sid-F21E9F4D-EA19-44DF-B1D3-14663A809CAE", errorElement.getAttachedToRefId());
+
+    BoundaryEvent timerElement = (BoundaryEvent)model.getMainProcess().getFlowElement("timerEvent");
+    TimerEventDefinition timerEvent = (TimerEventDefinition)extractEventDefinition(timerElement);
+    assertFalse(timerElement.isCancelActivity());
+    assertEquals("PT5M", timerEvent.getTimeDuration());
+    assertEquals("sid-F21E9F4D-EA19-44DF-B1D3-14663A809CAE", errorElement.getAttachedToRefId());
 
   }
   

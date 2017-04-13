@@ -28,6 +28,7 @@ import org.activiti.bpmn.model.IOParameter;
 import org.activiti.bpmn.model.InclusiveGateway;
 import org.activiti.bpmn.model.IntermediateCatchEvent;
 import org.activiti.bpmn.model.ManualTask;
+import org.activiti.bpmn.model.MapExceptionEntry;
 import org.activiti.bpmn.model.ParallelGateway;
 import org.activiti.bpmn.model.ReceiveTask;
 import org.activiti.bpmn.model.ScriptTask;
@@ -37,9 +38,12 @@ import org.activiti.bpmn.model.Signal;
 import org.activiti.bpmn.model.StartEvent;
 import org.activiti.bpmn.model.SubProcess;
 import org.activiti.bpmn.model.Task;
+import org.activiti.bpmn.model.TaskWithFieldExtensions;
 import org.activiti.bpmn.model.ThrowEvent;
 import org.activiti.bpmn.model.Transaction;
 import org.activiti.bpmn.model.UserTask;
+import org.activiti.engine.ActivitiException;
+import org.activiti.engine.delegate.BusinessRuleTaskDelegate;
 import org.activiti.engine.delegate.Expression;
 import org.activiti.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
 import org.activiti.engine.impl.bpmn.behavior.BoundaryEventActivityBehavior;
@@ -88,15 +92,16 @@ import org.activiti.engine.impl.task.TaskDefinition;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * Default implementation of the {@link ActivityBehaviorFactory}. 
- * Used when no custom {@link ActivityBehaviorFactory} is injected on 
- * the {@link ProcessEngineConfigurationImpl}.
+ * Default implementation of the {@link ActivityBehaviorFactory}. Used when no
+ * custom {@link ActivityBehaviorFactory} is injected on the
+ * {@link ProcessEngineConfigurationImpl}.
  * 
  * @author Joram Barrez
  */
 public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory implements ActivityBehaviorFactory {
   
   // Start event
+  public final static String EXCEPTION_MAP_FIELD = "mapExceptions";
 
   public NoneStartEventActivityBehavior createNoneStartEventActivityBehavior(StartEvent startEvent) {
     return new NoneStartEventActivityBehavior();
@@ -121,23 +126,43 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
   }
   
   public UserTaskActivityBehavior createUserTaskActivityBehavior(UserTask userTask, TaskDefinition taskDefinition) {
-    return new UserTaskActivityBehavior(taskDefinition);
+    return new UserTaskActivityBehavior(userTask.getId(), taskDefinition);
   }
 
   // Service task
   
   public ClassDelegate createClassDelegateServiceTask(ServiceTask serviceTask) {
-    return new ClassDelegate(serviceTask.getImplementation(), createFieldDeclarations(serviceTask.getFieldExtensions()));
+    Expression skipExpression;
+    if (StringUtils.isNotEmpty(serviceTask.getSkipExpression())) {
+      skipExpression = expressionManager.createExpression(serviceTask.getSkipExpression());
+    } else {
+      skipExpression = null;
+    }
+    return new ClassDelegate(serviceTask.getId(), serviceTask.getImplementation(), 
+        createFieldDeclarations(serviceTask.getFieldExtensions()), skipExpression, serviceTask.getMapExceptions());
   }
   
   public ServiceTaskDelegateExpressionActivityBehavior createServiceTaskDelegateExpressionActivityBehavior(ServiceTask serviceTask) {
     Expression delegateExpression = expressionManager.createExpression(serviceTask.getImplementation());
-    return new ServiceTaskDelegateExpressionActivityBehavior(delegateExpression, createFieldDeclarations(serviceTask.getFieldExtensions()));
+    Expression skipExpression;
+    if (StringUtils.isNotEmpty(serviceTask.getSkipExpression())) {
+      skipExpression = expressionManager.createExpression(serviceTask.getSkipExpression());
+    } else {
+      skipExpression = null;
+    }
+    return new ServiceTaskDelegateExpressionActivityBehavior(serviceTask.getId(), delegateExpression, 
+        skipExpression, createFieldDeclarations(serviceTask.getFieldExtensions()));
   }
   
   public ServiceTaskExpressionActivityBehavior createServiceTaskExpressionActivityBehavior(ServiceTask serviceTask) {
     Expression expression = expressionManager.createExpression(serviceTask.getImplementation());
-    return new ServiceTaskExpressionActivityBehavior(expression, serviceTask.getResultVariableName());
+    Expression skipExpression;
+    if (StringUtils.isNotEmpty(serviceTask.getSkipExpression())) {
+      skipExpression = expressionManager.createExpression(serviceTask.getSkipExpression());
+    } else {
+      skipExpression = null;
+    }
+    return new ServiceTaskExpressionActivityBehavior(serviceTask.getId(), expression, skipExpression, serviceTask.getResultVariableName());
   }
   
   public WebServiceActivityBehavior createWebServiceActivityBehavior(ServiceTask serviceTask) {
@@ -158,7 +183,7 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
   
   protected MailActivityBehavior createMailActivityBehavior(String taskId, List<FieldExtension> fields) {
     List<FieldDeclaration> fieldDeclarations = createFieldDeclarations(fields);
-    return (MailActivityBehavior) ClassDelegate.instantiateDelegate(MailActivityBehavior.class, fieldDeclarations);
+    return (MailActivityBehavior) ClassDelegate.defaultInstantiateDelegate(MailActivityBehavior.class, fieldDeclarations);
   }
   
   // We do not want a hard dependency on Mule, hence we return ActivityBehavior and instantiate 
@@ -171,18 +196,15 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
     return createMuleActivityBehavior(sendTask, sendTask.getFieldExtensions(), bpmnModel);
   }
   
-  protected ActivityBehavior createMuleActivityBehavior(Task task, List<FieldExtension> fieldExtensions, BpmnModel bpmnModel) {
+  protected ActivityBehavior createMuleActivityBehavior(TaskWithFieldExtensions task, List<FieldExtension> fieldExtensions, BpmnModel bpmnModel) {
     try {
       
       Class< ? > theClass = Class.forName("org.activiti.mule.MuleSendActivitiBehavior");
       List<FieldDeclaration> fieldDeclarations = createFieldDeclarations(fieldExtensions);
-      return (ActivityBehavior) ClassDelegate.instantiateDelegate(theClass, fieldDeclarations);
+      return (ActivityBehavior) ClassDelegate.defaultInstantiateDelegate(theClass, fieldDeclarations);
       
     } catch (ClassNotFoundException e) {
-      
-      bpmnModel.addProblem("Could not find org.activiti.mule.MuleSendActivitiBehavior: " + e.getMessage(), task);
-      return null;
-      
+    	throw new ActivitiException("Could not find org.activiti.mule.MuleSendActivitiBehavior: ", e);
     }
   }
   
@@ -196,7 +218,7 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
     return createCamelActivityBehavior(sendTask, sendTask.getFieldExtensions(), bpmnModel);
   }
  
-  protected ActivityBehavior createCamelActivityBehavior(Task task, List<FieldExtension> fieldExtensions, BpmnModel bpmnModel) {
+  protected ActivityBehavior createCamelActivityBehavior(TaskWithFieldExtensions task, List<FieldExtension> fieldExtensions, BpmnModel bpmnModel) {
     try {
       Class< ? > theClass = null;
       FieldExtension behaviorExtension = null;
@@ -218,23 +240,39 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
       }
       
       List<FieldDeclaration> fieldDeclarations = createFieldDeclarations(fieldExtensions);
-      return (ActivityBehavior) ClassDelegate.instantiateDelegate(theClass, fieldDeclarations);
+      addExceptionMapAsFieldDeclaraion(fieldDeclarations, task.getMapExceptions());
+      return (ActivityBehavior) ClassDelegate.defaultInstantiateDelegate(theClass, fieldDeclarations);
      
     } catch (ClassNotFoundException e) {
-     
-      bpmnModel.addProblem("Could not find org.activiti.camel.CamelBehavior: " + e.getMessage(), task);
-      return null;
+    	throw new ActivitiException("Could not find org.activiti.camel.CamelBehavior: ", e);
     }
   }
   
+  private void addExceptionMapAsFieldDeclaraion(List<FieldDeclaration> fieldDeclarations, List<MapExceptionEntry> mapExceptions) {
+    FieldDeclaration exceptionMapsFieldDeclaration = new FieldDeclaration(EXCEPTION_MAP_FIELD, mapExceptions.getClass().toString(), mapExceptions);
+    fieldDeclarations.add(exceptionMapsFieldDeclaration);
+    
+  }
+
   public ShellActivityBehavior createShellActivityBehavior(ServiceTask serviceTask) {
     List<FieldDeclaration> fieldDeclarations = createFieldDeclarations(serviceTask.getFieldExtensions());
-    return (ShellActivityBehavior) ClassDelegate.instantiateDelegate(ShellActivityBehavior.class, fieldDeclarations);
+    return (ShellActivityBehavior) ClassDelegate.defaultInstantiateDelegate(ShellActivityBehavior.class, fieldDeclarations);
   }
   
-  public BusinessRuleTaskActivityBehavior createBusinessRuleTaskActivityBehavior(BusinessRuleTask businessRuleTask) {
-    BusinessRuleTaskActivityBehavior ruleActivity = new BusinessRuleTaskActivityBehavior();
-    
+  public ActivityBehavior createBusinessRuleTaskActivityBehavior(BusinessRuleTask businessRuleTask) {
+    BusinessRuleTaskDelegate ruleActivity = null;
+    if (StringUtils.isNotEmpty(businessRuleTask.getClassName())){
+      try {
+        Class<?> clazz = Class.forName(businessRuleTask.getClassName());
+        ruleActivity = (BusinessRuleTaskDelegate) clazz.newInstance();
+      } catch (Exception e) {
+        throw new ActivitiException("Could not instantiate businessRuleTask (id:" + businessRuleTask.getId()  + ") class: " + 
+            businessRuleTask.getClassName(), e);
+      }
+    } else {
+      ruleActivity = new BusinessRuleTaskActivityBehavior();
+    }
+	
     for (String ruleVariableInputObject : businessRuleTask.getInputVariables()) {
       ruleActivity.addRuleVariableInputIdExpression(expressionManager.createExpression(ruleVariableInputObject.trim()));
     }
@@ -261,7 +299,7 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
     if (language == null) {
       language = ScriptingEngines.DEFAULT_SCRIPTING_LANGUAGE;
     }
-    return new ScriptTaskActivityBehavior(scriptTask.getScript(), language, scriptTask.getResultVariable(), scriptTask.isAutoStoreVariables());
+    return new ScriptTaskActivityBehavior(scriptTask.getId(), scriptTask.getScript(), language, scriptTask.getResultVariable(), scriptTask.isAutoStoreVariables());
   }
 
   // Gateways
@@ -305,10 +343,11 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
     
     CallActivityBehavior callActivityBehaviour = null;
     if (StringUtils.isNotEmpty(callActivity.getCalledElement()) && callActivity.getCalledElement().matches(expressionRegex)) {
-      callActivityBehaviour = new CallActivityBehavior(expressionManager.createExpression(callActivity.getCalledElement()));
+      callActivityBehaviour = new CallActivityBehavior(expressionManager.createExpression(callActivity.getCalledElement()), callActivity.getMapExceptions());
     } else {
-      callActivityBehaviour = new CallActivityBehavior(callActivity.getCalledElement());
+      callActivityBehaviour = new CallActivityBehavior(callActivity.getCalledElement(), callActivity.getMapExceptions());
     }
+    callActivityBehaviour.setInheritVariables(callActivity.isInheritVariables());
 
     for (IOParameter ioParameter : callActivity.getInParameters()) {
       if (StringUtils.isNotEmpty(ioParameter.getSourceExpression())) {
@@ -372,7 +411,7 @@ public class DefaultActivityBehaviorFactory extends AbstractBehaviorFactory impl
   }
   
   public TerminateEndEventActivityBehavior createTerminateEndEventActivityBehavior(EndEvent endEvent) {
-    return new TerminateEndEventActivityBehavior();
+    return new TerminateEndEventActivityBehavior(endEvent);
   }
 
   // Boundary Events

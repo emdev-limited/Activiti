@@ -15,89 +15,114 @@ package org.activiti.rest.service.api.runtime.process;
 
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
+import org.activiti.engine.HistoryService;
+import org.activiti.engine.history.HistoricVariableInstance;
 import org.activiti.engine.runtime.ProcessInstance;
-import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.common.api.DataResponse;
-import org.activiti.rest.service.api.RestResponseFactory;
 import org.activiti.rest.service.api.engine.variable.RestVariable;
-import org.activiti.rest.service.application.ActivitiRestServicesApplication;
-import org.restlet.data.Form;
-import org.restlet.data.Status;
-import org.restlet.resource.Get;
-import org.restlet.resource.Post;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 
 /**
+ * Modified the "createProcessInstance" method to conditionally call a 
+ *   "createProcessInstanceResponse" method with a different signature, which
+ *   will conditionally return the process variables that exist when the process
+ *   instance either enters its first wait state or completes. In this case,
+ *   the different method is always called with a flag of true, which means
+ *   that it will always return those variables. If variables are not to be 
+ *   returned, the original method is called, which doesn't return the variables.
+ * 
  * @author Frederik Heremans
+ * @author Ryan Johnston (@rjfsu)
  */
+@RestController
 public class ProcessInstanceCollectionResource extends BaseProcessInstanceResource {
+  
+  @Autowired
+  protected HistoryService historyService;
 
-  @Get
-  public DataResponse getProcessInstances() {
-    if(!authenticate()) {
-      return null;
-    }
-    Form urlQuery = getQuery();
-   
+  @RequestMapping(value="/runtime/process-instances", method = RequestMethod.GET, produces="application/json")
+  public DataResponse getProcessInstances(@RequestParam Map<String,String> allRequestParams, HttpServletRequest request) {
     // Populate query based on request
     ProcessInstanceQueryRequest queryRequest = new ProcessInstanceQueryRequest();
     
-    if(getQueryParameter("id", urlQuery) != null) {
-      queryRequest.setProcessInstanceId(getQueryParameter("id", urlQuery));
+    if (allRequestParams.containsKey("id")) {
+      queryRequest.setProcessInstanceId(allRequestParams.get("id"));
     }
     
-    if(getQueryParameter("processDefinitionKey", urlQuery) != null) {
-      queryRequest.setProcessDefinitionKey(getQueryParameter("processDefinitionKey", urlQuery));
+    if (allRequestParams.containsKey("processDefinitionKey")) {
+      queryRequest.setProcessDefinitionKey(allRequestParams.get("processDefinitionKey"));
     }
     
-    if(getQueryParameter("processDefinitionId", urlQuery) != null) {
-      queryRequest.setProcessDefinitionId(getQueryParameter("processDefinitionId", urlQuery));
+    if (allRequestParams.containsKey("processDefinitionId")) {
+      queryRequest.setProcessDefinitionId(allRequestParams.get("processDefinitionId"));
     }
     
-    if(getQueryParameter("businessKey", urlQuery) != null) {
-      queryRequest.setProcessBusinessKey(getQueryParameter("businessKey", urlQuery));
+    if (allRequestParams.containsKey("businessKey")) {
+      queryRequest.setProcessBusinessKey(allRequestParams.get("businessKey"));
     }
     
-    if(getQueryParameter("involvedUser", urlQuery) != null) {
-      queryRequest.setInvolvedUser(getQueryParameter("involvedUser", urlQuery));
+    if (allRequestParams.containsKey("involvedUser")) {
+      queryRequest.setInvolvedUser(allRequestParams.get("involvedUser"));
     }
     
-    if(getQueryParameter("suspended", urlQuery) != null) {
-      queryRequest.setSuspended(getQueryParameterAsBoolean("suspended", urlQuery));
+    if (allRequestParams.containsKey("suspended")) {
+      queryRequest.setSuspended(Boolean.valueOf(allRequestParams.get("suspended")));
     }
     
-    if(getQueryParameter("superProcessInstanceId", urlQuery) != null) {
-      queryRequest.setSuperProcessInstanceId(getQueryParameter("superProcessInstanceId", urlQuery));
+    if (allRequestParams.containsKey("superProcessInstanceId")) {
+      queryRequest.setSuperProcessInstanceId(allRequestParams.get("superProcessInstanceId"));
     }
     
-    if(getQueryParameter("subProcessInstanceId", urlQuery) != null) {
-      queryRequest.setSubProcessInstanceId(getQueryParameter("subProcessInstanceId", urlQuery));
+    if (allRequestParams.containsKey("subProcessInstanceId")) {
+      queryRequest.setSubProcessInstanceId(allRequestParams.get("subProcessInstanceId"));
     }
     
-    if(getQueryParameter("excludeSubprocesses", urlQuery) != null) {
-      queryRequest.setExcludeSubprocesses(getQueryParameterAsBoolean("excludeSubprocesses", urlQuery));
+    if (allRequestParams.containsKey("excludeSubprocesses")) {
+      queryRequest.setExcludeSubprocesses(Boolean.valueOf(allRequestParams.get("excludeSubprocesses")));
     }
     
-    if(getQueryParameter("includeProcessVariables", urlQuery) != null) {
-      queryRequest.setIncludeProcessVariables(getQueryParameterAsBoolean("includeProcessVariables", urlQuery));
+    if (allRequestParams.containsKey("includeProcessVariables")) {
+      queryRequest.setIncludeProcessVariables(Boolean.valueOf(allRequestParams.get("includeProcessVariables")));
     }
     
-    return getQueryResponse(queryRequest, urlQuery);
+    if (allRequestParams.containsKey("tenantId")) {
+      queryRequest.setTenantId(allRequestParams.get("tenantId"));
+    }
+    
+    if (allRequestParams.containsKey("tenantIdLike")) {
+      queryRequest.setTenantIdLike(allRequestParams.get("tenantIdLike"));
+    }
+    
+    if (allRequestParams.containsKey("withoutTenantId")) {
+      if (Boolean.valueOf(allRequestParams.get("withoutTenantId"))) {
+        queryRequest.setWithoutTenantId(Boolean.TRUE);
+      }
+    }
+    
+    return getQueryResponse(queryRequest, allRequestParams);
   }
   
   
-  @Post
-  public ProcessInstanceResponse createProcessInstance(ProcessInstanceCreateRequest request) {
+  @RequestMapping(value="/runtime/process-instances", method = RequestMethod.POST, produces="application/json")
+  public ProcessInstanceResponse createProcessInstance(@RequestBody ProcessInstanceCreateRequest request,
+      HttpServletRequest httpRequest, HttpServletResponse response) {
     
-    if(!authenticate()) {
-      return null;
-    }
-    
-    if(request.getProcessDefinitionId() == null && request.getProcessDefinitionKey() == null && request.getMessage() == null) {
+    if (request.getProcessDefinitionId() == null && request.getProcessDefinitionKey() == null && request.getMessage() == null) {
       throw new ActivitiIllegalArgumentException("Either processDefinitionId, processDefinitionKey or message is required.");
     }
     
@@ -105,39 +130,75 @@ public class ProcessInstanceCollectionResource extends BaseProcessInstanceResour
             + ((request.getProcessDefinitionKey() != null) ? 1 : 0)
             + ((request.getMessage() != null) ? 1 : 0);
     
-    if(paramsSet > 1) {
+    if (paramsSet > 1) {
       throw new ActivitiIllegalArgumentException("Only one of processDefinitionId, processDefinitionKey or message should be set.");
     }
     
-    RestResponseFactory factory = getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
+    if (request.isCustomTenantSet()) {
+    	// Tenant-id can only be used with either key or message
+    	if(request.getProcessDefinitionId() != null) {
+    		throw new ActivitiIllegalArgumentException("TenantId can only be used with either processDefinitionKey or message.");
+    	}
+    }
     
     Map<String, Object> startVariables = null;
-    if(request.getVariables() != null) {
+    if (request.getVariables() != null) {
       startVariables = new HashMap<String, Object>();
-      for(RestVariable variable : request.getVariables()) {
-        if(variable.getName() == null) {
+      for (RestVariable variable : request.getVariables()) {
+        if (variable.getName() == null) {
           throw new ActivitiIllegalArgumentException("Variable name is required.");
         }
-        startVariables.put(variable.getName(), factory.getVariableValue(variable));
+        startVariables.put(variable.getName(), restResponseFactory.getVariableValue(variable));
       }
     }
     
     // Actually start the instance based on key or id
     try {
       ProcessInstance instance = null;
-      if(request.getProcessDefinitionId() != null) {
-        instance = ActivitiUtil.getRuntimeService().startProcessInstanceById(
+      if (request.getProcessDefinitionId() != null) {
+        instance = runtimeService.startProcessInstanceById(
                 request.getProcessDefinitionId(), request.getBusinessKey(), startVariables);
-      } else if(request.getProcessDefinitionKey() != null){
-        instance = ActivitiUtil.getRuntimeService().startProcessInstanceByKey(
-                request.getProcessDefinitionKey(), request.getBusinessKey(), startVariables);
+      } else if (request.getProcessDefinitionKey() != null) {
+      	if (request.isCustomTenantSet()) {
+      		instance = runtimeService.startProcessInstanceByKeyAndTenantId(
+      				request.getProcessDefinitionKey(), request.getBusinessKey(), startVariables, request.getTenantId());
+      	} else {
+      		instance = runtimeService.startProcessInstanceByKey(
+      				request.getProcessDefinitionKey(), request.getBusinessKey(), startVariables);
+      	}
       } else {
-        instance = ActivitiUtil.getRuntimeService().startProcessInstanceByMessage(
-                request.getMessage(), request.getBusinessKey(), startVariables);
+      	if (request.isCustomTenantSet()) {
+      		instance = runtimeService.startProcessInstanceByMessageAndTenantId(
+      				request.getMessage(), request.getBusinessKey(), startVariables, request.getTenantId());
+      	} else {
+      		instance = runtimeService.startProcessInstanceByMessage(
+      				request.getMessage(), request.getBusinessKey(), startVariables);
+      	}
       }
       
-      setStatus(Status.SUCCESS_CREATED);
-      return factory.createProcessInstanceResponse(this, instance);
+      response.setStatus(HttpStatus.CREATED.value());
+      
+      //Added by Ryan Johnston
+      if (request.getReturnVariables()) {
+        Map<String, Object> runtimeVariableMap = null;
+        List<HistoricVariableInstance> historicVariableList = null;
+        if (instance.isEnded()) {
+          historicVariableList = historyService.createHistoricVariableInstanceQuery()
+              .processInstanceId(instance.getId())
+              .list();
+        } else {
+          runtimeVariableMap = runtimeService.getVariables(instance.getId());
+        }
+    	  return restResponseFactory.createProcessInstanceResponse(instance, true, 
+    	      runtimeVariableMap, historicVariableList);
+    	  
+      } else {
+    	  return restResponseFactory.createProcessInstanceResponse(instance);
+      }
+      //End Added by Ryan Johnston
+      
+      //Removed by Ryan Johnston (obsolete given the above).
+      //return factory.createProcessInstanceResponse(this, instance);
     } catch(ActivitiObjectNotFoundException aonfe) {
       throw new ActivitiIllegalArgumentException(aonfe.getMessage(), aonfe);
     }

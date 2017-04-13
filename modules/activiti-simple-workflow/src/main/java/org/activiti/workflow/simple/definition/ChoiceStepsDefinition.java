@@ -17,7 +17,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
 
 /**
  * Defines a block of steps of which one collection of steps is executed based on conditions.
@@ -66,7 +69,7 @@ public class ChoiceStepsDefinition extends AbstractConditionStepListContainer<Ch
     setParameters(new HashMap<String, Object>(otherDefinition.getParameters()));
     
     steps = new ArrayList<ListConditionStepDefinition<ChoiceStepsDefinition>>();
-    if (definition.getStepList() != null && definition.getStepList().size() > 0) {
+    if (definition.getStepList() != null && !definition.getStepList().isEmpty()) {
       for (ListConditionStepDefinition<ChoiceStepsDefinition> stepDefinition : definition.getStepList()) {
         steps.add(stepDefinition.clone());
       }
@@ -74,6 +77,7 @@ public class ChoiceStepsDefinition extends AbstractConditionStepListContainer<Ch
   }
   
   @Override
+  @JsonSerialize(include=Inclusion.NON_EMPTY)
   public Map<String, Object> getParameters() {
   	return parameters;
   }

@@ -62,6 +62,8 @@ public interface ActivityExecution extends DelegateExecution {
    */
   ActivityExecution getParent();
   
+  ActivityExecution getProcessInstance();
+  
   /**
    * returns the list of execution of which this execution the parent of.
    */
@@ -89,6 +91,13 @@ public interface ActivityExecution extends DelegateExecution {
    * returns whether this execution has ended or not.
    */
   boolean isEnded();
+  
+  /**
+   * Sets whether this execution is ended or not.
+   * Note that this won't trigger any deletion or such, it simply sets the boolean.
+   * Use {@link #end()} to set the boolean and execution removal methods. 
+   */
+  void setEnded(boolean ended);
   
   /**
    * changes the concurrent indicator on this execution.
@@ -144,5 +153,5 @@ public interface ActivityExecution extends DelegateExecution {
    * Performs destroy scope behavior: all child executions and sub-process instances and other related
    * resources are removed. The execution itself can continue execution. 
    */
-  void destroyScope(String string);
+  void destroyScope(String reason);
 }

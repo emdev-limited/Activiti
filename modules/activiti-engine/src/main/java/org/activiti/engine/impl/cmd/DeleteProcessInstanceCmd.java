@@ -18,7 +18,6 @@ import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.impl.interceptor.Command;
 import org.activiti.engine.impl.interceptor.CommandContext;
 
-
 /**
  * @author Joram Barrez
  */
@@ -34,10 +33,10 @@ public class DeleteProcessInstanceCmd implements Command<Void>, Serializable {
   }
 
   public Void execute(CommandContext commandContext) { 
-    if(processInstanceId == null) {
+    if (processInstanceId == null) {
       throw new ActivitiIllegalArgumentException("processInstanceId is null");
     }
-    
+
     commandContext
       .getExecutionEntityManager()
       .deleteProcessInstance(processInstanceId, deleteReason);

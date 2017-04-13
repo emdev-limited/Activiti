@@ -41,11 +41,11 @@ public class ClaimTaskCmd extends NeedsActiveTaskCmd<Void> {
           throw new ActivitiTaskAlreadyClaimedException(task.getId(), task.getAssignee());
         }
       } else {
-        task.setAssignee(userId);
+        task.setAssignee(userId, true, true);
       }      
     } else {
       // Task should be assigned to no one
-      task.setAssignee(null);
+      task.setAssignee(null, true, true);
     }
     
     // Add claim time

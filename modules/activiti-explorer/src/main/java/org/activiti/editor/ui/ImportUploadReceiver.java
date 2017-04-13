@@ -33,10 +33,11 @@ import org.activiti.explorer.I18nManager;
 import org.activiti.explorer.Messages;
 import org.activiti.explorer.NotificationManager;
 import org.activiti.explorer.ViewManager;
+import org.activiti.explorer.util.XmlUtil;
 import org.apache.commons.lang3.StringUtils;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.node.ObjectNode;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.vaadin.ui.Upload.FinishedEvent;
 import com.vaadin.ui.Upload.FinishedListener;
 import com.vaadin.ui.Upload.Receiver;
@@ -87,19 +88,18 @@ public class ImportUploadReceiver implements Receiver, FinishedListener, ModelDa
       try {
         if (fileName.endsWith(".bpmn20.xml") || fileName.endsWith(".bpmn")) {
           validFile = true;
-          BpmnXMLConverter xmlConverter = new BpmnXMLConverter();
-          XMLInputFactory xif = XMLInputFactory.newInstance();
+            
+          XMLInputFactory xif = XmlUtil.createSafeXmlInputFactory();
           InputStreamReader in = new InputStreamReader(new ByteArrayInputStream(outputStream.toByteArray()), "UTF-8");
           XMLStreamReader xtr = xif.createXMLStreamReader(in);
           BpmnModel bpmnModel = new BpmnXMLConverter().convertToBpmnModel(xtr);
-          xmlConverter.convertToBpmnModel(xtr);
           
           if (bpmnModel.getMainProcess() == null || bpmnModel.getMainProcess().getId() == null) {
             notificationManager.showErrorNotification(Messages.MODEL_IMPORT_FAILED, 
                 i18nManager.getMessage(Messages.MODEL_IMPORT_INVALID_BPMN_EXPLANATION));
           } else {
           
-            if (bpmnModel.getLocationMap().size() == 0) {
+            if (bpmnModel.getLocationMap().isEmpty()) {
               notificationManager.showErrorNotification(Messages.MODEL_IMPORT_INVALID_BPMNDI,
                   i18nManager.getMessage(Messages.MODEL_IMPORT_INVALID_BPMNDI_EXPLANATION));
             } else {

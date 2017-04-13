@@ -14,10 +14,12 @@ package org.activiti.camel;
 
 import java.util.Map;
 
+import org.activiti.engine.IdentityService;
 import org.activiti.engine.RuntimeService;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Endpoint;
 import org.apache.camel.impl.DefaultComponent;
+import org.apache.camel.util.IntrospectionSupport;
 
 /**
  * This class has been modified to be consistent with the changes to CamelBehavior and its implementations. The set of changes
@@ -25,23 +27,26 @@ import org.apache.camel.impl.DefaultComponent;
  * or you can choose to create your own. Please reference the comments for the "CamelBehavior" class for more information on the 
  * out-of-the-box implementation class options. 
  * 
- * @author Ryan Johnston (@rjfsu), Tijs Rademakers
+ * @author Ryan Johnston (@rjfsu), Tijs Rademakers, Arnold Schrijver
  */
 public class ActivitiComponent extends DefaultComponent {
 
-  private RuntimeService runtimeService;
+  protected IdentityService identityService;
+    
+  protected RuntimeService runtimeService;
   
-  private boolean copyVariablesToProperties;
+  protected boolean copyVariablesToProperties;
 
-  private boolean copyVariablesToBodyAsMap;
+  protected boolean copyVariablesToBodyAsMap;
 
-  private boolean copyCamelBodyToBody;
+  protected boolean copyCamelBodyToBody;
 
   public ActivitiComponent() {}
   
   @Override
   public void setCamelContext(CamelContext context) {
     super.setCamelContext(context);
+    identityService = getByType(context, IdentityService.class);
     runtimeService = getByType(context, RuntimeService.class);
   }
 
@@ -55,11 +60,20 @@ public class ActivitiComponent extends DefaultComponent {
   }
 
   @Override
-  protected Endpoint createEndpoint(String s, String s1, Map<String, Object> stringObjectMap) throws Exception {
-    ActivitiEndpoint ae = new ActivitiEndpoint(s, getCamelContext(), runtimeService);
+  protected Endpoint createEndpoint(String s, String s1, Map<String, Object> parameters) throws Exception {
+    ActivitiEndpoint ae = new ActivitiEndpoint(s, getCamelContext());
+    ae.setIdentityService(identityService);
+    ae.setRuntimeService(runtimeService);
+    
     ae.setCopyVariablesToProperties(this.copyVariablesToProperties);
     ae.setCopyVariablesToBodyAsMap(this.copyVariablesToBodyAsMap);
     ae.setCopyCamelBodyToBody(this.copyCamelBodyToBody);
+    
+    Map<String, Object> returnVars = IntrospectionSupport.extractProperties(parameters, "var.return.");
+    if (returnVars != null && returnVars.size() > 0) {
+      ae.getReturnVarMap().putAll(returnVars);
+    }
+    
     return ae;
   }
   

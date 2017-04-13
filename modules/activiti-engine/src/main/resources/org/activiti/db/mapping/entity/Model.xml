@@ -7,21 +7,64 @@
   <!-- MODEL INSERT -->
   
   <insert id="insertModel" parameterType="org.activiti.engine.impl.persistence.entity.ModelEntity">
-    insert into ${prefix}ACT_RE_MODEL(ID_, REV_, NAME_, KEY_, CATEGORY_, CREATE_TIME_, LAST_UPDATE_TIME_, VERSION_, META_INFO_, DEPLOYMENT_ID_, EDITOR_SOURCE_VALUE_ID_, EDITOR_SOURCE_EXTRA_VALUE_ID_)
+    insert into ${prefix}ACT_RE_MODEL(ID_, REV_, NAME_, KEY_, CATEGORY_, CREATE_TIME_, LAST_UPDATE_TIME_, VERSION_, META_INFO_, DEPLOYMENT_ID_, EDITOR_SOURCE_VALUE_ID_, EDITOR_SOURCE_EXTRA_VALUE_ID_, TENANT_ID_)
     values(#{id, jdbcType=VARCHAR}, 
            1,
            #{name, jdbcType=VARCHAR}, 
            #{key, jdbcType=VARCHAR}, 
            #{category, jdbcType=VARCHAR}, 
            #{createTime, jdbcType=TIMESTAMP},
-           #{createTime, jdbcType=TIMESTAMP},
+           #{lastUpdateTime, jdbcType=TIMESTAMP},
            #{version, jdbcType=INTEGER}, 
            #{metaInfo, jdbcType=VARCHAR}, 
            #{deploymentId, jdbcType=VARCHAR},
            #{editorSourceValueId, jdbcType=VARCHAR}, 
-           #{editorSourceExtraValueId, jdbcType=VARCHAR})
+           #{editorSourceExtraValueId, jdbcType=VARCHAR},
+           #{tenantId, jdbcType=VARCHAR})
   </insert>
-  
+
+  <insert id="bulkInsertModel" parameterType="java.util.List">
+    INSERT INTO ${prefix}ACT_RE_MODEL(ID_, REV_, NAME_, KEY_, CATEGORY_, CREATE_TIME_, LAST_UPDATE_TIME_, VERSION_, META_INFO_, DEPLOYMENT_ID_, EDITOR_SOURCE_VALUE_ID_, EDITOR_SOURCE_EXTRA_VALUE_ID_, TENANT_ID_)
+    VALUES 
+      <foreach collection="list" item="model" index="index" separator=","> 
+        (#{model.id, jdbcType=VARCHAR}, 
+         1,
+         #{model.name, jdbcType=VARCHAR}, 
+         #{model.key, jdbcType=VARCHAR}, 
+         #{model.category, jdbcType=VARCHAR}, 
+         #{model.createTime, jdbcType=TIMESTAMP},
+         #{model.lastUpdateTime, jdbcType=TIMESTAMP},
+         #{model.version, jdbcType=INTEGER}, 
+         #{model.metaInfo, jdbcType=VARCHAR}, 
+         #{model.deploymentId, jdbcType=VARCHAR},
+         #{model.editorSourceValueId, jdbcType=VARCHAR}, 
+         #{model.editorSourceExtraValueId, jdbcType=VARCHAR},
+         #{model.tenantId, jdbcType=VARCHAR})
+     </foreach>
+  </insert>
+
+  <insert id="bulkInsertModel_oracle" parameterType="java.util.List">
+    INSERT ALL 
+      <foreach collection="list" item="model" index="index"> 
+        INTO ${prefix}ACT_RE_MODEL(ID_, REV_, NAME_, KEY_, CATEGORY_, CREATE_TIME_, LAST_UPDATE_TIME_,
+        VERSION_, META_INFO_, DEPLOYMENT_ID_, EDITOR_SOURCE_VALUE_ID_, EDITOR_SOURCE_EXTRA_VALUE_ID_, TENANT_ID_) VALUES 
+          (#{model.id, jdbcType=VARCHAR}, 
+           1,
+           #{model.name, jdbcType=VARCHAR}, 
+           #{model.key, jdbcType=VARCHAR}, 
+           #{model.category, jdbcType=VARCHAR}, 
+           #{model.createTime, jdbcType=TIMESTAMP},
+           #{model.lastUpdateTime, jdbcType=TIMESTAMP},
+           #{model.version, jdbcType=INTEGER}, 
+           #{model.metaInfo, jdbcType=VARCHAR}, 
+           #{model.deploymentId, jdbcType=VARCHAR},
+           #{model.editorSourceValueId, jdbcType=VARCHAR}, 
+           #{model.editorSourceExtraValueId, jdbcType=VARCHAR},
+           #{model.tenantId, jdbcType=VARCHAR})
+     </foreach>
+    SELECT * FROM dual
+  </insert>
+
   <!-- MODEL UPDATE -->
   <update id="updateModel" parameterType="org.activiti.engine.impl.persistence.entity.ModelEntity">
     update ${prefix}ACT_RE_MODEL set
@@ -34,14 +77,15 @@
       META_INFO_ = #{metaInfo, jdbcType=VARCHAR},
       DEPLOYMENT_ID_ = #{deploymentId, jdbcType=VARCHAR},
       EDITOR_SOURCE_VALUE_ID_ = #{editorSourceValueId, jdbcType=VARCHAR},
-      EDITOR_SOURCE_EXTRA_VALUE_ID_ = #{editorSourceExtraValueId, jdbcType=VARCHAR}
+      EDITOR_SOURCE_EXTRA_VALUE_ID_ = #{editorSourceExtraValueId, jdbcType=VARCHAR},
+      TENANT_ID_ = #{tenantId, jdbcType=VARCHAR}
     where ID_ = #{id, jdbcType=VARCHAR} and REV_ = #{revision, jdbcType=INTEGER}
   </update>
 
   
   <!-- MODEL DELETE -->
   
-  <delete id="deleteModel" parameterType="string">
+  <delete id="deleteModel" parameterType="org.activiti.engine.impl.persistence.entity.ModelEntity">
     delete from ${prefix}ACT_RE_MODEL where ID_ = #{id} and REV_ = #{revision}
   </delete>
 
@@ -60,6 +104,7 @@
     <result property="deploymentId" column="DEPLOYMENT_ID_" jdbcType="VARCHAR" />
     <result property="editorSourceValueId" column="EDITOR_SOURCE_VALUE_ID_" jdbcType="VARCHAR" />
     <result property="editorSourceExtraValueId" column="EDITOR_SOURCE_EXTRA_VALUE_ID_" jdbcType="VARCHAR" />
+    <result property="tenantId" column="TENANT_ID_" jdbcType="VARCHAR" />
   </resultMap>
 
   <!-- MODEL SELECT -->
@@ -87,7 +132,7 @@
         and RES.NAME_ = #{name}
       </if>
       <if test="nameLike != null">
-        and RES.NAME_ like #{nameLike}
+        and RES.NAME_ like #{nameLike}${wildcardEscapeClause}
       </if>
       <if test="key != null">
         and RES.KEY_ = #{key}
@@ -96,7 +141,7 @@
         and RES.CATEGORY_ = #{category}
       </if>
       <if test="categoryLike != null">
-        and RES.CATEGORY_ like #{categoryLike}
+        and RES.CATEGORY_ like #{categoryLike}${wildcardEscapeClause}
       </if>
       <if test="categoryNotEquals != null">
         and ( RES.CATEGORY_ &lt;&gt; #{categoryNotEquals} OR RES.CATEGORY_ is null )  
@@ -115,6 +160,15 @@
       </if>
       <if test="latest">
         and RES.VERSION_ = (select max(VERSION_) from ${prefix}ACT_RE_MODEL where KEY_ = RES.KEY_)
+      </if>
+      <if test="tenantId != null">
+        and RES.TENANT_ID_ = #{tenantId}
+      </if>
+      <if test="tenantIdLike != null">
+        and RES.TENANT_ID_ like #{tenantIdLike}${wildcardEscapeClause}
+      </if>
+      <if test="withoutTenantId">
+        and (RES.TENANT_ID_ = '' or RES.TENANT_ID_ is null)
       </if>
     </where>
   </sql>

@@ -19,17 +19,20 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import org.activiti.engine.impl.cmd.ChangeDeploymentTenantIdCmd;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseRestTestCase;
+import org.activiti.rest.service.BaseSpringRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
 import org.apache.commons.lang3.StringUtils;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonProcessingException;
-import org.restlet.data.Status;
-import org.restlet.representation.Representation;
-import org.restlet.resource.ClientResource;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 
 
 /**
@@ -37,19 +40,22 @@ import org.restlet.resource.ClientResource;
  * 
  * @author Tijs Rademakers
  */
-public class HistoricActivityInstanceCollectionResourceTest extends BaseRestTestCase {
+public class HistoricActivityInstanceCollectionResourceTest extends BaseSpringRestTestCase {
   
   /**
    * Test querying historic activity instance. 
    * GET history/historic-activity-instances
    */
-  @Deployment
+  @Deployment(resources={"org/activiti/rest/service/api/twoTaskProcess.bpmn20.xml"})
   public void testQueryActivityInstances() throws Exception {
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
     Task task = taskService.createTaskQuery().processInstanceId(processInstance.getId()).singleResult();
     taskService.complete(task.getId());
     
-    ProcessInstance processInstance2 = runtimeService.startProcessInstanceByKey("oneTaskProcess");
+    // Set tenant on deployment
+    managementService.executeCommand(new ChangeDeploymentTenantIdCmd(deploymentId, "myTenant"));
+    
+    ProcessInstance processInstance2 = runtimeService.startProcessInstanceByKeyAndTenantId("oneTaskProcess", "myTenant");
 
     String url = RestUrls.createRelativeResourceUrl(RestUrls.URL_HISTORIC_ACTIVITY_INSTANCES);
     
@@ -86,30 +92,35 @@ public class HistoricActivityInstanceCollectionResourceTest extends BaseRestTest
     assertResultsPresentInDataResponse(url + "?taskAssignee=fozzie", 1, "processTask2");
     
     assertResultsPresentInDataResponse(url + "?taskAssignee=fozzie2", 0);
+    
+    // Without tenant ID, only activities for processinstance1
+    assertResultsPresentInDataResponse(url + "?withoutTenantId=true", 3);
+    
+    // Tenant id
+    assertResultsPresentInDataResponse(url + "?tenantId=myTenant", 2, "theStart", "processTask");
+    assertResultsPresentInDataResponse(url + "?tenantId=anotherTenant");
+    
+    // Tenant id like
+    assertResultsPresentInDataResponse(url + "?tenantIdLike=" + encode("%enant"), 2, "theStart", "processTask");
+    assertResultsPresentInDataResponse(url + "?tenantIdLike=anotherTenant");
   }
   
   protected void assertResultsPresentInDataResponse(String url, int numberOfResultsExpected, String... expectedActivityIds) throws JsonProcessingException, IOException {
-    
     // Do the actual call
-    ClientResource client = getAuthenticatedClient(url);
-    Representation response = client.get();
+  	CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + url), HttpStatus.SC_OK);
+    JsonNode dataNode = objectMapper.readTree(response.getEntity().getContent()).get("data");
+    closeResponse(response);
+    Assert.assertEquals(numberOfResultsExpected, dataNode.size());
     
-    // Check status and size
-    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
-    JsonNode dataNode = objectMapper.readTree(response.getStream()).get("data");
-    assertEquals(numberOfResultsExpected, dataNode.size());
-
     // Check presence of ID's
     if (expectedActivityIds != null) {
       List<String> toBeFound = new ArrayList<String>(Arrays.asList(expectedActivityIds));
       Iterator<JsonNode> it = dataNode.iterator();
       while(it.hasNext()) {
-        String activityId = it.next().get("activityId").getTextValue();
+        String activityId = it.next().get("activityId").textValue();
         toBeFound.remove(activityId);
       }
-      assertTrue("Not all entries have been found in result, missing: " + StringUtils.join(toBeFound, ", "), toBeFound.isEmpty());
+      Assert.assertTrue("Not all entries have been found in result, missing: " + StringUtils.join(toBeFound, ", "), toBeFound.isEmpty());
     }
-    
-    client.release();
   }
 }

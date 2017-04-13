@@ -15,6 +15,7 @@ package org.activiti.engine.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiIllegalArgumentException;
@@ -38,21 +39,30 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   
   private static final long serialVersionUID = 1L;
   protected String id;
+  protected Set<String> ids;
   protected String category;
   protected String categoryLike;
   protected String categoryNotEquals;
   protected String name;
   protected String nameLike;
   protected String deploymentId;
+  protected Set<String> deploymentIds;
   protected String key;
   protected String keyLike;
   protected String resourceName;
   protected String resourceNameLike;
   protected Integer version;
+  protected Integer versionGt;
+  protected Integer versionGte;
+  protected Integer versionLt;
+  protected Integer versionLte;
   protected boolean latest = false;
   protected SuspensionState suspensionState;
   protected String authorizationUserId;
   protected String procDefId;
+  protected String tenantId;
+  protected String tenantIdLike;
+  protected boolean withoutTenantId;
   
   protected String eventSubscriptionName;
   protected String eventSubscriptionType;
@@ -71,6 +81,18 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   public ProcessDefinitionQueryImpl processDefinitionId(String processDefinitionId) {
     this.id = processDefinitionId;
     return this;
+  }
+  
+  @Override
+  public ProcessDefinitionQuery processDefinitionIds(Set<String> processDefinitionIds) {
+    if (processDefinitionIds == null) {
+      throw new ActivitiIllegalArgumentException("processDefinitionIds is null");
+    }
+    if (processDefinitionIds.isEmpty()) {
+      throw new ActivitiIllegalArgumentException("processDefinitionIds is empty");
+    }
+  	this.ids = processDefinitionIds;
+  	return this;
   }
   
   public ProcessDefinitionQueryImpl processDefinitionCategory(String category) {
@@ -120,6 +142,17 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
     this.deploymentId = deploymentId;
     return this;
   }
+  
+  public ProcessDefinitionQueryImpl deploymentIds(Set<String> deploymentIds) {
+    if (deploymentIds == null) {
+      throw new ActivitiIllegalArgumentException("deploymentIds is null");
+    }
+    if (deploymentIds.isEmpty()) {
+      throw new ActivitiIllegalArgumentException("deploymentIds is empty");
+    }
+    this.deploymentIds = deploymentIds;
+    return this;
+  }
 
   public ProcessDefinitionQueryImpl processDefinitionKey(String key) {
     if (key == null) {
@@ -154,13 +187,41 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   }
   
   public ProcessDefinitionQueryImpl processDefinitionVersion(Integer version) {
+    checkVersion(version);
+    this.version = version;
+    return this;
+  }
+
+  public ProcessDefinitionQuery processDefinitionVersionGreaterThan(Integer processDefinitionVersion) {
+    checkVersion(processDefinitionVersion);
+    this.versionGt = processDefinitionVersion;
+    return this;
+  }
+
+  public ProcessDefinitionQuery processDefinitionVersionGreaterThanOrEquals(Integer processDefinitionVersion) {
+    checkVersion(processDefinitionVersion);
+    this.versionGte = processDefinitionVersion;
+    return this;
+  }
+
+  public ProcessDefinitionQuery processDefinitionVersionLowerThan(Integer processDefinitionVersion) {
+    checkVersion(processDefinitionVersion);
+    this.versionLt = processDefinitionVersion;
+    return this;
+  }
+
+  public ProcessDefinitionQuery processDefinitionVersionLowerThanOrEquals(Integer processDefinitionVersion) {
+    checkVersion(processDefinitionVersion);
+    this.versionLte = processDefinitionVersion;
+    return this;
+  }
+  
+  protected void checkVersion(Integer version) {
     if (version == null) {
       throw new ActivitiIllegalArgumentException("version is null");
     } else if (version <= 0) {
       throw new ActivitiIllegalArgumentException("version must be positive");
     }
-    this.version = version;
-    return this;
   }
   
   public ProcessDefinitionQueryImpl latestVersion() {
@@ -176,6 +237,27 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   public ProcessDefinitionQuery suspended() {
     this.suspensionState = SuspensionState.SUSPENDED;
     return this;
+  }
+  
+  public ProcessDefinitionQuery processDefinitionTenantId(String tenantId) {
+  	if (tenantId == null) {
+  		throw new ActivitiIllegalArgumentException("processDefinition tenantId is null");
+  	}
+  	this.tenantId = tenantId;
+  	return this;
+  }
+  
+  public ProcessDefinitionQuery processDefinitionTenantIdLike(String tenantIdLike) {
+  	if (tenantIdLike == null) {
+  		throw new ActivitiIllegalArgumentException("process definition tenantId is null");
+  	}
+  	this.tenantIdLike = tenantIdLike;
+  	return this;
+  }
+  
+  public ProcessDefinitionQuery processDefinitionWithoutTenantId() {
+  	this.withoutTenantId = true;
+  	return this;
   }
   
   public ProcessDefinitionQuery messageEventSubscription(String messageName) {
@@ -246,6 +328,10 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
     return orderBy(ProcessDefinitionQueryProperty.PROCESS_DEFINITION_NAME);
   }
   
+  public ProcessDefinitionQuery orderByTenantId() {
+    return orderBy(ProcessDefinitionQueryProperty.PROCESS_DEFINITION_TENANT_ID);
+  }
+  
   //results ////////////////////////////////////////////
   
   public long executeCount(CommandContext commandContext) {
@@ -264,11 +350,6 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   
   public void checkQueryOk() {
     super.checkQueryOk();
-    
-    // latest() makes only sense when used with key() or keyLike()
-    if (latest && ( (id != null) || (name != null) || (nameLike != null) || (version != null) || (deploymentId != null) ) ){
-      throw new ActivitiIllegalArgumentException("Calling latest() can only be used in combination with key(String) and keyLike(String)");
-    }
   }
   
   //getters ////////////////////////////////////////////
@@ -276,8 +357,14 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   public String getDeploymentId() {
     return deploymentId;
   }
+  public Set<String> getDeploymentIds() {
+    return deploymentIds;
+  }
   public String getId() {
     return id;
+  }
+  public Set<String> getIds() {
+    return ids;
   }
   public String getName() {
     return name;
@@ -293,6 +380,18 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   }
   public Integer getVersion() {
     return version;
+  }
+  public Integer getVersionGt() {
+    return versionGt;
+  }
+  public Integer getVersionGte() {
+    return versionGte;
+  }
+  public Integer getVersionLt() {
+    return versionLt;
+  }
+  public Integer getVersionLte() {
+    return versionLte;
   }
   public boolean isLatest() {
     return latest;
@@ -318,12 +417,22 @@ public class ProcessDefinitionQueryImpl extends AbstractQuery<ProcessDefinitionQ
   public String getCategoryNotEquals() {
     return categoryNotEquals;
   }
+  public String getTenantId() {
+    return tenantId;
+  }
+  public String getTenantIdLike() {
+    return tenantIdLike;
+  }
+  public boolean isWithoutTenantId() {
+    return withoutTenantId;
+	}
 
-  public ProcessDefinitionQueryImpl startableByUser(String userId) {
+	public ProcessDefinitionQueryImpl startableByUser(String userId) {
     if (userId == null) {
       throw new ActivitiIllegalArgumentException("userId is null");
     }
     this.authorizationUserId = userId;
     return this;
   }
+
 }

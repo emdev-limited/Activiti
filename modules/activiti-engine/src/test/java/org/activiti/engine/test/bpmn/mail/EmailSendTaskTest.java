@@ -14,6 +14,7 @@
 package org.activiti.engine.test.bpmn.mail;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,7 +26,10 @@ import java.util.Map;
 import javax.activation.DataHandler;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
+import org.activiti.engine.ActivitiException;
+import org.activiti.engine.impl.history.HistoryLevel;
 import org.activiti.engine.impl.util.CollectionUtil;
 import org.activiti.engine.test.Deployment;
 import org.subethamail.wiser.WiserMessage;
@@ -115,6 +119,132 @@ public class EmailSendTaskTest extends EmailTestCase {
     assertEmailSend(messages.get(0), true, "Test", "Mr. <b>Kermit</b>", "activiti@localhost", Arrays.asList("kermit@activiti.org"), null);
   }
   
+  @Deployment
+  public void testTextMailWithFileAttachment() throws Exception {
+    HashMap<String, Object> vars = new HashMap<String, Object>();
+    vars.put("attachmentsBean", new AttachmentsBean());
+    runtimeService.startProcessInstanceByKey("textMailWithFileAttachment", vars);
+
+    List<WiserMessage> messages = wiser.getMessages();
+    assertEquals(1, messages.size());
+    WiserMessage message = messages.get(0);
+    MimeMultipart mm = (MimeMultipart) message.getMimeMessage().getContent();
+    assertEquals(2, mm.getCount());
+    String attachmentFileName = mm.getBodyPart(1).getDataHandler().getName();
+    assertEquals(new AttachmentsBean().getFile().getName(), attachmentFileName);
+  }
+
+  @Deployment
+  public void testTextMailWithFileAttachments() throws Exception {
+    HashMap<String, Object> vars = new HashMap<String, Object>();
+    vars.put("attachmentsBean", new AttachmentsBean());
+    runtimeService.startProcessInstanceByKey("textMailWithFileAttachments", vars);
+
+    List<WiserMessage> messages = wiser.getMessages();
+    assertEquals(1, messages.size());
+    WiserMessage message = messages.get(0);
+    MimeMultipart mm = (MimeMultipart) message.getMimeMessage().getContent();
+    File[] files = new AttachmentsBean().getFiles();
+    assertEquals(1 + files.length, mm.getCount());
+    for (int i = 0; i < files.length; i++) {
+      String attachmentFileName = mm.getBodyPart(1 + i).getDataHandler().getName();
+      assertEquals(files[i].getName(), attachmentFileName);
+    }
+  }
+
+  @Deployment
+  public void testTextMailWithFileAttachmentsByPath() throws Exception {
+    HashMap<String, Object> vars = new HashMap<String, Object>();
+    vars.put("attachmentsBean", new AttachmentsBean());
+    runtimeService.startProcessInstanceByKey("textMailWithFileAttachmentsByPath", vars);
+
+    List<WiserMessage> messages = wiser.getMessages();
+    assertEquals(1, messages.size());
+    WiserMessage message = messages.get(0);
+    MimeMultipart mm = (MimeMultipart) message.getMimeMessage().getContent();
+    File[] files = new AttachmentsBean().getFiles();
+    assertEquals(1 + files.length, mm.getCount());
+    for (int i = 0; i < files.length; i++) {
+      String attachmentFileName = mm.getBodyPart(1 + i).getDataHandler().getName();
+      assertEquals(files[i].getName(), attachmentFileName);
+    }
+  }
+
+  @Deployment
+  public void testTextMailWithDataSourceAttachment() throws Exception {
+    String fileName = "file-name-to-be-displayed";
+    String fileContent = "This is the file content";
+    HashMap<String, Object> vars = new HashMap<String, Object>();
+    vars.put("attachmentsBean", new AttachmentsBean());
+    vars.put("fileContent", fileContent);
+    vars.put("fileName", fileName);
+    runtimeService.startProcessInstanceByKey("textMailWithDataSourceAttachment", vars);
+
+    List<WiserMessage> messages = wiser.getMessages();
+    assertEquals(1, messages.size());
+    WiserMessage message = messages.get(0);
+    MimeMultipart mm = (MimeMultipart) message.getMimeMessage().getContent();
+    assertEquals(2, mm.getCount());
+    String attachmentFileName = mm.getBodyPart(1).getDataHandler().getName();
+    assertEquals(fileName, attachmentFileName);
+  }
+
+  @Deployment
+  public void testTextMailWithNotExistingFileAttachment() throws Exception {
+    HashMap<String, Object> vars = new HashMap<String, Object>();
+    vars.put("attachmentsBean", new AttachmentsBean());
+    runtimeService.startProcessInstanceByKey("textMailWithNotExistingFileAttachment", vars);
+
+    List<WiserMessage> messages = wiser.getMessages();
+    assertEquals(1, messages.size());
+    WiserMessage message = messages.get(0);
+    assertFalse(message.getMimeMessage().getContent() instanceof MimeMultipart);
+  }
+
+  @Deployment
+  public void testHtmlMailWithFileAttachment() throws Exception {
+    HashMap<String, Object> vars = new HashMap<String, Object>();
+    vars.put("attachmentsBean", new AttachmentsBean());
+    vars.put("gender", "male");
+    runtimeService.startProcessInstanceByKey("htmlMailWithFileAttachment", vars);
+
+    List<WiserMessage> messages = wiser.getMessages();
+    assertEquals(1, messages.size());
+    WiserMessage message = messages.get(0);
+    MimeMultipart mm = (MimeMultipart) message.getMimeMessage().getContent();
+    assertEquals(2, mm.getCount());
+    String attachmentFileName = mm.getBodyPart(1).getDataHandler().getName();
+    assertEquals(new AttachmentsBean().getFile().getName(), attachmentFileName);
+  }
+
+  @Deployment
+  public void testInvalidAddress() throws Exception {
+    try {
+      runtimeService.startProcessInstanceByKey("invalidAddress").getId();
+      fail("An Invalid email address should not execute");
+    } catch(ActivitiException e) {
+      // fine
+    } catch(Exception e) {
+      fail("Only an ActivitiException is expected here but not: " + e);
+    }
+  }
+ 
+  @Deployment
+  public void testInvalidAddressWithoutException() throws Exception {
+    String piId = runtimeService.startProcessInstanceByKey("invalidAddressWithoutException").getId();
+    if (processEngineConfiguration.getHistoryLevel().isAtLeast(HistoryLevel.ACTIVITY)) {
+      assertNotNull(historyService.createHistoricVariableInstanceQuery().processInstanceId(piId).variableName("emailError").singleResult());
+    }
+  }
+  
+  @Deployment
+  public void testInvalidAddressWithoutExceptionVariableName() throws Exception {
+    String piId = runtimeService.startProcessInstanceByKey("invalidAddressWithoutException").getId();
+    if (processEngineConfiguration.getHistoryLevel().isAtLeast(HistoryLevel.ACTIVITY)) {
+      assertNull(historyService.createHistoricVariableInstanceQuery().processInstanceId(piId).variableName("emailError").singleResult());
+    }
+  }
+  
   // Helper 
   
   private void assertEmailSend(WiserMessage emailMessage, boolean htmlMail, String subject, String message, 
@@ -129,7 +259,7 @@ public class EmailSendTaskTest extends EmailTestCase {
       }
       
       assertEquals(subject, mimeMessage.getHeader("Subject", null));
-      assertEquals("\"" + from + "\" <" +from.toString() + ">" , mimeMessage.getHeader("From", null));
+      assertEquals(from, mimeMessage.getHeader("From", null));
       assertTrue(getMessage(mimeMessage).contains(message));
       
       for (String t : to) {

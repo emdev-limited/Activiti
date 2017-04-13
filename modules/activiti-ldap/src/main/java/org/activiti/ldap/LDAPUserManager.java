@@ -25,6 +25,7 @@ import javax.naming.directory.SearchResult;
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.identity.Group;
+import org.activiti.engine.identity.Picture;
 import org.activiti.engine.identity.User;
 import org.activiti.engine.identity.UserQuery;
 import org.activiti.engine.impl.Page;
@@ -68,8 +69,13 @@ public class LDAPUserManager extends AbstractManager implements UserIdentityMana
 
 
   @Override
-  public void updateUser(UserEntity updatedUser) {
+  public void updateUser(User updatedUser) {
     throw new ActivitiException("LDAP user manager doesn't support updating a user");
+  }
+  
+  @Override
+  public boolean isNewUser(User user) {
+  	throw new ActivitiException("LDAP user manager doesn't support adding or updating a user");
   }
 
 
@@ -119,13 +125,15 @@ public class LDAPUserManager extends AbstractManager implements UserIdentityMana
       return result;
     } else if (query.getFullNameLike() != null){
       
+      final String fullNameLike = query.getFullNameLike().replaceAll("%", "");
+      
       LDAPTemplate ldapTemplate = new LDAPTemplate(ldapConfigurator);
       return ldapTemplate.execute(new LDAPCallBack<List<User>>() {
         
         public List<User> executeInContext(InitialDirContext initialDirContext) {
           List<User> result = new ArrayList<User>();
           try {
-            String searchExpression = ldapConfigurator.getLdapQueryBuilder().buildQueryByFullNameLike(ldapConfigurator, query.getFullNameLike());
+            String searchExpression = ldapConfigurator.getLdapQueryBuilder().buildQueryByFullNameLike(ldapConfigurator, fullNameLike);
             String baseDn = ldapConfigurator.getUserBaseDn() != null ? ldapConfigurator.getUserBaseDn() : ldapConfigurator.getBaseDn();
             NamingEnumeration< ? > namingEnum = initialDirContext.search(baseDn, searchExpression, createSearchControls());
             
@@ -159,17 +167,28 @@ public class LDAPUserManager extends AbstractManager implements UserIdentityMana
       user.setId(result.getAttributes().get(ldapConfigurator.getUserIdAttribute()).get().toString());
     }
     if (ldapConfigurator.getUserFirstNameAttribute() != null) {
-      user.setFirstName(result.getAttributes().get(ldapConfigurator.getUserFirstNameAttribute()).get().toString());
+    	try{
+    		user.setFirstName(result.getAttributes().get(ldapConfigurator.getUserFirstNameAttribute()).get().toString());
+    	} catch(NullPointerException e){
+    		user.setFirstName("");
+    	}
     }
     if (ldapConfigurator.getUserLastNameAttribute() != null) {
-      user.setLastName(result.getAttributes().get(ldapConfigurator.getUserLastNameAttribute()).get().toString());
+    	try{
+    		user.setLastName(result.getAttributes().get(ldapConfigurator.getUserLastNameAttribute()).get().toString());
+    	} catch(NullPointerException e){
+    		user.setLastName("");
+    	}
     }
     if (ldapConfigurator.getUserEmailAttribute() != null) {
-      user.setEmail(result.getAttributes().get(ldapConfigurator.getUserEmailAttribute()).get().toString());
+      try {
+        user.setEmail(result.getAttributes().get(ldapConfigurator.getUserEmailAttribute()).get().toString());
+      } catch(NullPointerException e){
+    		user.setEmail("");
+      }
     }
   }
-
-
+  
   @Override
   public long findUserCountByQueryCriteria(UserQueryImpl query) {
     return findUserByQueryCriteria(query, null).size(); // Is there a generic way to do counts in ldap?
@@ -181,44 +200,55 @@ public class LDAPUserManager extends AbstractManager implements UserIdentityMana
     throw new ActivitiException("LDAP user manager doesn't support querying");
   }
 
-
   @Override
   public UserQuery createNewUserQuery() {
     return new UserQueryImpl(Context.getProcessEngineConfiguration().getCommandExecutor());
   }
-
 
   @Override
   public IdentityInfoEntity findUserInfoByUserIdAndKey(String userId, String key) {
     throw new ActivitiException("LDAP user manager doesn't support querying");
   }
 
-
   @Override
   public List<String> findUserInfoKeysByUserIdAndType(String userId, String type) {
     throw new ActivitiException("LDAP user manager doesn't support querying");
   }
-
 
   @Override
   public List<User> findPotentialStarterUsers(String proceDefId) {
     throw new ActivitiException("LDAP user manager doesn't support querying");
   }
 
-
   @Override
   public List<User> findUsersByNativeQuery(Map<String, Object> parameterMap, int firstResult, int maxResults) {
     throw new ActivitiException("LDAP user manager doesn't support querying");
   }
 
-
   @Override
   public long findUserCountByNativeQuery(Map<String, Object> parameterMap) {
     throw new ActivitiException("LDAP user manager doesn't support querying");
   }
+  
+  @Override
+  public void setUserPicture(String userId, Picture picture) {
+  	throw new ActivitiException("LDAP user manager doesn't support user pictures");
+  }
+  
+  @Override
+  public Picture getUserPicture(String userId) {
+  	logger.debug("LDAP user manager doesn't support user pictures. Returning null");
+  	return null;
+  }
 
   @Override
   public Boolean checkPassword(final String userId, final String password) {
+	  
+	  // Extra password check, see http://forums.activiti.org/comment/22312
+  	if (password == null || password.length() == 0) {
+  		throw new ActivitiException("Null or empty passwords are not allowed!");
+  	}
+	  
     try {
       LDAPTemplate ldapTemplate = new LDAPTemplate(ldapConfigurator);
       return ldapTemplate.execute(new LDAPCallBack<Boolean>() {

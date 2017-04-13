@@ -13,8 +13,9 @@
 
 package org.activiti.engine.history;
 
-import org.activiti.engine.query.Query;
+import java.util.Set;
 
+import org.activiti.engine.query.Query;
 
 /** 
  * Programmatic querying for {@link HistoricVariableInstance}s.
@@ -29,8 +30,17 @@ public interface HistoricVariableInstanceQuery extends Query<HistoricVariableIns
   /** Only select historic process variables with the given process instance. */
   HistoricVariableInstanceQuery processInstanceId(String processInstanceId);
   
+  /** Only select historic process variables with the given id. **/
+  HistoricVariableInstanceQuery executionId(String executionId);
+  
+  /** Only select historic process variables whose id is in the given set of ids. */
+  HistoricVariableInstanceQuery executionIds(Set<String> executionIds);
+  
   /** Only select historic process variables with the given task. */
   HistoricVariableInstanceQuery taskId(String taskId);
+
+  /** Only select historic process variables whose id is in the given set of ids. */
+  HistoricVariableInstanceQuery taskIds(Set<String> taskIds);
 
   /** Only select historic process variables with the given variable name. */
   HistoricVariableInstanceQuery variableName(String variableName);
@@ -48,6 +58,21 @@ public interface HistoricVariableInstanceQuery extends Query<HistoricVariableIns
    * only select historic process variables with the given name and value
    */
   HistoricVariableInstanceQuery variableValueEquals(String variableName, Object variableValue);
+  
+  /**
+   * only select historic process variables that don't have the given name and value
+   */
+  HistoricVariableInstanceQuery variableValueNotEquals(String variableName, Object variableValue);
+  
+  /**
+   * only select historic process variables like the given name and value
+   */
+  HistoricVariableInstanceQuery variableValueLike(String variableName, String variableValue);
+  
+  /**
+   * only select historic process variables like the given name and value (case insensitive)
+   */
+  HistoricVariableInstanceQuery variableValueLikeIgnoreCase(String variableName, String variableValue);
 
   HistoricVariableInstanceQuery orderByProcessInstanceId();
   

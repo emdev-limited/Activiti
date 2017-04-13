@@ -14,7 +14,11 @@ package org.activiti.bpmn.converter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -24,7 +28,9 @@ import org.activiti.bpmn.converter.util.BpmnXMLUtil;
 import org.activiti.bpmn.converter.util.CommaSplitter;
 import org.activiti.bpmn.model.BaseElement;
 import org.activiti.bpmn.model.BpmnModel;
+import org.activiti.bpmn.model.CustomProperty;
 import org.activiti.bpmn.model.ExtensionAttribute;
+import org.activiti.bpmn.model.Resource;
 import org.activiti.bpmn.model.UserTask;
 import org.activiti.bpmn.model.alfresco.AlfrescoUserTask;
 import org.apache.commons.lang3.StringUtils;
@@ -33,36 +39,34 @@ import org.apache.commons.lang3.StringUtils;
  * @author Tijs Rademakers, Saeid Mirzaei
  */
 public class UserTaskXMLConverter extends BaseBpmnXMLConverter {
-  
-  List<String> formTypes = new ArrayList<String>();
 
-  /** default attributes taken from bpmn spec  and from activiti extension */
-  protected static final List<ExtensionAttribute> defaultAttributes =    Arrays.asList(
-      new ExtensionAttribute(ATTRIBUTE_ID)
-      , new ExtensionAttribute(ATTRIBUTE_NAME)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_FORM_FORMKEY)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_DUEDATE)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_ASSIGNEE)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_PRIORITY)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_CANDIDATEUSERS)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_CANDIDATEGROUPS)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_ACTIVITY_ASYNCHRONOUS)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_ACTIVITY_EXCLUSIVE)
-      , new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_ACTIVITY_ISFORCOMPENSATION)
+  protected Map<String, BaseChildElementParser> childParserMap = new HashMap<String, BaseChildElementParser>();
+
+  /** default attributes taken from bpmn spec and from activiti extension */
+  protected static final List<ExtensionAttribute> defaultUserTaskAttributes = Arrays.asList(
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_FORM_FORMKEY), 
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_DUEDATE), 
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_BUSINESS_CALENDAR_NAME),
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_ASSIGNEE), 
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_OWNER), 
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_PRIORITY), 
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_CANDIDATEUSERS), 
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_CANDIDATEGROUPS),
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_CATEGORY),
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_SERVICE_EXTENSIONID),
+      new ExtensionAttribute(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_SKIP_EXPRESSION)
   );
 
   public UserTaskXMLConverter() {
     HumanPerformerParser humanPerformerParser = new HumanPerformerParser();
-    childElementParsers.put(humanPerformerParser.getElementName(), humanPerformerParser);
+    childParserMap.put(humanPerformerParser.getElementName(), humanPerformerParser);
     PotentialOwnerParser potentialOwnerParser = new PotentialOwnerParser();
-    childElementParsers.put(potentialOwnerParser.getElementName(), potentialOwnerParser);
+    childParserMap.put(potentialOwnerParser.getElementName(), potentialOwnerParser);
+    CustomIdentityLinkParser customIdentityLinkParser = new CustomIdentityLinkParser();
+    childParserMap.put(customIdentityLinkParser.getElementName(), customIdentityLinkParser);
   }
   
-  public static String getXMLType() {
-    return ELEMENT_TASK_USER;
-  }
-  
-  public static Class<? extends BaseElement> getBpmnElementType() {
+  public Class<? extends BaseElement> getBpmnElementType() {
     return UserTask.class;
   }
   
@@ -72,11 +76,12 @@ public class UserTaskXMLConverter extends BaseBpmnXMLConverter {
   }
   
   @Override
-  protected BaseElement convertXMLToElement(XMLStreamReader xtr) throws Exception {
+  @SuppressWarnings("unchecked")
+  protected BaseElement convertXMLToElement(XMLStreamReader xtr, BpmnModel model) throws Exception {
     String formKey = xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_FORM_FORMKEY);
     UserTask userTask = null;
     if (StringUtils.isNotEmpty(formKey)) {
-      if (formTypes.contains(formKey)) {
+      if (model.getUserTaskFormTypes() != null && model.getUserTaskFormTypes().contains(formKey)) {
         userTask = new AlfrescoUserTask();
       }
     }
@@ -85,6 +90,8 @@ public class UserTaskXMLConverter extends BaseBpmnXMLConverter {
     }
     BpmnXMLUtil.addXMLLocation(userTask, xtr);
     userTask.setDueDate(xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_DUEDATE));
+    userTask.setBusinessCalendarName(xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_BUSINESS_CALENDAR_NAME));
+    userTask.setCategory(xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_CATEGORY));
     userTask.setFormKey(formKey);
     userTask.setAssignee(xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_ASSIGNEE)); 
     userTask.setOwner(xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_OWNER));
@@ -99,44 +106,123 @@ public class UserTaskXMLConverter extends BaseBpmnXMLConverter {
       String expression = xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_CANDIDATEGROUPS);
       userTask.getCandidateGroups().addAll(parseDelimitedList(expression));
     }
+    
+    userTask.setExtensionId(xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_SERVICE_EXTENSIONID));
 
-    BpmnXMLUtil.addCustomAttributes(xtr, userTask, defaultAttributes);
+    if (StringUtils.isNotEmpty(xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_SKIP_EXPRESSION))) {
+      String expression = xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TASK_USER_SKIP_EXPRESSION);
+      userTask.setSkipExpression(expression);
+    }
 
-    parseChildElements(getXMLElementName(), userTask, xtr);
+    BpmnXMLUtil.addCustomAttributes(xtr, userTask, defaultElementAttributes, 
+        defaultActivityAttributes, defaultUserTaskAttributes);
+
+    parseChildElements(getXMLElementName(), userTask, childParserMap, model, xtr);
     
     return userTask;
   }
-
+  
   @Override
-  protected void writeAdditionalAttributes(BaseElement element, XMLStreamWriter xtw) throws Exception {
+  @SuppressWarnings("unchecked")
+  protected void writeAdditionalAttributes(BaseElement element, BpmnModel model, XMLStreamWriter xtw) throws Exception {
     UserTask userTask = (UserTask) element;
     writeQualifiedAttribute(ATTRIBUTE_TASK_USER_ASSIGNEE, userTask.getAssignee(), xtw);
     writeQualifiedAttribute(ATTRIBUTE_TASK_USER_OWNER, userTask.getOwner(), xtw);
     writeQualifiedAttribute(ATTRIBUTE_TASK_USER_CANDIDATEUSERS, convertToDelimitedString(userTask.getCandidateUsers()), xtw);
     writeQualifiedAttribute(ATTRIBUTE_TASK_USER_CANDIDATEGROUPS, convertToDelimitedString(userTask.getCandidateGroups()), xtw);
     writeQualifiedAttribute(ATTRIBUTE_TASK_USER_DUEDATE, userTask.getDueDate(), xtw);
+    writeQualifiedAttribute(ATTRIBUTE_TASK_USER_BUSINESS_CALENDAR_NAME, userTask.getBusinessCalendarName(), xtw);
+    writeQualifiedAttribute(ATTRIBUTE_TASK_USER_CATEGORY, userTask.getCategory(), xtw);
     writeQualifiedAttribute(ATTRIBUTE_FORM_FORMKEY, userTask.getFormKey(), xtw);
     if (userTask.getPriority() != null) {
       writeQualifiedAttribute(ATTRIBUTE_TASK_USER_PRIORITY, userTask.getPriority().toString(), xtw);
     }
+    if (StringUtils.isNotEmpty(userTask.getExtensionId())) {
+      writeQualifiedAttribute(ATTRIBUTE_TASK_SERVICE_EXTENSIONID, userTask.getExtensionId(), xtw);
+    }
+    if (userTask.getSkipExpression() != null) {
+      writeQualifiedAttribute(ATTRIBUTE_TASK_USER_SKIP_EXPRESSION, userTask.getSkipExpression(), xtw);
+    }
     // write custom attributes
-    BpmnXMLUtil.writeAttribute(userTask.getAttributes().values(), xtw, defaultAttributes);
+    BpmnXMLUtil.writeCustomAttributes(userTask.getAttributes().values(), xtw, defaultElementAttributes, 
+        defaultActivityAttributes, defaultUserTaskAttributes);
   }
   
   @Override
-  protected void writeExtensionChildElements(BaseElement element, XMLStreamWriter xtw) throws Exception {
+  protected boolean writeExtensionChildElements(BaseElement element, boolean didWriteExtensionStartElement, XMLStreamWriter xtw) throws Exception {
     UserTask userTask = (UserTask) element;
-    writeFormProperties(userTask, xtw);
+    didWriteExtensionStartElement = writeFormProperties(userTask, didWriteExtensionStartElement, xtw);
+    didWriteExtensionStartElement = writeCustomIdentities(element, didWriteExtensionStartElement, xtw);
+    if (!userTask.getCustomProperties().isEmpty()) {
+      for (CustomProperty customProperty : userTask.getCustomProperties()) {
+        
+        if (StringUtils.isEmpty(customProperty.getSimpleValue())) {
+          continue;
+        }
+        
+        if (didWriteExtensionStartElement == false) {
+          xtw.writeStartElement(ELEMENT_EXTENSIONS);
+          didWriteExtensionStartElement = true;
+        }
+        xtw.writeStartElement(ACTIVITI_EXTENSIONS_PREFIX, customProperty.getName(), ACTIVITI_EXTENSIONS_NAMESPACE);
+        xtw.writeCData(customProperty.getSimpleValue());
+        xtw.writeEndElement();
+      }
+    }
+    return didWriteExtensionStartElement;
+  }
+  
+  protected boolean writeCustomIdentities(BaseElement element, boolean didWriteExtensionStartElement, XMLStreamWriter xtw) throws Exception {
+	  UserTask userTask = (UserTask) element;
+	  if (userTask.getCustomUserIdentityLinks().isEmpty() && userTask.getCustomGroupIdentityLinks().isEmpty()) {
+		  return didWriteExtensionStartElement;
+	  }
+	    
+  	if (didWriteExtensionStartElement == false) { 
+      xtw.writeStartElement(ELEMENT_EXTENSIONS);
+      didWriteExtensionStartElement = true;
+    }
+  	Set<String> identityLinkTypes = new HashSet<String>();
+  	identityLinkTypes.addAll(userTask.getCustomUserIdentityLinks().keySet());
+  	identityLinkTypes.addAll(userTask.getCustomGroupIdentityLinks().keySet());
+  	for (String identityType : identityLinkTypes) {
+  		writeCustomIdentities(userTask, identityType, userTask.getCustomUserIdentityLinks().get(identityType), userTask.getCustomGroupIdentityLinks().get(identityType), xtw);
+  	}
+    
+    return didWriteExtensionStartElement;
   }
 
-  @Override
-  protected void writeAdditionalChildElements(BaseElement element, XMLStreamWriter xtw) throws Exception {
+  protected void writeCustomIdentities(UserTask userTask,String identityType, Set<String> users, Set<String> groups, XMLStreamWriter xtw) throws Exception {
+	  xtw.writeStartElement(ACTIVITI_EXTENSIONS_PREFIX, ELEMENT_CUSTOM_RESOURCE, ACTIVITI_EXTENSIONS_NAMESPACE);
+	  writeDefaultAttribute(ATTRIBUTE_NAME, identityType, xtw);
+      
+    List<String> identityList = new ArrayList<String>();
+    
+    if (users!=null) {
+      for (String userId: users) {
+        identityList.add("user("+userId+")");
+      }
+    }
+    
+    if (groups!=null) {
+      for (String groupId: groups){
+    	  identityList.add("group("+groupId+")");
+      }
+    }
+    
+    String delimitedString = convertToDelimitedString(identityList);
+    
+    xtw.writeStartElement(ELEMENT_RESOURCE_ASSIGNMENT);
+    xtw.writeStartElement(ELEMENT_FORMAL_EXPRESSION);
+    xtw.writeCharacters(delimitedString);
+    xtw.writeEndElement(); // End ELEMENT_FORMAL_EXPRESSION
+    xtw.writeEndElement(); // End ELEMENT_RESOURCE_ASSIGNMENT
+    
+    xtw.writeEndElement(); // End ELEMENT_CUSTOM_RESOURCE
   }
   
-  public void addFormType(String formType) {
-    if (StringUtils.isNotEmpty(formType)) {
-      formTypes.add(formType);
-    }
+  @Override
+  protected void writeAdditionalChildElements(BaseElement element, BpmnModel model, XMLStreamWriter xtw) throws Exception {
   }
   
   public class HumanPerformerParser extends BaseChildElementParser {
@@ -146,21 +232,15 @@ public class UserTaskXMLConverter extends BaseBpmnXMLConverter {
     }
 
     public void parseChildElement(XMLStreamReader xtr, BaseElement parentElement, BpmnModel model) throws Exception {
-      UserTask userTask = (UserTask) parentElement;
-      if (StringUtils.isNotEmpty(userTask.getAssignee())) {
-        model.addProblem("No duplicate assignee and humanPerformer definition allowed", xtr);
-      }
       String resourceElement = XMLStreamReaderUtil.moveDown(xtr);
-      if (StringUtils.isNotEmpty(resourceElement) && "resourceAssignmentExpression".equals(resourceElement)) {
+      if (StringUtils.isNotEmpty(resourceElement) && ELEMENT_RESOURCE_ASSIGNMENT.equals(resourceElement)) {
         String expression = XMLStreamReaderUtil.moveDown(xtr);
-        if (StringUtils.isNotEmpty(expression) && "formalExpression".equals(expression)) {
+        if (StringUtils.isNotEmpty(expression) && ELEMENT_FORMAL_EXPRESSION.equals(expression)) {
           ((UserTask) parentElement).setAssignee(xtr.getElementText());
         }
       }
     }
   }
-
- 
 
   public class PotentialOwnerParser extends BaseChildElementParser {
 
@@ -168,22 +248,24 @@ public class UserTaskXMLConverter extends BaseBpmnXMLConverter {
       return "potentialOwner";
     }
     
-   
-
     public void parseChildElement(XMLStreamReader xtr, BaseElement parentElement, BpmnModel model) throws Exception {
       String resourceElement = XMLStreamReaderUtil.moveDown(xtr);
-      if (StringUtils.isNotEmpty(resourceElement) && "resourceAssignmentExpression".equals(resourceElement)) {
+      if (StringUtils.isNotEmpty(resourceElement) && ELEMENT_RESOURCE_ASSIGNMENT.equals(resourceElement)) {
         String expression = XMLStreamReaderUtil.moveDown(xtr);
-        if (StringUtils.isNotEmpty(expression) && "formalExpression".equals(expression)) {
+        if (StringUtils.isNotEmpty(expression) && ELEMENT_FORMAL_EXPRESSION.equals(expression)) {
           
           List<String> assignmentList = CommaSplitter.splitCommas(xtr.getElementText());
           
           for (String assignmentValue : assignmentList) {
-            if (assignmentValue == null)
+            if (assignmentValue == null) {
               continue;
+            }
+            
             assignmentValue = assignmentValue.trim();
-            if (assignmentValue.length() == 0)
+            
+            if (assignmentValue.length() == 0) {
               continue;
+            }
 
             String userPrefix = "user(";
             String groupPrefix = "group(";
@@ -198,7 +280,68 @@ public class UserTaskXMLConverter extends BaseBpmnXMLConverter {
             }
           }
         }
+      } else if (StringUtils.isNotEmpty(resourceElement) && ELEMENT_RESOURCE_REF.equals(resourceElement)) {
+        String resourceId = xtr.getElementText();
+        if (model.containsResourceId(resourceId)) { 
+          Resource resource = model.getResource(resourceId);
+          ((UserTask) parentElement).getCandidateGroups().add(resource.getName());
+        } else { 
+          Resource resource = new Resource(resourceId, resourceId);
+          model.addResource(resource);
+          ((UserTask) parentElement).getCandidateGroups().add(resource.getName());
+        }
       }
     }
   }
+  
+  public class CustomIdentityLinkParser extends BaseChildElementParser {
+
+    public String getElementName() {
+      return ELEMENT_CUSTOM_RESOURCE;
+    }
+	    
+    public void parseChildElement(XMLStreamReader xtr, BaseElement parentElement, BpmnModel model) throws Exception {
+	    String identityLinkType = xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_NAME);
+	    
+	    // the attribute value may be unqualified
+	    if (identityLinkType == null) {
+	      identityLinkType = xtr.getAttributeValue(null, ATTRIBUTE_NAME);
+	    }
+	    
+	    if (identityLinkType == null) return;
+	    
+	    String resourceElement = XMLStreamReaderUtil.moveDown(xtr);
+	      if (StringUtils.isNotEmpty(resourceElement) && ELEMENT_RESOURCE_ASSIGNMENT.equals(resourceElement)) {
+	        String expression = XMLStreamReaderUtil.moveDown(xtr);
+	        if (StringUtils.isNotEmpty(expression) && ELEMENT_FORMAL_EXPRESSION.equals(expression)) {
+	          
+	          List<String> assignmentList = CommaSplitter.splitCommas(xtr.getElementText());
+	          
+	          for (String assignmentValue : assignmentList) {
+	            if (assignmentValue == null) {
+	              continue;
+	            }
+	            
+	            assignmentValue = assignmentValue.trim();
+	            
+	            if (assignmentValue.length() == 0) {
+	              continue;
+	            }
+
+	            String userPrefix = "user(";
+	            String groupPrefix = "group(";
+	            if (assignmentValue.startsWith(userPrefix)) {
+	              assignmentValue = assignmentValue.substring(userPrefix.length(), assignmentValue.length() - 1).trim();
+	              ((UserTask) parentElement).addCustomUserIdentityLink(assignmentValue, identityLinkType);
+	            } else if (assignmentValue.startsWith(groupPrefix)) {
+	              assignmentValue = assignmentValue.substring(groupPrefix.length(), assignmentValue.length() - 1).trim();
+	              ((UserTask) parentElement).addCustomGroupIdentityLink(assignmentValue, identityLinkType);
+	            } else {
+	              ((UserTask) parentElement).addCustomGroupIdentityLink(assignmentValue, identityLinkType);
+	            }
+	          }
+	        }
+	      }
+	    }
+	  }
 }

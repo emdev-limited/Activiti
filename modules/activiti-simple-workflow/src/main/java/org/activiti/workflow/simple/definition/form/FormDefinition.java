@@ -17,11 +17,13 @@ import java.util.List;
 
 import org.activiti.workflow.simple.definition.HumanStepDefinition;
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-import org.codehaus.jackson.annotate.JsonProperty;
-import org.codehaus.jackson.map.annotate.JsonSerialize;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
- * A {@link HumanStepDefinition} can have a form associated with it 
+ * A {@link HumanStepDefinition} (or other) can have a form associated with it 
  * that a user must complete to continue the workflow.
  * Such a form contains {@link FormPropertyDefinition}s and {@link FormPropertyGroup}s  
  * or potentially a form key, when the properties are not used.
@@ -31,14 +33,23 @@ import org.codehaus.jackson.map.annotate.JsonSerialize;
  */
 public class FormDefinition implements FormPropertyDefinitionContainer {
 
-	protected String formKey;
+  protected String description;
+  protected String formKey;
   protected List<FormPropertyDefinition> formProperties = new ArrayList<FormPropertyDefinition>();
   protected List<FormPropertyGroup> formGroups = new ArrayList<FormPropertyGroup>();
 
-  /**
+  public String getDescription() {
+	return description;
+  }
+
+  public void setDescription(String description) {
+	this.description = description;
+  }
+
+/**
    * @return All {@link FormPropertyDefinition}s that are not part of any {@link FormPropertyGroup}.
    */
-  @JsonSerialize(contentAs=FormPropertyDefinition.class)
+  @JsonDeserialize(contentAs=FormPropertyDefinition.class)
   @JsonProperty(value="formProperties")
   public List<FormPropertyDefinition> getFormPropertyDefinitions() {
     return formProperties;
@@ -99,9 +110,10 @@ public class FormDefinition implements FormPropertyDefinitionContainer {
     
     FormDefinition formDefinition = (FormDefinition) otherDefinition;
     setFormKey(formDefinition.getFormKey());
+    setDescription(formDefinition.getDescription());
     
     List<FormPropertyGroup> groupList = new ArrayList<FormPropertyGroup>();
-    if (formDefinition.getFormGroups() != null && formDefinition.getFormGroups().size() > 0) {
+    if (formDefinition.getFormGroups() != null && !formDefinition.getFormGroups().isEmpty()) {
       for (FormPropertyGroup propertyGroup : formDefinition.getFormGroups()) {
         groupList.add(propertyGroup.clone());
       }
@@ -109,7 +121,7 @@ public class FormDefinition implements FormPropertyDefinitionContainer {
     setFormGroups(groupList);
     
     formProperties = new ArrayList<FormPropertyDefinition>();
-    if (formDefinition.getFormGroups() != null && formDefinition.getFormGroups().size() > 0) {
+    if (formDefinition.getFormGroups() != null && !formDefinition.getFormGroups().isEmpty()) {
       for (FormPropertyDefinition propertyDefinition : formDefinition.getFormPropertyDefinitions()) {
         formProperties.add(propertyDefinition.clone());
       }

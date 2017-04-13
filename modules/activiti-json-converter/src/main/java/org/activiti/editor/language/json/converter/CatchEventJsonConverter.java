@@ -21,8 +21,9 @@ import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.IntermediateCatchEvent;
 import org.activiti.bpmn.model.MessageEventDefinition;
 import org.activiti.bpmn.model.SignalEventDefinition;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ObjectNode;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @author Tijs Rademakers
@@ -46,8 +47,8 @@ public class CatchEventJsonConverter extends BaseBpmnJsonConverter {
     convertersToJsonMap.put(IntermediateCatchEvent.class, CatchEventJsonConverter.class);
   }
   
-  protected String getStencilId(FlowElement flowElement) {
-    IntermediateCatchEvent catchEvent = (IntermediateCatchEvent) flowElement;
+  protected String getStencilId(BaseElement baseElement) {
+    IntermediateCatchEvent catchEvent = (IntermediateCatchEvent) baseElement;
     List<EventDefinition> eventDefinitions = catchEvent.getEventDefinitions();
     if (eventDefinitions.size() != 1) {
       // return timer event as default;
@@ -64,8 +65,8 @@ public class CatchEventJsonConverter extends BaseBpmnJsonConverter {
     }
   }
 
-  protected void convertElementToJson(ObjectNode propertiesNode, FlowElement flowElement) {
-    IntermediateCatchEvent catchEvent = (IntermediateCatchEvent) flowElement;
+  protected void convertElementToJson(ObjectNode propertiesNode, BaseElement baseElement) {
+    IntermediateCatchEvent catchEvent = (IntermediateCatchEvent) baseElement;
     addEventProperties(catchEvent, propertiesNode);
   }
   

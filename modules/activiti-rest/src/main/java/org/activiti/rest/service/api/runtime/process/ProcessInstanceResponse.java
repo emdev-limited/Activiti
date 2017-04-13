@@ -19,17 +19,29 @@ import java.util.List;
 import org.activiti.rest.service.api.engine.variable.RestVariable;
 
 /**
+ * Modified to add a "completed" flag, which lets the caller know if the process instance
+ *   has run to completion without encountering a wait state or experiencing an error/
+ *   exception.
+ * 
  * @author Frederik Heremans
+ * @author Ryan Johnston (@rjfsu)
  */
 public class ProcessInstanceResponse {
   protected String id;
   protected String url;
   protected String businessKey;
   protected boolean suspended;
+  protected boolean ended;
   protected String processDefinitionId;
   protected String processDefinitionUrl;
+  protected String processDefinitionKey;
   protected String activityId;
   protected List<RestVariable> variables = new ArrayList<RestVariable>();
+  protected String tenantId;
+  protected String name;
+  
+  //Added by Ryan Johnston
+  protected boolean completed;
   
   public String getId() {
     return id;
@@ -63,6 +75,14 @@ public class ProcessInstanceResponse {
     this.suspended = suspended;
   }
   
+  public boolean isEnded() {
+    return ended;
+  }
+
+  public void setEnded(boolean ended) {
+    this.ended = ended;
+  }
+
   public String getProcessDefinitionId() {
     return processDefinitionId;
   }
@@ -74,11 +94,19 @@ public class ProcessInstanceResponse {
   public String getProcessDefinitionUrl() {
     return processDefinitionUrl;
   }
-  
+
   public void setProcessDefinitionUrl(String processDefinitionUrl) {
     this.processDefinitionUrl = processDefinitionUrl;
   }
-  
+
+  public String getProcessDefinitionKey() {
+    return processDefinitionKey;
+  }
+
+  public void setProcessDefinitionKey(String processDefinitionKey) {
+    this.processDefinitionKey = processDefinitionKey;
+  }
+
   public String getActivityId() {
     return activityId;
   }
@@ -97,5 +125,31 @@ public class ProcessInstanceResponse {
   
   public void addVariable(RestVariable variable) {
     variables.add(variable);
+  }
+  
+  public void setTenantId(String tenantId) {
+	  this.tenantId = tenantId;
+  }
+  
+  public String getTenantId() {
+	  return tenantId;
+  }
+  
+  public void setName(String name) {
+	  this.name = name;
+  }
+  
+  public String getName() {
+	  return name;
+  }
+  
+  //Added by Ryan Johnston
+  public boolean isCompleted() {
+	  return completed;
+  }
+  
+  //Added by Ryan Johnston
+  public void setCompleted(boolean completed) {
+	  this.completed = completed;
   }
 }

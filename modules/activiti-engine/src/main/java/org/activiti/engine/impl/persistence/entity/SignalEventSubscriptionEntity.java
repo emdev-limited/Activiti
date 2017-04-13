@@ -21,6 +21,7 @@ import org.activiti.bpmn.model.Signal;
 
 /**
  * @author Daniel Meyer
+ * @author Joram Barrez
  */
 public class SignalEventSubscriptionEntity extends EventSubscriptionEntity {
   
@@ -34,13 +35,17 @@ public class SignalEventSubscriptionEntity extends EventSubscriptionEntity {
     eventType = "signal";
   }
   
-  public SignalEventSubscriptionEntity() {    
+  public SignalEventSubscriptionEntity() {
     eventType = "signal";
   }
   
   @Override
   public void setConfiguration(String configuration) {
-    this.configuration = MessageFormat.format(CONFIGURATION_TEMPLATE, configuration);
+    if (configuration != null && configuration.contains("{\"scope\":")) {
+      this.configuration = configuration;
+    } else {
+      this.configuration = MessageFormat.format(CONFIGURATION_TEMPLATE, configuration);
+    }
   }
   
   public boolean isProcessInstanceScoped() {

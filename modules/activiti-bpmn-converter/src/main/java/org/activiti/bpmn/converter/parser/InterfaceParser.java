@@ -12,9 +12,6 @@
  */
 package org.activiti.bpmn.converter.parser;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import javax.xml.stream.XMLStreamReader;
 
 import org.activiti.bpmn.constants.BpmnXMLConstants;
@@ -23,13 +20,15 @@ import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.Interface;
 import org.activiti.bpmn.model.Operation;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Tijs Rademakers
  */
 public class InterfaceParser implements BpmnXMLConstants {
   
-  protected static final Logger LOGGER = Logger.getLogger(InterfaceParser.class.getName());
+  protected static final Logger LOGGER = LoggerFactory.getLogger(InterfaceParser.class.getName());
   
   public void parse(XMLStreamReader xtr, BpmnModel model) throws Exception {
     
@@ -73,7 +72,7 @@ public class InterfaceParser implements BpmnXMLConstants {
         }
       }
     } catch (Exception e) {
-      LOGGER.log(Level.WARNING, "Error parsing interface child elements", e);
+      LOGGER.warn("Error parsing interface child elements", e);
     }
     
     model.getInterfaces().add(interfaceObject);
@@ -86,10 +85,18 @@ public class InterfaceParser implements BpmnXMLConstants {
       if (indexOfP != -1) {
         String prefix = messageRef.substring(0, indexOfP);
         String resolvedNamespace = model.getNamespace(prefix);
-        result = resolvedNamespace + ":" + messageRef.substring(indexOfP + 1);
-      } else {
-        result = model.getTargetNamespace() + ":" + messageRef;
+        messageRef = messageRef.substring(indexOfP + 1);
+
+        if (resolvedNamespace == null) {
+          // if it's an invalid prefix will consider this is not a namespace prefix so will be used as part of the stringReference
+          messageRef = prefix + ":" + messageRef;
+        } else if (!resolvedNamespace.equalsIgnoreCase(model.getTargetNamespace())) {
+          //  if it's a valid namespace prefix but it's not the targetNamespace then we'll use it as a valid namespace
+          // (even out editor does not support defining namespaces it is still a valid xml file)
+          messageRef = resolvedNamespace + ":" + messageRef;
+        }
       }
+      result = messageRef;
     }
     return result;
   }

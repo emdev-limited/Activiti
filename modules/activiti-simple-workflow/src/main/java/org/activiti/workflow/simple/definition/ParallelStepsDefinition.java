@@ -17,7 +17,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-import org.codehaus.jackson.annotate.JsonTypeName;
+
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
 
 /**
  * Defines a block of steps that all must be executed in parallel.
@@ -66,7 +69,7 @@ public class ParallelStepsDefinition extends AbstractStepListContainer<ParallelS
     setParameters(new HashMap<String, Object>(otherDefinition.getParameters()));
     
     steps = new ArrayList<ListStepDefinition<ParallelStepsDefinition>>();
-    if (definition.getStepList() != null && definition.getStepList().size() > 0) {
+    if (definition.getStepList() != null && !definition.getStepList().isEmpty()) {
       for (ListStepDefinition<ParallelStepsDefinition> stepDefinition : definition.getStepList()) {
         steps.add(stepDefinition.clone());
       }
@@ -74,6 +77,7 @@ public class ParallelStepsDefinition extends AbstractStepListContainer<ParallelS
   }
   
   @Override
+  @JsonSerialize(include=Inclusion.NON_EMPTY)
   public Map<String, Object> getParameters() {
   	return parameters;
   }

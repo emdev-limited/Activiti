@@ -25,6 +25,7 @@ import org.activiti.engine.impl.javax.el.CompositeELResolver;
 import org.activiti.engine.impl.javax.el.DynamicBeanPropertyELResolver;
 import org.activiti.engine.impl.javax.el.ELContext;
 import org.activiti.engine.impl.javax.el.ELResolver;
+import org.activiti.engine.impl.javax.el.JsonNodeELResolver;
 import org.activiti.engine.impl.javax.el.ListELResolver;
 import org.activiti.engine.impl.javax.el.MapELResolver;
 import org.activiti.engine.impl.javax.el.ResourceBundleELResolver;
@@ -42,6 +43,7 @@ public class SimpleResolver extends ELResolver {
 			add(new ArrayELResolver(true));
 			add(new ListELResolver(true));
 			add(new MapELResolver(true));
+			add(new JsonNodeELResolver(true));
 			add(new ResourceBundleELResolver());
       add(new DynamicBeanPropertyELResolver(true, ItemInstance.class, "getFieldValue", "setFieldValue"));
 			add(new BeanELResolver(true));
@@ -52,6 +54,7 @@ public class SimpleResolver extends ELResolver {
 			add(new ArrayELResolver(false));
 			add(new ListELResolver(false));
 			add(new MapELResolver(false));
+			add(new JsonNodeELResolver(false));
 			add(new ResourceBundleELResolver());
       add(new DynamicBeanPropertyELResolver(false, ItemInstance.class, "getFieldValue", "setFieldValue"));
 			add(new BeanELResolver(false));
@@ -137,5 +140,5 @@ public class SimpleResolver extends ELResolver {
 	@Override
 	public Object invoke(ELContext context, Object base, Object method, Class<?>[] paramTypes, Object[] params) {
 		return delegate.invoke(context, base, method, paramTypes, params);
-	};
+	}
 }

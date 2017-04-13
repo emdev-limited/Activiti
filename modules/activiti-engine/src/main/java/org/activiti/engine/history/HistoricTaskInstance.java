@@ -14,7 +14,8 @@
 package org.activiti.engine.history;
 
 import java.util.Date;
-import java.util.Map;
+
+import org.activiti.engine.task.TaskInfo;
 
 
 /**
@@ -22,39 +23,13 @@ import java.util.Map;
  * statistics, audit and other business intelligence purposes.
  * 
  * @author Tom Baeyens
+ * @author Joram Barrez
  */
-public interface HistoricTaskInstance {
-
-  /** 
-   * The unique identifier of this historic task instance. This is the same identifier as the
-   * runtime Task instance.
-   */
-  String getId();
-
-  /** Process definition reference. */
-  String getProcessDefinitionId();
-
-  /** Process instance reference. */
-  String getProcessInstanceId();
-
-  /** Execution reference. */
-  String getExecutionId();
-
-  /** The latest name given to this task. */
-  String getName();
-
-  /** The latest description given to this task. */
-  String getDescription();
+public interface HistoricTaskInstance extends TaskInfo, HistoricData {
 
   /** The reason why this task was deleted {'completed' | 'deleted' | any other user defined string }. */
   String getDeleteReason();
   
-  /** Task owner */
-  String getOwner();
-
-  /** The latest assignee given to this task. */
-  String getAssignee();
-
   /** Time when the task started. */
   Date getStartTime();
 
@@ -70,24 +45,10 @@ public interface HistoricTaskInstance {
   /** Time when the task was claimed. */
   Date getClaimTime();
   
-  /** Task definition key. */
-  String getTaskDefinitionKey();
+  /** Sets an optional localized name for the task. */
+  void setLocalizedName(String name);
   
-  /** Task form key. */
-  String getFormKey();
+  /** Sets an optional localized description for the task. */
+  void setLocalizedDescription(String description);
   
-  /** Task priority **/
-  int getPriority();
-  
-  /** Task due date **/
-  Date getDueDate();
-  
-  /** The parent task of this task, in case this task was a subtask */
-  String getParentTaskId();
-
-  /** Returns the local task variables if requested in the task query */
-  Map<String, Object> getTaskLocalVariables();
-  
-  /** Returns the process variables if requested in the task query */
-  Map<String, Object> getProcessVariables();
 }

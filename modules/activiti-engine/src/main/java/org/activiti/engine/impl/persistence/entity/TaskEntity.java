@@ -24,10 +24,15 @@ import java.util.Map;
 import java.util.Set;
 
 import org.activiti.engine.ActivitiException;
+import org.activiti.engine.ImplicitListeners;
+import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.delegate.DelegateExecution;
 import org.activiti.engine.delegate.DelegateTask;
 import org.activiti.engine.delegate.TaskListener;
+import org.activiti.engine.delegate.event.ActivitiEventType;
+import org.activiti.engine.delegate.event.impl.ActivitiEventBuilder;
 import org.activiti.engine.impl.context.Context;
+import org.activiti.engine.impl.db.BulkDeleteable;
 import org.activiti.engine.impl.db.DbSqlSession;
 import org.activiti.engine.impl.db.HasRevision;
 import org.activiti.engine.impl.db.PersistentObject;
@@ -36,11 +41,11 @@ import org.activiti.engine.impl.identity.Authentication;
 import org.activiti.engine.impl.interceptor.CommandContext;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.impl.task.TaskDefinition;
-import org.activiti.engine.impl.util.ClockUtil;
 import org.activiti.engine.task.DelegationState;
 import org.activiti.engine.task.IdentityLink;
 import org.activiti.engine.task.IdentityLinkType;
 import org.activiti.engine.task.Task;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author Tom Baeyens
@@ -48,7 +53,7 @@ import org.activiti.engine.task.Task;
  * @author Falko Menge
  * @author Tijs Rademakers
  */ 
-public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask, Serializable, PersistentObject, HasRevision {
+public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask, Serializable, PersistentObject, HasRevision, BulkDeleteable {
 
   public static final String DELETE_REASON_COMPLETED = "completed";
   public static final String DELETE_REASON_DELETED = "deleted";
@@ -59,16 +64,20 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
 
   protected String owner;
   protected String assignee;
+  protected String initialAssignee;
   protected DelegationState delegationState;
   
   protected String parentTaskId;
   
   protected String name;
+  protected String localizedName;
   protected String description;
+  protected String localizedDescription;
   protected int priority = DEFAULT_PRIORITY;
   protected Date createTime; // The time when the task has been created
   protected Date dueDate;
   protected int suspensionState = SuspensionState.ACTIVE.getStateCode();
+  protected String category;
   
   protected boolean isIdentityLinksInitialized = false;
   protected List<IdentityLinkEntity> taskIdentityLinkEntities = new ArrayList<IdentityLinkEntity>(); 
@@ -83,12 +92,17 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   
   protected TaskDefinition taskDefinition;
   protected String taskDefinitionKey;
+  protected String formKey;
   
   protected boolean isDeleted;
   
   protected String eventName;
   
+  protected String tenantId = ProcessEngineConfiguration.NO_TENANT_ID;
+  
   protected List<VariableInstanceEntity> queryVariables;
+  
+  protected boolean forcedUpdate;
   
   public TaskEntity() {
   }
@@ -99,7 +113,7 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   
   /** creates and initializes a new persistent task. */
   public static TaskEntity createAndInsert(ActivityExecution execution) {
-    TaskEntity task = create();
+    TaskEntity task = create(Context.getProcessEngineConfiguration().getClock().getCurrentTime());
     task.insert((ExecutionEntity) execution);
     return task;
   }
@@ -109,46 +123,76 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
     DbSqlSession dbSqlSession = commandContext.getDbSqlSession();
     dbSqlSession.insert(this);
     
+    // Inherit tenant id (if applicable)
+    if (execution != null && execution.getTenantId() != null) {
+    	setTenantId(execution.getTenantId());
+    }
+    
     if(execution != null) {
       execution.addTask(this);
     }
     
     commandContext.getHistoryManager().recordTaskCreated(this, execution);
+    
+    if(commandContext.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+    	commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+    			ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_CREATED, this));
+    	commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+    			ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_INITIALIZED, this));
+    }
   }
   
   public void update() {
     // Needed to make history work: the setter will also update the historic task
     setOwner(this.getOwner());
-    setAssignee(this.getAssignee());
+    setAssignee(this.getAssignee(), true, false);
     setDelegationState(this.getDelegationState());
     setName(this.getName());
     setDescription(this.getDescription());
     setPriority(this.getPriority());
+    setCategory(this.getCategory());
     setCreateTime(this.getCreateTime());
     setDueDate(this.getDueDate());
     setParentTaskId(this.getParentTaskId());
+    setFormKey(formKey);
     
     CommandContext commandContext = Context.getCommandContext();
     DbSqlSession dbSqlSession = commandContext.getDbSqlSession();
     dbSqlSession.update(this);
+    
+    if(commandContext.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+    	commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+    			ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_UPDATED, this));
+    }
   }
   
   /**  Creates a new task.  Embedded state and create time will be initialized.
-   * But this task still will have to be persisted. See {@link #insert(ExecutionEntity)}. */
-  public static TaskEntity create() {
+   * But this task still will have to be persisted. See {@link #insert(ExecutionEntity))}. */
+  public static TaskEntity create(Date createTime) {
     TaskEntity task = new TaskEntity();
     task.isIdentityLinksInitialized = true;
-    task.createTime = ClockUtil.getCurrentTime();
+    task.createTime = createTime;
     return task;
   }
 
-  public void complete() {
+  @SuppressWarnings("rawtypes")
+  public void complete(Map variablesMap, boolean localScope) {
+  	
+  	if (getDelegationState() != null && getDelegationState().equals(DelegationState.PENDING)) {
+  		throw new ActivitiException("A delegated task cannot be completed, but should be resolved instead.");
+  	}
+  	
     fireEvent(TaskListener.EVENTNAME_COMPLETE);
 
     if (Authentication.getAuthenticatedUserId() != null && processInstanceId != null) {
       getProcessInstance().involveUser(Authentication.getAuthenticatedUserId(), IdentityLinkType.PARTICIPANT);
     }
     
+    if(Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+    	Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+    	    ActivitiEventBuilder.createEntityWithVariablesEvent(ActivitiEventType.TASK_COMPLETED, this, variablesMap, localScope));
+    }
+ 
     Context
       .getCommandContext()
       .getTaskEntityManager()
@@ -166,12 +210,12 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
     if (getOwner() == null) {
       setOwner(getAssignee());
     }
-    setAssignee(userId);
+    setAssignee(userId, true, true);
   }
 
   public void resolve() {
     setDelegationState(DelegationState.RESOLVED);
-    setAssignee(this.owner);
+    setAssignee(this.owner, true, true);
   }
 
   public Object getPersistentState() {
@@ -204,11 +248,19 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
     
     persistentState.put("suspensionState", this.suspensionState);
     
+    if (forcedUpdate) {
+      persistentState.put("forcedUpdate", Boolean.TRUE);
+    }
+    
     return persistentState;
   }
   
   public int getRevisionNext() {
     return revision+1;
+  }
+  
+  public void forceUpdate() {
+    this.forcedUpdate = true;
   }
 
   // variables ////////////////////////////////////////////////////////////////
@@ -234,6 +286,33 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
       .getCommandContext()
       .getVariableInstanceEntityManager()
       .findVariableInstancesByTaskId(id);
+  }
+  
+  @Override
+  protected VariableInstanceEntity createVariableInstance(String variableName, Object value,
+      ExecutionEntity sourceActivityExecution) {
+    VariableInstanceEntity result = super.createVariableInstance(variableName, value, sourceActivityExecution);
+    
+    // Dispatch event, if needed
+    if(Context.getProcessEngineConfiguration() != null && Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+  		Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+  				ActivitiEventBuilder.createVariableEvent(ActivitiEventType.VARIABLE_CREATED, variableName, value, result.getType(), result.getTaskId(), 
+  						result.getExecutionId(), getProcessInstanceId(), getProcessDefinitionId()));
+    }
+    return result;
+  }
+  
+  @Override
+  protected void updateVariableInstance(VariableInstanceEntity variableInstance, Object value,
+      ExecutionEntity sourceActivityExecution) {
+    super.updateVariableInstance(variableInstance, value, sourceActivityExecution);
+    
+    // Dispatch event, if needed
+    if(Context.getProcessEngineConfiguration() != null && Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+    	Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+    			ActivitiEventBuilder.createVariableEvent(ActivitiEventType.VARIABLE_UPDATED, variableInstance.getName(), value, variableInstance.getType(), 
+    					variableInstance.getTaskId(), variableInstance.getExecutionId(), getProcessInstanceId(), getProcessDefinitionId()));
+    }
   }
 
   // execution ////////////////////////////////////////////////////////////////
@@ -287,19 +366,24 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
       .getIdentityLinkEntityManager()
       .findIdentityLinkByTaskUserGroupAndType(id, userId, groupId, type);
     
+    List<String> identityLinkIds = new ArrayList<String>();
     for (IdentityLinkEntity identityLink: identityLinks) {
       Context
         .getCommandContext()
         .getIdentityLinkEntityManager()
         .deleteIdentityLink(identityLink, true);
+      identityLinkIds.add(identityLink.getId());
     }
     
     // fix deleteCandidate() in create TaskListener
     List<IdentityLinkEntity> removedIdentityLinkEntities = new ArrayList<IdentityLinkEntity>();
     for (IdentityLinkEntity identityLinkEntity : this.getIdentityLinks()) {
-      if (IdentityLinkType.CANDIDATE.equals(identityLinkEntity.getType())) {
+      if (IdentityLinkType.CANDIDATE.equals(identityLinkEntity.getType()) && 
+          identityLinkIds.contains(identityLinkEntity.getId()) == false) {
+        
         if ((userId != null && userId.equals(identityLinkEntity.getUserId()))
-          || (groupId != null && identityLinkEntity.getGroupId().equals(groupId))) {
+          || (groupId != null && groupId.equals(identityLinkEntity.getGroupId()))) {
+          
           Context
             .getCommandContext()
             .getIdentityLinkEntityManager()
@@ -416,6 +500,10 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   public void setNameWithoutCascade(String taskName) {
     this.name = taskName;
   }
+  
+  public void setLocalizedName(String name) {
+    this.localizedName = name;
+  }
 
   public void setDescription(String description) {
     this.description = description;
@@ -432,14 +520,31 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   public void setDescriptionWithoutCascade(String description) {
     this.description = description;
   }
+  
+  public void setLocalizedDescription(String description) {
+    this.localizedDescription = description;
+  }
 
   public void setAssignee(String assignee) {
-    if (assignee==null && this.assignee==null) {
+    setAssignee(assignee, false, false);
+  }
+  
+  public void setAssignee(String assignee, boolean dispatchAssignmentEvent, boolean dispatchUpdateEvent) {
+  	CommandContext commandContext = Context.getCommandContext();
+  	
+  	if (assignee==null && this.assignee==null) {
+  		
+  		// ACT-1923: even if assignee is unmodified and null, this should be stored in history.
+  		if (commandContext!=null) {
+        commandContext
+          .getHistoryManager()
+          .recordTaskAssigneeChange(id, assignee);
+  		}
+  		
       return;
     }
     this.assignee = assignee;
 
-    CommandContext commandContext = Context.getCommandContext();
     // if there is no command context, then it means that the user is calling the 
     // setAssignee outside a service method.  E.g. while creating a new task.
     if (commandContext!=null) {
@@ -451,17 +556,39 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
         getProcessInstance().involveUser(assignee, IdentityLinkType.PARTICIPANT);
       }
       
-      fireEvent(TaskListener.EVENTNAME_ASSIGNMENT);
+      if(!StringUtils.equals(initialAssignee, assignee)) {
+      	fireEvent(TaskListener.EVENTNAME_ASSIGNMENT);
+      	initialAssignee = assignee;
+      }
+      
+      if(commandContext.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+      	if(dispatchAssignmentEvent) {
+      		commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+      				ActivitiEventBuilder.createEntityEvent(ActivitiEventType.TASK_ASSIGNED, this));
+      	}
+      	
+      	if(dispatchUpdateEvent) {
+      		commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+      				ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_UPDATED, this));
+      	}
+      }
     }
   }
 
   /* plain setter for persistence */
   public void setAssigneeWithoutCascade(String assignee) {
     this.assignee = assignee;
+    
+    // Assign the assignee that was persisted before
+    this.initialAssignee = assignee;
   }
   
   public void setOwner(String owner) {
-    if (owner==null && this.owner==null) {
+    setOwner(owner, false);
+  }
+  
+  public void setOwner(String owner, boolean dispatchUpdateEvent) {
+  	if (owner==null && this.owner==null) {
       return;
     }
 //    if (owner!=null && owner.equals(this.owner)) {
@@ -478,6 +605,13 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
       if (owner != null && processInstanceId != null) {
         getProcessInstance().involveUser(owner, IdentityLinkType.PARTICIPANT);
       }
+      
+      if(dispatchUpdateEvent && commandContext.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+      	if(dispatchUpdateEvent) {
+      		commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+      				ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_UPDATED, this));
+      	}
+      }
     }
   }
 
@@ -487,14 +621,25 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   }
   
   public void setDueDate(Date dueDate) {
-    this.dueDate = dueDate;
-    
-    CommandContext commandContext = Context.getCommandContext();
-    if (commandContext!=null) {
-      commandContext
-        .getHistoryManager()
-        .recordTaskDueDateChange(id, dueDate);
-    }
+   setDueDate(dueDate, false);
+  }
+  
+  public void setDueDate(Date dueDate, boolean dispatchUpdateEvent) {
+  	 this.dueDate = dueDate;
+     
+     CommandContext commandContext = Context.getCommandContext();
+     if (commandContext!=null) {
+       commandContext
+         .getHistoryManager()
+         .recordTaskDueDateChange(id, dueDate);
+       
+       if(dispatchUpdateEvent && commandContext.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+       	if(dispatchUpdateEvent) {
+       		commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+       				ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_UPDATED, this));
+       	}
+       }
+     }
   }
 
   public void setDueDateWithoutCascade(Date dueDate) {
@@ -502,6 +647,10 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   }
   
   public void setPriority(int priority) {
+  	setPriority(priority, false);
+  }
+  
+  public void setPriority(int priority, boolean dispatchUpdateEvent) {
     this.priority = priority;
     
     CommandContext commandContext = Context.getCommandContext();
@@ -509,9 +658,31 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
       commandContext
         .getHistoryManager()
         .recordTaskPriorityChange(id, priority);
+      
+      if(dispatchUpdateEvent && commandContext.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
+      	if(dispatchUpdateEvent) {
+      		commandContext.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
+      				ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_UPDATED, this));
+      	}
+      }
     }
   }
-
+  
+  public void setCategoryWithoutCascade(String category) {
+	  this.category = category;
+  }
+  
+  public void setCategory(String category) {
+  	this.category = category;
+  	 
+    CommandContext commandContext = Context.getCommandContext();
+    if (commandContext!=null) {
+      commandContext
+        .getHistoryManager()
+        .recordTaskCategoryChange(id, category);
+    }
+  }
+  
   public void setPriorityWithoutCascade(int priority) {
     this.priority = priority;
   }
@@ -533,9 +704,28 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   
   public void setTaskDefinitionKeyWithoutCascade(String taskDefinitionKey) {
        this.taskDefinitionKey = taskDefinitionKey;
-  }       
+  }   
+  
+  public String getFormKey() {
+		return formKey;
+	}
 
-  public void fireEvent(String taskEventName) {
+	public void setFormKey(String formKey) {
+		this.formKey = formKey;
+		
+	  CommandContext commandContext = Context.getCommandContext();
+    if (commandContext!=null) {
+      commandContext
+        .getHistoryManager()
+        .recordTaskFormKeyChange(id, formKey);
+    }
+	}
+	
+	public void setFormKeyWithoutCascade(String formKey) {
+		this.formKey = formKey;
+	}
+
+	public void fireEvent(String taskEventName) {
     TaskDefinition taskDefinition = getTaskDefinition();
     if (taskDefinition != null) {
       List<TaskListener> taskEventListeners = getTaskDefinition().getTaskListener(taskEventName);
@@ -555,11 +745,60 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
         }
       }
     }
+    
+ // fire implicit listeners
+  	ProcessEngineConfiguration cfg = Context.getProcessEngineConfiguration();
+  	if (!(cfg instanceof ImplicitListeners))
+  		return;
+  	
+  	List<TaskListener> taskEventListeners = ((ImplicitListeners) cfg).getImplicitUserTaskListenersFor(taskEventName);
+     if (taskEventListeners != null) {
+       for (TaskListener taskListener : taskEventListeners) {
+         ExecutionEntity execution = getExecution();
+         if (execution != null) {
+           setEventName(taskEventName);
+         }
+         try {
+           Context.getProcessEngineConfiguration()
+             .getDelegateInterceptor()
+             .handleInvocation(new TaskListenerInvocation(taskListener, (DelegateTask)this));
+         }catch (Exception e) {
+           throw new ActivitiException("Exception while invoking TaskListener: "+e.getMessage(), e);
+         }
+       }
+     }
   }
   
   @Override
   protected boolean isActivityIdUsedForDetails() {
     return false;
+  }
+  
+  // Override from VariableScopeImpl
+  
+  // Overriden to avoid fetching *all* variables (as is the case in the super call)
+  @Override
+  protected VariableInstanceEntity getSpecificVariable(String variableName) {
+		CommandContext commandContext = Context.getCommandContext();
+		if (commandContext == null) {
+			throw new ActivitiException("lazy loading outside command context");
+		}
+		VariableInstanceEntity variableInstance = commandContext
+		    .getVariableInstanceEntityManager()
+		    .findVariableInstanceByTaskAndName(id, variableName);
+
+		return variableInstance;
+	}
+  
+  @Override
+  protected List<VariableInstanceEntity> getSpecificVariables(Collection<String> variableNames) {
+  	CommandContext commandContext = Context.getCommandContext();
+		if (commandContext == null) {
+			throw new ActivitiException("lazy loading outside command context");
+		}
+		return commandContext
+		    .getVariableInstanceEntityManager()
+		    .findVariableInstancesByTaskAndNames(id, variableNames);
   }
 
   // modified getters and setters /////////////////////////////////////////////
@@ -596,11 +835,19 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   }
 
   public String getName() {
-    return name;
+    if (localizedName != null && localizedName.length() > 0) {
+      return localizedName;
+    } else {
+      return name;
+    }
   }
 
   public String getDescription() {
-    return description;
+    if (localizedDescription != null && localizedDescription.length() > 0) {
+      return localizedDescription;
+    } else {
+      return description;
+    }
   }
   
   public Date getDueDate() {
@@ -703,7 +950,7 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   public String getParentTaskId() {
     return parentTaskId;
   }
-  public Map<String, VariableInstanceEntity> getVariableInstances() {
+  public Map<String, VariableInstanceEntity> getVariableInstanceEntities() {
     ensureVariableInstancesInitialized();
     return variableInstances;
   }
@@ -713,7 +960,10 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   public void setSuspensionState(int suspensionState) {
     this.suspensionState = suspensionState;
   }
-  public boolean isSuspended() {
+  public String getCategory() {
+		return category;
+	}
+	public boolean isSuspended() {
     return suspensionState == SuspensionState.SUSPENDED.getStateCode();
   }
   public Map<String, Object> getTaskLocalVariables() {
@@ -738,7 +988,13 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
     }
     return variables;
   }
-  public List<VariableInstanceEntity> getQueryVariables() {
+  public String getTenantId() {
+		return tenantId;
+	}
+	public void setTenantId(String tenantId) {
+		this.tenantId = tenantId;
+	}
+	public List<VariableInstanceEntity> getQueryVariables() {
     if(queryVariables == null && Context.getCommandContext() != null) {
       queryVariables = new VariableInitializingList();
     }
@@ -748,5 +1004,5 @@ public class TaskEntity extends VariableScopeImpl implements Task, DelegateTask,
   public void setQueryVariables(List<VariableInstanceEntity> queryVariables) {
     this.queryVariables = queryVariables;
   }
-  
+
 }

@@ -15,12 +15,10 @@ package org.activiti.engine.impl.cmd;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
-import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.interceptor.Command;
 import org.activiti.engine.impl.interceptor.CommandContext;
 import org.activiti.engine.impl.persistence.entity.TaskEntity;
@@ -29,6 +27,7 @@ import org.activiti.engine.task.Task;
 
 /**
  * @author Tom Baeyens
+ * @author Joram Barrez
  */
 public class GetTaskVariablesCmd implements Command<Map<String, Object>>, Serializable {
 
@@ -48,8 +47,7 @@ public class GetTaskVariablesCmd implements Command<Map<String, Object>>, Serial
       throw new ActivitiIllegalArgumentException("taskId is null");
     }
     
-    TaskEntity task = Context
-      .getCommandContext()
+    TaskEntity task = commandContext
       .getTaskEntityManager()
       .findTaskById(taskId);
     
@@ -57,23 +55,24 @@ public class GetTaskVariablesCmd implements Command<Map<String, Object>>, Serial
       throw new ActivitiObjectNotFoundException("task "+taskId+" doesn't exist", Task.class);
     }
 
-    Map<String, Object> taskVariables;
-    if (isLocal) {
-      taskVariables = task.getVariablesLocal();
+    
+    if (variableNames == null) {
+    	
+    	if (isLocal) {
+    		return task.getVariablesLocal();
+    	} else {
+    		return task.getVariables();
+    	}
+    	
     } else {
-      taskVariables = task.getVariables();
+    	
+    	if (isLocal) {
+    		return task.getVariablesLocal(variableNames, false);
+    	} else {
+    		return task.getVariables(variableNames, false);
+    	}
+    	
     }
     
-    if (variableNames==null) {
-      variableNames = taskVariables.keySet();
-    }
-    
-    // this copy is made to avoid lazy initialization outside a command context
-    Map<String, Object> variables = new HashMap<String, Object>();
-    for (String variableName: variableNames) {
-      variables.put(variableName, task.getVariable(variableName));
-    }
-    
-    return variables;
   }
 }

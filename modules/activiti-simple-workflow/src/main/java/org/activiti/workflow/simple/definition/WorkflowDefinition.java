@@ -20,6 +20,9 @@ import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.workflow.simple.converter.WorkflowDefinitionConversion;
 import org.activiti.workflow.simple.definition.form.FormDefinition;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 /**
  * Allows to create simple workflows through an easy, fluent Java API.
  * 
@@ -57,6 +60,7 @@ public class WorkflowDefinition extends AbstractStepDefinitionContainer<Workflow
   protected String key;
   protected String name;
   protected String description;
+  protected String category;
   protected FormDefinition startFormDefinition;
   protected ParallelStepsDefinition currentParallelStepsDefinition;
   protected ChoiceStepsDefinition currentChoiceStepsDefinition;
@@ -115,6 +119,20 @@ public class WorkflowDefinition extends AbstractStepDefinitionContainer<Workflow
     return this;
   }
   
+  public String getCategory() {
+	return category;
+  }
+
+  public void setCategory(String category) {
+	this.category = category;
+  }
+  
+  public WorkflowDefinition category(String category) {
+	  setCategory(category);
+	  return this;
+  }
+
+  @JsonInclude(Include.NON_EMPTY)
   public Map<String, Object> getParameters() {
 	  return parameters;
   }

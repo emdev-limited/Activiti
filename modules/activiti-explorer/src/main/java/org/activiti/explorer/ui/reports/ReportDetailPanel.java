@@ -145,13 +145,14 @@ public class ReportDetailPanel extends DetailPanel {
     final ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
     StartFormData startFormData = processEngine.getFormService().getStartFormData(processDefinition.getId());
     
-    if(startFormData != null && ((startFormData.getFormProperties() != null && startFormData.getFormProperties().size() > 0) || startFormData.getFormKey() != null)) {
+    if(startFormData != null && ((startFormData.getFormProperties() != null && !startFormData.getFormProperties()
+                                                                                             .isEmpty()) || startFormData.getFormKey() != null)) {
       processDefinitionStartForm = new FormPropertiesForm();
       detailContainer.addComponent(processDefinitionStartForm);
       
       processDefinitionStartForm.setFormProperties(startFormData.getFormProperties());
 
-      processDefinitionStartForm.setSubmitButtonCaption("Generate report");
+      processDefinitionStartForm.setSubmitButtonCaption(i18nManager.getMessage(Messages.REPORTING_GENERATE_REPORT));
       processDefinitionStartForm.hideCancelButton();
       processDefinitionStartForm.addListener(new FormPropertiesEventListener() {
 

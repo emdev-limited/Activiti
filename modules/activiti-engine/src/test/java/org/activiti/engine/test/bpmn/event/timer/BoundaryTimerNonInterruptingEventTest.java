@@ -17,9 +17,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
-import org.activiti.engine.impl.jobexecutor.JobExecutor;
+import org.activiti.engine.impl.asyncexecutor.AsyncExecutor;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
-import org.activiti.engine.impl.util.ClockUtil;
 import org.activiti.engine.runtime.Execution;
 import org.activiti.engine.runtime.Job;
 import org.activiti.engine.runtime.JobQuery;
@@ -48,8 +47,10 @@ public class BoundaryTimerNonInterruptingEventTest extends PluggableActivitiTest
     assertEquals(2, jobs.size());
 
     // After setting the clock to time '1 hour and 5 seconds', the first timer should fire
-    ClockUtil.setCurrentTime(new Date(startTime.getTime() + ((60 * 60 * 1000) + 5000)));
-    waitForJobExecutorToProcessAllJobs(5000L, 25L);
+    processEngineConfiguration.getClock().setCurrentTime(new Date(startTime.getTime() + ((60 * 60 * 1000) + 5000)));
+    Job job = managementService.createJobQuery().executable().singleResult();
+    assertNotNull(job);
+    managementService.executeJob(job.getId());
     
     // we still have one timer more to fire
     assertEquals(1L, jobQuery.count());
@@ -68,7 +69,7 @@ public class BoundaryTimerNonInterruptingEventTest extends PluggableActivitiTest
     assertEquals("First Task", taskService.createTaskQuery().singleResult().getName());
 
     // After setting the clock to time '2 hour and 5 seconds', the second timer should fire
-    ClockUtil.setCurrentTime(new Date(startTime.getTime() + ((2 * 60 * 60 * 1000) + 5000)));
+    processEngineConfiguration.getClock().setCurrentTime(new Date(startTime.getTime() + ((2 * 60 * 60 * 1000) + 5000)));
     waitForJobExecutorToProcessAllJobs(5000L, 25L);
     
     // no more timers to fire
@@ -109,7 +110,7 @@ public class BoundaryTimerNonInterruptingEventTest extends PluggableActivitiTest
     assertEquals(1, jobs.size());
 
     // After setting the clock to time '1 hour and 5 seconds', the first timer should fire
-    ClockUtil.setCurrentTime(new Date(startTime.getTime() + ((60 * 60 * 1000) + 5000)));
+    processEngineConfiguration.getClock().setCurrentTime(new Date(startTime.getTime() + ((60 * 60 * 1000) + 5000)));
     waitForJobExecutorToProcessAllJobs(5000L, 25L);
     
     // timer has fired
@@ -181,23 +182,41 @@ public class BoundaryTimerNonInterruptingEventTest extends PluggableActivitiTest
   @Deployment
   public void testTimerWithCycle() throws Exception {
     runtimeService.startProcessInstanceByKey("nonInterruptingCycle").getId();
-    TaskQuery tq = taskService.createTaskQuery().taskDefinitionKey("timerFiredTask");
-    assertEquals(0, tq.count());
-    moveByHours(1);
-    assertEquals(1, tq.count());
-    moveByHours(1);
-    assertEquals(2, tq.count());
+
+    List<Job> jobs = managementService.createJobQuery().list();
+    assertEquals(1, jobs.size());
+    //boundary events
+    try {
+      waitForJobExecutorToProcessAllJobs(2000, 100);
+      fail("a new job must be prepared because there are undefinite number of repeats 1 hour interval");
+    }catch (Exception ex){
+      //expected exception because a new job is prepared
+    }
+
+   moveByMinutes(60);
+    try {
+      waitForJobExecutorToProcessAllJobs(2000, 100);
+      fail("a new job must be prepared because there are undefinite number of repeats 1 hour interval");
+    }catch (Exception ex){
+      //expected exception because a new job is prepared
+    }
+
 
     Task task = taskService.createTaskQuery().taskDefinitionKey("task").singleResult();
     taskService.complete(task.getId());
 
-    moveByHours(1);
-    assertEquals(2, tq.count());
+    moveByMinutes(60);
+    try {
+      waitForJobExecutorToProcessAllJobs(2000, 100);
+     }catch (Exception ex){
+      fail("No more jobs since the user completed the task");
+
+    }
   }
   
   @Deployment
   /**
-   * see http://jira.codehaus.org/browse/ACT-1173
+   * see https://activiti.atlassian.net/browse/ACT-1173
    */
   public void testTimerOnEmbeddedSubprocess() {
     String id = runtimeService.startProcessInstanceByKey("nonInterruptingTimerOnEmbeddedSubprocess").getId();
@@ -224,7 +243,7 @@ public class BoundaryTimerNonInterruptingEventTest extends PluggableActivitiTest
   
   @Deployment
   /**
-   * see http://jira.codehaus.org/browse/ACT-1106
+   * see https://activiti.atlassian.net/browse/ACT-1106
    */
   public void testReceiveTaskWithBoundaryTimer(){
     // Set the clock fixed
@@ -250,7 +269,7 @@ public class BoundaryTimerNonInterruptingEventTest extends PluggableActivitiTest
     runtimeService.signal(executions.get(0).getId());
 
 //    // After setting the clock to time '1 hour and 5 seconds', the second timer should fire
-//    ClockUtil.setCurrentTime(new Date(startTime.getTime() + ((60 * 60 * 1000) + 5000)));
+//    processEngineConfiguration.getClock().setCurrentTime(new Date(startTime.getTime() + ((60 * 60 * 1000) + 5000)));
 //    waitForJobExecutorToProcessAllJobs(5000L, 25L);
 //    assertEquals(0L, jobQuery.count());
 
@@ -312,13 +331,8 @@ public class BoundaryTimerNonInterruptingEventTest extends PluggableActivitiTest
     assertProcessEnded(procId);
   }
 
-  //we cannot use waitForExecutor... method since there will always be one job left
-  private void moveByHours(int hours) throws Exception {
-    ClockUtil.setCurrentTime(new Date(ClockUtil.getCurrentTime().getTime() + ((hours * 60 * 1000 * 60) + 5000)));
-    JobExecutor jobExecutor = processEngineConfiguration.getJobExecutor();
-    jobExecutor.start();
-    Thread.sleep(1000);
-    jobExecutor.shutdown();
+  private void moveByMinutes(int minutes) throws Exception {
+    processEngineConfiguration.getClock().setCurrentTime(new Date(processEngineConfiguration.getClock().getCurrentTime().getTime() + ((minutes * 60 * 1000))));
   }
 
 

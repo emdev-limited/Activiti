@@ -156,21 +156,21 @@ public class JSONML {
 
 //		              attribute = value
 
-	                    attribute = (String)token;
-			        	if (!arrayForm && (attribute == "tagName" || attribute == "childNode")) {
-                            throw x.syntaxError("Reserved attribute.");			        		
-			        	}
-	                    token = x.nextToken();
-	                    if (token == XML.EQ) {
-	                        token = x.nextToken();
-	                        if (!(token instanceof String)) {
-	                            throw x.syntaxError("Missing value");
-	                        }
-	                        newjo.accumulate(attribute, JSONObject.stringToValue((String)token));
-	                        token = null;
-	                    } else {
-	                    	newjo.accumulate(attribute, "");
-	                    }
+                    attribute = (String)token;
+                    if (!arrayForm && ("tagName".equals(attribute) || "childNode".equals(attribute))) {
+                      throw x.syntaxError("Reserved attribute.");			        		
+                    }
+                    token = x.nextToken();
+                    if (token == XML.EQ) {
+                        token = x.nextToken();
+                        if (!(token instanceof String)) {
+                            throw x.syntaxError("Missing value");
+                        }
+                        newjo.accumulate(attribute, JSONObject.stringToValue((String)token));
+                        token = null;
+                    } else {
+                    	newjo.accumulate(attribute, "");
+                    }
 		            }
                     if (arrayForm && newjo.length() > 0) {
                     	newja.put(newjo);
@@ -308,7 +308,7 @@ public class JSONML {
     	String       k;
 	    Iterator     keys;
 	    int			 length;
-    	StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 	    String       tagName;
 	    String       v;
 	    
@@ -385,7 +385,7 @@ public class JSONML {
      */
 	@SuppressWarnings("unchecked")
   public static String toString(JSONObject jo) throws JSONException {
-	    StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 	    Object		 e;
 	    int          i;
 	    JSONArray    ja;

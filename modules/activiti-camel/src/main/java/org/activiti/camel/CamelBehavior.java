@@ -14,17 +14,17 @@
 package org.activiti.camel;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 
+import org.activiti.bpmn.model.MapExceptionEntry;
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ProcessEngineConfiguration;
+import org.activiti.engine.delegate.BpmnError;
 import org.activiti.engine.delegate.DelegateExecution;
 import org.activiti.engine.delegate.Expression;
-import org.activiti.engine.impl.bpmn.behavior.BpmnActivityBehavior;
+import org.activiti.engine.impl.bpmn.behavior.AbstractBpmnActivityBehavior;
+import org.activiti.engine.impl.bpmn.helper.ErrorPropagation;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.pvm.PvmProcessDefinition;
 import org.activiti.engine.impl.pvm.delegate.ActivityBehavior;
@@ -60,15 +60,17 @@ import org.apache.commons.lang3.StringUtils;
 * @author Ryan Johnston (@rjfsu), Tijs Rademakers, Saeid Mirzaei
 * @version 5.12
 */
-public abstract class CamelBehavior extends BpmnActivityBehavior implements ActivityBehavior {
+public abstract class CamelBehavior extends AbstractBpmnActivityBehavior implements ActivityBehavior {
 
   private static final long serialVersionUID = 1L;
   protected Expression camelContext;
   protected CamelContext camelContextObj;
   protected SpringProcessEngineConfiguration springConfiguration;
+  protected List<MapExceptionEntry> mapExceptions;
   
   protected abstract void setPropertTargetVariable(ActivitiEndpoint endpoint);
   
+ 
   public enum TargetType {
         BODY_AS_MAP, BODY, PROPERTIES
       }  
@@ -109,29 +111,10 @@ public abstract class CamelBehavior extends BpmnActivityBehavior implements Acti
     final ActivitiEndpoint endpoint = createEndpoint(execution);
     final Exchange exchange = createExchange(execution, endpoint);
     
-    if (isASync(execution)) {
-
-      FutureTask<Void> future = new FutureTask<Void>(new Callable<Void>() {
-          public Void call() {
-            try {
-              endpoint.process(exchange);
-            } catch (Exception e) {  
-              throw new RuntimeException("Unable to process camel endpint asynchronously.");
-            }
-            return null;
-          }
-      });
-      ExecutorService executor = Executors.newSingleThreadExecutor();
-      executor.submit(future);
-      handleCamelException(exchange);
-
-    } else {
-      endpoint.process(exchange);
-      handleCamelException(exchange);
-      execution.setVariables(ExchangeUtils.prepareVariables(exchange, endpoint));
-    }
-  
-    performDefaultOutgoingBehavior(execution);
+    endpoint.process(exchange);
+    execution.setVariables(ExchangeUtils.prepareVariables(exchange, endpoint));
+    if (!handleCamelException(exchange, execution))
+      leave(execution);
   }
 
   protected ActivitiEndpoint createEndpoint(ActivityExecution execution) {
@@ -145,24 +128,35 @@ public abstract class CamelBehavior extends BpmnActivityBehavior implements Acti
         return (ActivitiEndpoint) e;
       }
     }
-    throw new RuntimeException("Activiti endpoint not defined for " + key);    
+    throw new ActivitiException("Activiti endpoint not defined for " + key);    
   }
 
   protected Exchange createExchange(ActivityExecution activityExecution, ActivitiEndpoint endpoint) {
-    Exchange ex = new DefaultExchange(camelContextObj);
+    Exchange ex = endpoint.createExchange();
     ex.setProperty(ActivitiProducer.PROCESS_ID_PROPERTY, activityExecution.getProcessInstanceId());
+    ex.setProperty(ActivitiProducer.EXECUTION_ID_PROPERTY, activityExecution.getId());
     Map<String, Object> variables = activityExecution.getVariables();
     updateTargetVariables(endpoint);
     copyVariables(variables, ex, endpoint);
     return ex;
   }
   
-  protected void handleCamelException(Exchange exchange) {
+  protected boolean handleCamelException(Exchange exchange, ActivityExecution execution) throws Exception {
     Exception camelException = exchange.getException();
     boolean notHandledByCamel = exchange.isFailed() && camelException != null;
     if (notHandledByCamel) {
-      throw new ActivitiException("Unhandled exception on camel route", camelException);
+      if (camelException instanceof BpmnError) {
+        ErrorPropagation.propagateError((BpmnError) camelException,
+            execution);
+        return true;
+      } else {
+        if (ErrorPropagation.mapException(camelException, execution, mapExceptions))
+          return true;
+        else
+          throw new ActivitiException("Unhandled exception on camel route", camelException);
+      }
     }
+    return false;
   }
   
   protected void copyVariablesToProperties(Map<String, Object> variables, Exchange exchange) {

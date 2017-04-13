@@ -14,12 +14,16 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
 import org.activiti.bpmn.constants.BpmnXMLConstants;
+import org.activiti.bpmn.converter.child.ActivitiEventListenerParser;
+import org.activiti.bpmn.converter.child.ActivitiFailedjobRetryParser;
+import org.activiti.bpmn.converter.child.ActivitiMapExceptionParser;
 import org.activiti.bpmn.converter.child.BaseChildElementParser;
 import org.activiti.bpmn.converter.child.CancelEventDefinitionParser;
 import org.activiti.bpmn.converter.child.CompensateEventDefinitionParser;
 import org.activiti.bpmn.converter.child.ConditionExpressionParser;
 import org.activiti.bpmn.converter.child.DataInputAssociationParser;
 import org.activiti.bpmn.converter.child.DataOutputAssociationParser;
+import org.activiti.bpmn.converter.child.DataStateParser;
 import org.activiti.bpmn.converter.child.DocumentationParser;
 import org.activiti.bpmn.converter.child.ErrorEventDefinitionParser;
 import org.activiti.bpmn.converter.child.ExecutionListenerParser;
@@ -48,11 +52,13 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
   private static Map<String, BaseChildElementParser> genericChildParserMap = new HashMap<String, BaseChildElementParser>();
   
   static {
+    addGenericParser(new ActivitiEventListenerParser());
     addGenericParser(new CancelEventDefinitionParser());
     addGenericParser(new CompensateEventDefinitionParser());
     addGenericParser(new ConditionExpressionParser());
     addGenericParser(new DataInputAssociationParser());
     addGenericParser(new DataOutputAssociationParser());
+    addGenericParser(new DataStateParser());
     addGenericParser(new DocumentationParser());
     addGenericParser(new ErrorEventDefinitionParser());
     addGenericParser(new ExecutionListenerParser());
@@ -69,6 +75,8 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
     addGenericParser(new TimeCycleParser());
     addGenericParser(new TimeDurationParser());
     addGenericParser(new FlowNodeRefParser());
+    addGenericParser(new ActivitiFailedjobRetryParser());
+    addGenericParser(new ActivitiMapExceptionParser());
   }
   
   private static void addGenericParser(BaseChildElementParser parser) {
@@ -94,11 +102,12 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
   public static void parseChildElements(String elementName, BaseElement parentElement, XMLStreamReader xtr, 
       Map<String, BaseChildElementParser> childParsers, BpmnModel model) throws Exception {
     
-    if (childParsers == null) {
-      childParsers = new HashMap<String, BaseChildElementParser>();
+    Map<String, BaseChildElementParser> localParserMap =
+        new HashMap<String, BaseChildElementParser>(genericChildParserMap);
+    if (childParsers != null) {
+      localParserMap.putAll(childParsers);
     }
-    childParsers.putAll(genericChildParserMap);
-    
+
     boolean inExtensionElements = false;
     boolean readyWithChildElements = false;
     while (readyWithChildElements == false && xtr.hasNext()) {
@@ -106,8 +115,15 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
       if (xtr.isStartElement()) {
         if (ELEMENT_EXTENSIONS.equals(xtr.getLocalName())) {
           inExtensionElements = true;
-        } else if (childParsers.containsKey(xtr.getLocalName())) {
-          childParsers.get(xtr.getLocalName()).parseChildElement(xtr, parentElement, model);
+        } else if (localParserMap.containsKey(xtr.getLocalName())) {
+          BaseChildElementParser childParser = localParserMap.get(xtr.getLocalName());
+          //if we're into an extension element but the current element is not accepted by this parentElement then is read as a custom extension element
+          if (inExtensionElements && !childParser.accepts(parentElement)) {
+            ExtensionElement extensionElement = BpmnXMLUtil.parseExtensionElement(xtr);
+            parentElement.addExtensionElement(extensionElement);
+            continue;
+          }
+          localParserMap.get(xtr.getLocalName()).parseChildElement(xtr, parentElement, model);
         } else if (inExtensionElements) {
           ExtensionElement extensionElement = BpmnXMLUtil.parseExtensionElement(xtr);
           parentElement.addExtensionElement(extensionElement);
@@ -137,7 +153,9 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
       ExtensionAttribute extensionAttribute = new ExtensionAttribute();
       extensionAttribute.setName(xtr.getAttributeLocalName(i));
       extensionAttribute.setValue(xtr.getAttributeValue(i));
-      extensionAttribute.setNamespace(xtr.getAttributeNamespace(i));
+      if (StringUtils.isNotEmpty(xtr.getAttributeNamespace(i))) {
+        extensionAttribute.setNamespace(xtr.getAttributeNamespace(i));
+      }
       if (StringUtils.isNotEmpty(xtr.getAttributePrefix(i))) {
         extensionAttribute.setNamespacePrefix(xtr.getAttributePrefix(i));
       }
@@ -147,7 +165,7 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
     boolean readyWithExtensionElement = false;
     while (readyWithExtensionElement == false && xtr.hasNext()) {
       xtr.next();
-      if (xtr.isCharacters()) {
+      if (xtr.isCharacters() || XMLStreamReader.CDATA == xtr.getEventType()) {
         if (StringUtils.isNotEmpty(xtr.getText().trim())) {
           extensionElement.setElementText(xtr.getText().trim());
         }
@@ -174,12 +192,20 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
   }
   
   public static boolean writeExtensionElements(BaseElement baseElement, boolean didWriteExtensionStartElement, XMLStreamWriter xtw) throws Exception {
-    if (baseElement.getExtensionElements().size() > 0) {
+    return didWriteExtensionStartElement = writeExtensionElements(baseElement, didWriteExtensionStartElement, null, xtw);
+  }
+ 
+  public static boolean writeExtensionElements(BaseElement baseElement, boolean didWriteExtensionStartElement, Map<String, String> namespaceMap, XMLStreamWriter xtw) throws Exception {
+    if (!baseElement.getExtensionElements().isEmpty()) {
       if (didWriteExtensionStartElement == false) {
         xtw.writeStartElement(ELEMENT_EXTENSIONS);
         didWriteExtensionStartElement = true;
       }
-      Map<String, String> namespaceMap = new HashMap<String, String>();
+      
+      if (namespaceMap == null) {
+        namespaceMap = new HashMap<String, String>();
+      }
+      
       for (List<ExtensionElement> extensionElements : baseElement.getExtensionElements().values()) {
         for (ExtensionElement extensionElement : extensionElements) {
           writeExtensionElement(extensionElement, namespaceMap, xtw);
@@ -235,7 +261,7 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
       }
       
       if (extensionElement.getElementText() != null) {
-        xtw.writeCharacters(extensionElement.getElementText());
+        xtw.writeCData(extensionElement.getElementText());
       } else {
         for (List<ExtensionElement> childElements : extensionElement.getChildElements().values()) {
           for (ExtensionElement childElement : childElements) {
@@ -289,11 +315,14 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
   
   public static String convertToDelimitedString(List<String> stringList) {
     StringBuilder resultString = new StringBuilder();
-    for (String result : stringList) {
-      if (resultString.length() > 0) {
-        resultString.append(",");
-      }
-      resultString.append(result);
+    
+    if(stringList != null) {
+    	for (String result : stringList) {
+    		if (resultString.length() > 0) {
+    			resultString.append(",");
+    		}
+    		resultString.append(result);
+    	}
     }
     return resultString.toString();
   }
@@ -305,32 +334,40 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
    * @param element
    * @param blackList
    */
-  public static void addCustomAttributes(XMLStreamReader xtr, BaseElement element, List<ExtensionAttribute> blackList) {
+  public static void addCustomAttributes(XMLStreamReader xtr, BaseElement element, List<ExtensionAttribute>... blackLists) {
     for (int i = 0; i < xtr.getAttributeCount(); i++) {
       ExtensionAttribute extensionAttribute = new ExtensionAttribute();
       extensionAttribute.setName(xtr.getAttributeLocalName(i));
       extensionAttribute.setValue(xtr.getAttributeValue(i));
-      extensionAttribute.setNamespace(xtr.getAttributeNamespace(i));
+      if (StringUtils.isNotEmpty(xtr.getAttributeNamespace(i))) {
+        extensionAttribute.setNamespace(xtr.getAttributeNamespace(i));
+      }
       if (StringUtils.isNotEmpty(xtr.getAttributePrefix(i))) {
         extensionAttribute.setNamespacePrefix(xtr.getAttributePrefix(i));
       }
-      if (!isBlacklisted(extensionAttribute, blackList))
+      if (!isBlacklisted(extensionAttribute, blackLists)) {
         element.addAttribute(extensionAttribute);
+      }
     }
   }
 
+  public static void writeCustomAttributes(Collection<List<ExtensionAttribute>> attributes, XMLStreamWriter xtw, List<ExtensionAttribute>... blackLists) throws XMLStreamException {
+    writeCustomAttributes(attributes, xtw, new LinkedHashMap<String, String>(), blackLists);
+  }
+  
   /**
    * write attributes to xtw (except blacklisted)
    * @param attributes
    * @param xtw
    * @param blackList
    */
-  public static void writeAttribute(Collection<List<ExtensionAttribute>> attributes, XMLStreamWriter xtw, List<ExtensionAttribute> blackList) throws XMLStreamException {
-    Map<String, String> localNamespaces = new LinkedHashMap<String, String>();
+  public static void writeCustomAttributes(Collection<List<ExtensionAttribute>> attributes, XMLStreamWriter xtw, Map<String, String> namespaceMap,
+      List<ExtensionAttribute>... blackLists) throws XMLStreamException {
+    
     for (List<ExtensionAttribute> attributeList : attributes) {
       if (attributeList != null && !attributeList.isEmpty()) {
         for (ExtensionAttribute attribute : attributeList) {
-          if ( !isBlacklisted(attribute, blackList)) {
+          if (!isBlacklisted(attribute, blackLists)) {
             if (attribute.getNamespacePrefix() == null) {
               if (attribute.getNamespace() == null)
                 xtw.writeAttribute(attribute.getName(), attribute.getValue());
@@ -338,8 +375,8 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
                 xtw.writeAttribute(attribute.getNamespace(), attribute.getName(), attribute.getValue());
               }
             } else {
-              if ( !localNamespaces.containsKey(attribute.getNamespacePrefix())) {
-                localNamespaces.put(attribute.getNamespacePrefix(), attribute.getNamespace());
+              if (!namespaceMap.containsKey(attribute.getNamespacePrefix())) {
+                namespaceMap.put(attribute.getNamespacePrefix(), attribute.getNamespace());
                 xtw.writeNamespace(attribute.getNamespacePrefix(), attribute.getNamespace());
               }
               xtw.writeAttribute(attribute.getNamespacePrefix(), attribute.getNamespace(),
@@ -351,15 +388,17 @@ public class BpmnXMLUtil implements BpmnXMLConstants {
     }
   }
 
-  private static boolean isBlacklisted(ExtensionAttribute attribute, List<ExtensionAttribute> blackList) {
-    if (blackList != null) {
-      for (ExtensionAttribute blackAttribute : blackList){
-        if (blackAttribute.getName().equals(attribute.getName())) {
-          if ( blackAttribute.getNamespace() != null && attribute.getNamespace() != null
-              && blackAttribute.getNamespace().equals(attribute.getNamespace()))
-            return true;
-          if (blackAttribute.getNamespace() == null && attribute.getNamespace() == null)
-            return true;
+  public static boolean isBlacklisted(ExtensionAttribute attribute, List<ExtensionAttribute>... blackLists) {
+    if (blackLists != null) {
+      for (List<ExtensionAttribute> blackList : blackLists) {
+        for (ExtensionAttribute blackAttribute : blackList) {
+          if (blackAttribute.getName().equals(attribute.getName())) {
+            if ( blackAttribute.getNamespace() != null && attribute.getNamespace() != null
+                && blackAttribute.getNamespace().equals(attribute.getNamespace()))
+              return true;
+            if (blackAttribute.getNamespace() == null && attribute.getNamespace() == null)
+              return true;
+          }
         }
       }
     }

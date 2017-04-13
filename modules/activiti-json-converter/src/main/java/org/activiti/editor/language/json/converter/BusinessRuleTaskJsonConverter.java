@@ -17,8 +17,9 @@ import java.util.Map;
 import org.activiti.bpmn.model.BaseElement;
 import org.activiti.bpmn.model.BusinessRuleTask;
 import org.activiti.bpmn.model.FlowElement;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ObjectNode;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @author Tijs Rademakers
@@ -40,12 +41,12 @@ public class BusinessRuleTaskJsonConverter extends BaseBpmnJsonConverter {
     convertersToJsonMap.put(BusinessRuleTask.class, BusinessRuleTaskJsonConverter.class);
   }
   
-  protected String getStencilId(FlowElement flowElement) {
+  protected String getStencilId(BaseElement baseElement) {
     return STENCIL_TASK_BUSINESS_RULE;
   }
   
-  protected void convertElementToJson(ObjectNode propertiesNode, FlowElement flowElement) {
-    BusinessRuleTask ruleTask = (BusinessRuleTask) flowElement;
+  protected void convertElementToJson(ObjectNode propertiesNode, BaseElement baseElement) {
+    BusinessRuleTask ruleTask = (BusinessRuleTask) baseElement;
   	propertiesNode.put(PROPERTY_RULETASK_CLASS, ruleTask.getClassName());
   	propertiesNode.put(PROPERTY_RULETASK_VARIABLES_INPUT, convertListToCommaSeparatedString(ruleTask.getInputVariables()));
   	propertiesNode.put(PROPERTY_RULETASK_RESULT, ruleTask.getResultVariableName());

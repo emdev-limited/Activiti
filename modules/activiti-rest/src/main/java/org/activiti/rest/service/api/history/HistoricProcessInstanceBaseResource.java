@@ -19,22 +19,20 @@ import java.util.List;
 import java.util.Map;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
+import org.activiti.engine.HistoryService;
 import org.activiti.engine.history.HistoricProcessInstanceQuery;
 import org.activiti.engine.impl.HistoricProcessInstanceQueryProperty;
 import org.activiti.engine.query.QueryProperty;
-import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.common.api.DataResponse;
-import org.activiti.rest.common.api.SecuredResource;
 import org.activiti.rest.service.api.RestResponseFactory;
 import org.activiti.rest.service.api.engine.variable.QueryVariable;
 import org.activiti.rest.service.api.engine.variable.QueryVariable.QueryVariableOperation;
-import org.activiti.rest.service.application.ActivitiRestServicesApplication;
-import org.restlet.data.Form;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Tijs Rademakers
  */
-public class HistoricProcessInstanceBaseResource extends SecuredResource {
+public class HistoricProcessInstanceBaseResource {
 
   private static Map<String, QueryProperty> allowedSortProperties = new HashMap<String, QueryProperty>();
 
@@ -45,16 +43,23 @@ public class HistoricProcessInstanceBaseResource extends SecuredResource {
     allowedSortProperties.put("startTime", HistoricProcessInstanceQueryProperty.START_TIME);
     allowedSortProperties.put("endTime", HistoricProcessInstanceQueryProperty.END_TIME);
     allowedSortProperties.put("duration", HistoricProcessInstanceQueryProperty.DURATION);
+    allowedSortProperties.put("tenantId", HistoricProcessInstanceQueryProperty.TENANT_ID);
   }
+  
+  @Autowired
+  protected RestResponseFactory restResponseFactory;
+  
+  @Autowired
+  protected HistoryService historyService;
 
-  protected DataResponse getQueryResponse(HistoricProcessInstanceQueryRequest queryRequest, Form urlQuery) {
-    HistoricProcessInstanceQuery query = ActivitiUtil.getHistoryService().createHistoricProcessInstanceQuery();
+  protected DataResponse getQueryResponse(HistoricProcessInstanceQueryRequest queryRequest, Map<String,String> allRequestParams) {
+    HistoricProcessInstanceQuery query = historyService.createHistoricProcessInstanceQuery();
 
     // Populate query based on request
     if (queryRequest.getProcessInstanceId() != null) {
       query.processInstanceId(queryRequest.getProcessInstanceId());
     }
-    if (queryRequest.getProcessInstanceIds() != null && queryRequest.getProcessInstanceIds().size() > 0) {
+    if (queryRequest.getProcessInstanceIds() != null && !queryRequest.getProcessInstanceIds().isEmpty()) {
       query.processInstanceIds(new HashSet<String>(queryRequest.getProcessInstanceIds()));
     }
     if (queryRequest.getProcessDefinitionKey() != null) {
@@ -105,13 +110,24 @@ public class HistoricProcessInstanceBaseResource extends SecuredResource {
     if (queryRequest.getVariables() != null) {
       addVariables(query, queryRequest.getVariables());
     }
+    
+    if (queryRequest.getTenantId() != null) {
+    	query.processInstanceTenantId(queryRequest.getTenantId());
+    }
+    
+    if (queryRequest.getTenantIdLike() != null) {
+    	query.processInstanceTenantIdLike(queryRequest.getTenantIdLike());
+    }
+    
+    if (Boolean.TRUE.equals(queryRequest.getWithoutTenantId())) {
+    	query.processInstanceWithoutTenantId();
+    }
 
-    return new HistoricProcessInstancePaginateList(this).paginateList(urlQuery, query, "processInstanceId", allowedSortProperties);
+    return new HistoricProcessInstancePaginateList(restResponseFactory).paginateList(
+        allRequestParams, queryRequest, query, "processInstanceId", allowedSortProperties);
   }
 
   protected void addVariables(HistoricProcessInstanceQuery processInstanceQuery, List<QueryVariable> variables) {
-    RestResponseFactory responseFactory = getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
-    
     for (QueryVariable variable : variables) {
       if (variable.getVariableOperation() == null) {
         throw new ActivitiIllegalArgumentException("Variable operation is missing for variable: " + variable.getName());
@@ -122,7 +138,7 @@ public class HistoricProcessInstanceBaseResource extends SecuredResource {
 
       boolean nameLess = variable.getName() == null;
 
-      Object actualValue = responseFactory.getVariableValue(variable);
+      Object actualValue = restResponseFactory.getVariableValue(variable);
 
       // A value-only query is only possible using equals-operator
       if (nameLess && variable.getVariableOperation() != QueryVariableOperation.EQUALS) {
@@ -161,17 +177,30 @@ public class HistoricProcessInstanceBaseResource extends SecuredResource {
         }
         break;
         
+      case LIKE_IGNORE_CASE:
+          if (actualValue instanceof String) {
+            processInstanceQuery.variableValueLikeIgnoreCase(variable.getName(), (String) actualValue);
+          } else {
+            throw new ActivitiIllegalArgumentException("Only string variable values are supported for like, but was: "
+                    + actualValue.getClass().getName());
+          }
+          break;
+        
       case GREATER_THAN:
         processInstanceQuery.variableValueGreaterThan(variable.getName(), actualValue);
+        break;
         
       case GREATER_THAN_OR_EQUALS:
         processInstanceQuery.variableValueGreaterThanOrEqual(variable.getName(), actualValue);
-        
+        break;
+
       case LESS_THAN:
         processInstanceQuery.variableValueLessThan(variable.getName(), actualValue);
+        break;
         
       case LESS_THAN_OR_EQUALS:
         processInstanceQuery.variableValueLessThanOrEqual(variable.getName(), actualValue);
+        break;
 
       default:
         throw new ActivitiIllegalArgumentException("Unsupported variable query operation: " + variable.getVariableOperation());

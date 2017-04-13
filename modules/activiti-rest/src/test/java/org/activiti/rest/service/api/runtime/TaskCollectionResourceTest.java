@@ -16,20 +16,21 @@ package org.activiti.rest.service.api.runtime;
 import java.util.Calendar;
 import java.util.List;
 
-import org.activiti.engine.impl.util.ClockUtil;
+import org.activiti.engine.impl.cmd.ChangeDeploymentTenantIdCmd;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.DelegationState;
 import org.activiti.engine.task.IdentityLinkType;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseRestTestCase;
+import org.activiti.rest.service.BaseSpringRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ObjectNode;
-import org.restlet.data.Status;
-import org.restlet.representation.Representation;
-import org.restlet.resource.ClientResource;
-import org.restlet.resource.ResourceException;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 
 /**
@@ -37,7 +38,7 @@ import org.restlet.resource.ResourceException;
  * 
  * @author Frederik Heremans
  */
-public class TaskCollectionResourceTest extends BaseRestTestCase {
+public class TaskCollectionResourceTest extends BaseSpringRestTestCase {
   
   /**
    * Test creating a task.
@@ -48,7 +49,6 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       Task parentTask = taskService.newTask();
       taskService.saveTask(parentTask);
       
-      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION));
       ObjectNode requestNode = objectMapper.createObjectNode();
       
       Calendar dueDate = Calendar.getInstance();
@@ -62,12 +62,16 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       requestNode.put("delegationState", "resolved");
       requestNode.put("dueDate", dueDateString);
       requestNode.put("parentTaskId", parentTask.getId());
+      requestNode.put("formKey", "testKey");
+      requestNode.put("tenantId", "test");
       
       // Execute the request
-      Representation response = client.post(requestNode);
-      assertEquals(Status.SUCCESS_CREATED, client.getResponse().getStatus());
-      
-      JsonNode responseNode = objectMapper.readTree(response.getStream());
+      HttpPost httpPost = new HttpPost(SERVER_URL_PREFIX + 
+          RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION));
+      httpPost.setEntity(new StringEntity(requestNode.toString()));
+      CloseableHttpResponse response = executeRequest(httpPost, HttpStatus.SC_CREATED);
+      JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
+      closeResponse(response);
       String createdTaskId =  responseNode.get("id").asText();
       
       // Check if task is created with right arguments
@@ -78,8 +82,11 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       assertEquals("owner", task.getOwner());
       assertEquals(20, task.getPriority());
       assertEquals(DelegationState.RESOLVED, task.getDelegationState());
-      assertEquals(dueDate.getTime(), task.getDueDate());
+      assertEquals(dateFormat.parse(dueDateString), task.getDueDate());
       assertEquals(parentTask.getId(), task.getParentTaskId());
+      assertEquals("testKey", task.getFormKey());
+      assertEquals("test", task.getTenantId());
+      
     } finally {
       // Clean adhoc-tasks even if test fails
       List<Task> tasks = taskService.createTaskQuery().list();
@@ -95,15 +102,11 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
    */
   public void testCreateTaskNoBody() throws Exception {
     try {
-      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION));
+      HttpPost httpPost = new HttpPost(SERVER_URL_PREFIX + 
+          RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION));
+      httpPost.setEntity(null);
+      closeResponse(executeRequest(httpPost, HttpStatus.SC_BAD_REQUEST));
       
-      try {
-        client.post(null);
-        fail("Exception expected");
-      } catch(ResourceException expected) {
-        assertEquals(Status.CLIENT_ERROR_UNSUPPORTED_MEDIA_TYPE, expected.getStatus());
-        assertEquals("A request body was expected when creating the task.", expected.getStatus().getDescription());
-      }
     } finally {
       // Clean adhoc-tasks even if test fails
       List<Task> tasks = taskService.createTaskQuery().list();
@@ -129,9 +132,9 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       
       Calendar inBetweenTaskCreation = Calendar.getInstance();
       inBetweenTaskCreation.add(Calendar.HOUR, 1);
-      
-      
-      ClockUtil.setCurrentTime(adhocTaskCreate.getTime());
+
+
+      processEngineConfiguration.getClock().setCurrentTime(adhocTaskCreate.getTime());
       Task adhocTask = taskService.newTask();
       adhocTask.setAssignee("gonzo");
       adhocTask.setOwner("owner");
@@ -140,10 +143,11 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       adhocTask.setName("Name one");
       adhocTask.setDueDate(adhocTaskCreate.getTime());
       adhocTask.setPriority(100);
+      adhocTask.setCategory("some-category");
       taskService.saveTask(adhocTask);
       taskService.addUserIdentityLink(adhocTask.getId(), "misspiggy", IdentityLinkType.PARTICIPANT);
-      
-      ClockUtil.setCurrentTime(processTaskCreate.getTime());
+
+      processEngineConfiguration.getClock().setCurrentTime(processTaskCreate.getTime());
       ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess", "myBusinessKey");
       Task processTask = taskService.createTaskQuery().processInstanceId(processInstance.getId()).singleResult();
       processTask.setParentTaskId(adhocTask.getId());
@@ -156,7 +160,7 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       assertResultsPresentInDataResponse(url, adhocTask.getId(), processTask.getId());
       
       // Name filtering
-      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?name=Name one";
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?name=" + encode("Name one");
       assertResultsPresentInDataResponse(url, adhocTask.getId());
       
       // Name like filtering
@@ -164,12 +168,18 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       assertResultsPresentInDataResponse(url, adhocTask.getId());
       
       // Description filtering
-      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?description=Description one";
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?description=" + encode("Description one");
       assertResultsPresentInDataResponse(url, adhocTask.getId());
+      
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?description=" + encode("Description two");
+      assertEmptyResultsPresentInDataResponse(url);
       
       // Description like filtering
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?descriptionLike=" + encode("%one");
       assertResultsPresentInDataResponse(url, adhocTask.getId());
+      
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?descriptionLike=" + encode("%two");
+      assertEmptyResultsPresentInDataResponse(url);
       
       // Priority filtering
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?priority=100";
@@ -187,9 +197,27 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?owner=owner";
       assertResultsPresentInDataResponse(url, adhocTask.getId());
       
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?owner=kermit";
+      assertEmptyResultsPresentInDataResponse(url);
+      
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?ownerLike=" + encode("%ner");
+      assertResultsPresentInDataResponse(url, adhocTask.getId());
+      
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?ownerLike=" + encode("kerm%");
+      assertEmptyResultsPresentInDataResponse(url);
+      
       // Assignee filtering
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?assignee=gonzo";
       assertResultsPresentInDataResponse(url, adhocTask.getId());
+      
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?assignee=kermit";
+      assertEmptyResultsPresentInDataResponse(url);
+      
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?assigneeLike=" + encode("gon%");
+      assertResultsPresentInDataResponse(url, adhocTask.getId());
+      
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?assigneeLike=" + encode("kerm%");
+      assertEmptyResultsPresentInDataResponse(url);
       
       // Unassigned filtering
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?unassigned=true";
@@ -214,7 +242,11 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       // Process instance filtering
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?processInstanceId=" + processInstance.getId();
       assertResultsPresentInDataResponse(url, processTask.getId());
-      
+
+      // Process instance id in list filtering
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?processInstanceIdIn=" + adhocTask.getId() + "," + processInstance.getId();
+      assertResultsPresentInDataResponse(url, processTask.getId());
+
       // Execution filtering
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?executionId=" + processInstance.getId();
       assertResultsPresentInDataResponse(url, processTask.getId());
@@ -259,6 +291,36 @@ public class TaskCollectionResourceTest extends BaseRestTestCase {
       url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?dueBefore=" + getISODateString(inBetweenTaskCreation.getTime());
       assertResultsPresentInDataResponse(url, adhocTask.getId());
       
+      // Without tenantId filtering before tenant set
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?withoutTenantId=true";
+      assertResultsPresentInDataResponse(url, adhocTask.getId(), processTask.getId());
+      
+      // Process definition
+      url  = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?processDefinitionKey=" + processInstance.getProcessDefinitionKey();
+      assertResultsPresentInDataResponse(url, processTask.getId());
+      
+      url  = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?processDefinitionId=" + processInstance.getProcessDefinitionId();
+      assertResultsPresentInDataResponse(url, processTask.getId());
+
+      // Set tenant on deployment
+      managementService.executeCommand(new ChangeDeploymentTenantIdCmd(deploymentId, "myTenant"));
+      
+      // Without tenantId filtering after tenant set, only adhoc task should remain
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?withoutTenantId=true";
+      assertResultsPresentInDataResponse(url, adhocTask.getId());
+      
+      // Tenant id filtering
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?tenantId=myTenant";
+      assertResultsPresentInDataResponse(url, processTask.getId());
+      
+      // Tenant id like filtering
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?tenantIdLike=" + encode("%enant");
+      assertResultsPresentInDataResponse(url, processTask.getId());
+      
+      // Category filtering
+      url = RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_COLLECTION) + "?category=" + encode("some-category");
+      assertResultsPresentInDataResponse(url, adhocTask.getId());
+
       // Suspend process-instance to have a supended task
       runtimeService.suspendProcessInstanceById(processInstance.getId());
       
