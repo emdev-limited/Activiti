@@ -23,13 +23,10 @@ public class ExecutionResponse {
   protected String url;
   protected String parentId;
   protected String parentUrl;
-  protected String superExecutionId;
-  protected String superExecutionUrl;
   protected String processInstanceId;
   protected String processInstanceUrl;
   protected boolean suspended;
   protected String activityId;
-  protected String tenantId;
   
   public String getId() {
     return id;
@@ -63,22 +60,6 @@ public class ExecutionResponse {
     this.parentUrl = parentUrl;
   }
   
-  public String getSuperExecutionId() {
-    return superExecutionId;
-  }
-
-  public void setSuperExecutionId(String superExecutionId) {
-    this.superExecutionId = superExecutionId;
-  }
-
-  public String getSuperExecutionUrl() {
-    return superExecutionUrl;
-  }
-
-  public void setSuperExecutionUrl(String superExecutionUrl) {
-    this.superExecutionUrl = superExecutionUrl;
-  }
-
   public String getProcessInstanceId() {
     return processInstanceId;
   }
@@ -109,13 +90,5 @@ public class ExecutionResponse {
   
   public void setActivityId(String activityId) {
     this.activityId = activityId;
-  }
-  
-  public String getTenantId() {
-	  return tenantId;
-  }
-  
-  public void setTenantId(String tenantId) {
-	  this.tenantId = tenantId;
   }
 }

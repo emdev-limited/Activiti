@@ -13,7 +13,6 @@
 package org.activiti.engine.runtime;
 
 import java.io.Serializable;
-import java.util.List;
 import java.util.Set;
 
 import org.activiti.engine.ProcessEngineConfiguration;
@@ -23,7 +22,6 @@ import org.activiti.engine.query.Query;
  * Allows programmatic querying of {@link ProcessInstance}s.
  * 
  * @author Joram Barrez
- * @author Tijs Rademakers
  * @author Frederik Heremans
  * @author Falko Menge
  */
@@ -40,33 +38,9 @@ public interface ProcessInstanceQuery extends Query<ProcessInstanceQuery, Proces
   
   /** Select process instance with the given business key, unique for the given process definition */
   ProcessInstanceQuery processInstanceBusinessKey(String processInstanceBusinessKey, String processDefinitionKey);
-  
-	/**
-	 * Only select process instances that have the given tenant id.
-	 */
-  ProcessInstanceQuery processInstanceTenantId(String tenantId);
-
-	/**
-	 * Only select process instances with a tenant id like the given one.
-	 */
-  ProcessInstanceQuery processInstanceTenantIdLike(String tenantIdLike);
-	
-	/**
-	 * Only select process instances that do not have a tenant id.
-	 */
-  ProcessInstanceQuery processInstanceWithoutTenantId();
-
-  /** Only select process instances whose process definition category is processDefinitionCategory. */
-  ProcessInstanceQuery processDefinitionCategory(String processDefinitionCategory);
 
   /** Select process instances whose process definition name is processDefinitionName*/
   ProcessInstanceQuery processDefinitionName(String processDefinitionName);
-
-  /**
-   * Only select process instances with a certain process definition version.
-   * Particulary useful when used in combination with {@link #processDefinitionKey(String)}
-   */
-  ProcessInstanceQuery processDefinitionVersion(Integer processDefinitionVersion);
 
   /**
    * Select the process instances which are defined by a process definition with
@@ -75,33 +49,10 @@ public interface ProcessInstanceQuery extends Query<ProcessInstanceQuery, Proces
   ProcessInstanceQuery processDefinitionKey(String processDefinitionKey);
 
   /**
-   * Select the process instances which are defined by process definitions with
-   * the given keys.
-   */
-  ProcessInstanceQuery processDefinitionKeys(Set<String> processDefinitionKeys);
-
-  /**
    * Select the process instances which are defined by a process definition
    * with the given id.
    */
   ProcessInstanceQuery processDefinitionId(String processDefinitionId);
-
-  /**
-   * Select the process instances which are defined by process definitions
-   * with the given ids.
-   */
-  ProcessInstanceQuery processDefinitionIds(Set<String> processDefinitionIds);
-  
-  /**
-   * Select the process instances which are defined by a deployment
-   * with the given id.
-   */
-  ProcessInstanceQuery deploymentId(String deploymentId);
-  
-  /**
-   * Select the process instances which are defined by one of the given deployment ids
-   */
-  ProcessInstanceQuery deploymentIdIn(List<String> deploymentIds);
 
   /**
    * Select the process instances which are a sub process instance of the given
@@ -226,16 +177,6 @@ public interface ProcessInstanceQuery extends Query<ProcessInstanceQuery, Proces
    */
   ProcessInstanceQuery variableValueLike(String name, String value);
   
-  /** 
-   * Only select process instances which have a global variable value like the given value (case insensitive).
-   * This be used on string variables only.
-   * @param name variable name, cannot be null.
-   * @param value variable value, cannot be null. The string can include the
-   * wildcard character '%' to express like-strategy: 
-   * starts with (string%), ends with (%string) or contains (%string%).
-   */
-  ProcessInstanceQuery variableValueLikeIgnoreCase(String name, String value);
-  
   /**
    * Only select process instances which are suspended, either because the 
    * process instance itself is suspended or because the corresponding process 
@@ -251,55 +192,9 @@ public interface ProcessInstanceQuery extends Query<ProcessInstanceQuery, Proces
   ProcessInstanceQuery active();
   
   /**
-   * Only select process instances with the given name.
-   */
-  ProcessInstanceQuery processInstanceName(String name);
-  
-  /**
-   * Only select process instances with a name like the given value. 
-   */
-  ProcessInstanceQuery processInstanceNameLike(String nameLike);
-  
-  /**
-   * Only select process instances with a name like the given value, ignoring upper/lower case.
-   */
-  ProcessInstanceQuery processInstanceNameLikeIgnoreCase(String nameLikeIgnoreCase);
-  
-  /**
-   * Localize process name and description to specified locale.
-   */
-  ProcessInstanceQuery locale(String locale);
-  
-  /**
-   * Instruct localization to fallback to more general locales including the default locale of the JVM if the specified locale is not found. 
-   */
-  ProcessInstanceQuery withLocalizationFallback();
-  
-  /**
    * Include process variables in the process query result
    */
   ProcessInstanceQuery includeProcessVariables();
-  
-  /**
-   * Limit process instance variables
-   */
-  ProcessInstanceQuery limitProcessInstanceVariables(Integer processInstanceVariablesLimit);
-  
-  /**
-   * Only select process instances that failed due to an exception happening during a job execution.
-   */
-  ProcessInstanceQuery withJobException();
-  
-  /**
-   * Begin an OR statement. Make sure you invoke the endOr method at the end of your OR statement.
-   * Only one OR statement is allowed, for the second call to this method an exception will be thrown.
-   */
-  ProcessInstanceQuery or();
-  
-  /**
-   * End an OR statement. Only one OR statement is allowed, for the second call to this method an exception will be thrown.
-   */
-  ProcessInstanceQuery endOr();
   
   //ordering /////////////////////////////////////////////////////////////////
   
@@ -311,8 +206,5 @@ public interface ProcessInstanceQuery extends Query<ProcessInstanceQuery, Proces
   
   /** Order by process definition id (needs to be followed by {@link #asc()} or {@link #desc()}). */
   ProcessInstanceQuery orderByProcessDefinitionId();
-  
-	/** Order by tenant id (needs to be followed by {@link #asc()} or {@link #desc()}). */
-  ProcessInstanceQuery orderByTenantId();
   
 }

@@ -12,11 +12,6 @@
  */
 package org.activiti.engine.impl.bpmn.webservice;
 
-import java.net.URL;
-import java.util.concurrent.ConcurrentMap;
-
-import javax.xml.namespace.QName;
-
 /**
  * An Operation is part of an {@link BpmnInterface} and it defines Messages that are consumed and
  * (optionally) produced when the Operation is called.
@@ -51,8 +46,8 @@ public class Operation {
     setInMessage(inMessage);
   }
   
-  public MessageInstance sendMessage(MessageInstance message, final ConcurrentMap<QName, URL> overridenEndpointAddresses) throws Exception {
-    return this.implementation.sendFor(message, this, overridenEndpointAddresses);
+  public MessageInstance sendMessage(MessageInstance message) {
+    return this.implementation.sendFor(message, this);
   }
   
   public String getId() {

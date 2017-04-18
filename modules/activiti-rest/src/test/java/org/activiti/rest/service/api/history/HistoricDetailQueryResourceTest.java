@@ -20,18 +20,16 @@ import java.util.Iterator;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.node.ObjectNode;
+import org.restlet.data.ChallengeScheme;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
 
 
 /**
@@ -39,7 +37,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * 
  * @author Tijs Rademakers
  */
-public class HistoricDetailQueryResourceTest extends BaseSpringRestTestCase {
+public class HistoricDetailQueryResourceTest extends BaseRestTestCase {
   
   /**
    * Test querying historic detail. 
@@ -87,27 +85,27 @@ public class HistoricDetailQueryResourceTest extends BaseSpringRestTestCase {
     
     requestNode = objectMapper.createObjectNode();
     requestNode.put("processInstanceId", processInstance2.getId());
-    HttpPost httpPost = new HttpPost(SERVER_URL_PREFIX + url);
-    httpPost.setEntity(new StringEntity(requestNode.toString()));
-    CloseableHttpResponse response = executeRequest(httpPost, 200);
+    ClientResource client = getAuthenticatedClient(url);
+    Representation response = client.post(requestNode);
     
     // Check status and size
-    assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-    JsonNode dataNode = objectMapper.readTree(response.getEntity().getContent()).get("data");
-    closeResponse(response);
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    JsonNode dataNode = objectMapper.readTree(response.getStream()).get("data");
     
     boolean byteVarFound = false;
     Iterator<JsonNode> it = dataNode.iterator();
-    while (it.hasNext()) {
+    while(it.hasNext()) {
       JsonNode variableNode = it.next().get("variable");
-      String name = variableNode.get("name").textValue();
+      String name = variableNode.get("name").getTextValue();
       if ("byteVar".equals(name)) {
         byteVarFound = true;
-        String valueUrl = variableNode.get("valueUrl").textValue();
-        response = executeRequest(new HttpGet(valueUrl), 200);
-        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        byte[] varInput = IOUtils.toByteArray(response.getEntity().getContent());
-        closeResponse(response);
+        String valueUrl = variableNode.get("valueUrl").getTextValue();
+        client.release();
+        client = new ClientResource(valueUrl);
+        client.setChallengeResponse(ChallengeScheme.HTTP_BASIC, "kermit", "kermit");
+        response = client.get();
+        assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+        byte[] varInput = IOUtils.toByteArray(response.getStream());
         assertEquals("test", new String(varInput));
         break;
       }
@@ -115,27 +113,24 @@ public class HistoricDetailQueryResourceTest extends BaseSpringRestTestCase {
     assertTrue(byteVarFound);
   }
   
-  protected void assertResultsPresentInDataResponse(String url, ObjectNode body, int numberOfResultsExpected, 
-      String variableName, Object variableValue) throws JsonProcessingException, IOException {
+  protected void assertResultsPresentInDataResponse(String url, ObjectNode body, int numberOfResultsExpected, String variableName, Object variableValue) throws JsonProcessingException, IOException {
     
     // Do the actual call
-    HttpPost httpPost = new HttpPost(SERVER_URL_PREFIX + url);
-    httpPost.setEntity(new StringEntity(body.toString()));
-    CloseableHttpResponse response = executeRequest(httpPost, 200);
+    ClientResource client = getAuthenticatedClient(url);
+    Representation response = client.post(body);
     
     // Check status and size
-    assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-    JsonNode dataNode = objectMapper.readTree(response.getEntity().getContent()).get("data");
-    closeResponse(response);
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    JsonNode dataNode = objectMapper.readTree(response.getStream()).get("data");
     assertEquals(numberOfResultsExpected, dataNode.size());
 
     // Check presence of ID's
     if (variableName != null) {
       boolean variableFound = false;
       Iterator<JsonNode> it = dataNode.iterator();
-      while (it.hasNext()) {
+      while(it.hasNext()) {
         JsonNode variableNode = it.next().get("variable");
-        String name = variableNode.get("name").textValue();
+        String name = variableNode.get("name").getTextValue();
         if (variableName.equals(name)) {
           variableFound = true;
           if (variableValue instanceof Boolean) {
@@ -149,5 +144,7 @@ public class HistoricDetailQueryResourceTest extends BaseSpringRestTestCase {
       }
       assertTrue("Variable " + variableName + " is missing", variableFound);
     }
+    
+    client.release();
   }
 }

@@ -14,7 +14,11 @@ package org.activiti.engine.impl.bpmn.parser.handler;
 
 import org.activiti.bpmn.constants.BpmnXMLConstants;
 import org.activiti.bpmn.model.BaseElement;
+import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.EventGateway;
+import org.activiti.bpmn.model.FlowElement;
+import org.activiti.bpmn.model.IntermediateCatchEvent;
+import org.activiti.bpmn.model.SequenceFlow;
 import org.activiti.engine.impl.bpmn.parser.BpmnParse;
 import org.activiti.engine.impl.pvm.process.ActivityImpl;
 
@@ -31,10 +35,16 @@ public class EventBasedGatewayParseHandler extends AbstractActivityBpmnParseHand
   protected void executeParse(BpmnParse bpmnParse, EventGateway gateway) {
     ActivityImpl activity = createActivityOnCurrentScope(bpmnParse, gateway, BpmnXMLConstants.ELEMENT_GATEWAY_EVENT);   
     activity.setActivityBehavior(bpmnParse.getActivityBehaviorFactory().createEventBasedGatewayActivityBehavior(gateway));
-    
-    activity.setAsync(gateway.isAsynchronous());
-    activity.setExclusive(!gateway.isNotExclusive());
     activity.setScope(true);
+
+    // find all outgoing sequence flows
+    BpmnModel bpmnModel = bpmnParse.getBpmnModel();
+    for (SequenceFlow sequenceFlow : gateway.getOutgoingFlows()) {
+      FlowElement flowElement = bpmnModel.getFlowElement(sequenceFlow.getTargetRef());
+      if (flowElement != null && flowElement instanceof IntermediateCatchEvent == false) {
+        bpmnModel.addProblem("Event based gateway can only be connected to elements of type intermediateCatchEvent.", flowElement);
+      }
+    }
   }
 
 }

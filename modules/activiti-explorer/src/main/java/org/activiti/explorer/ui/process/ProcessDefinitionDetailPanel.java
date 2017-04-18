@@ -12,8 +12,6 @@
  */
 package org.activiti.explorer.ui.process;
 
-import java.text.MessageFormat;
-
 import org.activiti.engine.form.StartFormData;
 import org.activiti.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.activiti.explorer.ExplorerApp;
@@ -68,8 +66,8 @@ public class ProcessDefinitionDetailPanel extends AbstractProcessDefinitionDetai
   public void showProcessStartForm(StartFormData startFormData) {
     if(processDefinitionStartForm == null) {
       processDefinitionStartForm = new FormPropertiesForm();
-      processDefinitionStartForm.setSubmitButtonCaption(i18nManager.getMessage(Messages.PROCESS_START));
-      processDefinitionStartForm.setCancelButtonCaption(i18nManager.getMessage(Messages.BUTTON_CANCEL));
+      processDefinitionStartForm.setSubmitButtonCaption("Start process");
+      processDefinitionStartForm.setCancelButtonCaption("Cancel");
       
       // When form is submitted/cancelled, show the info again
       processDefinitionStartForm.addListener(new FormPropertiesEventListener() {
@@ -78,8 +76,8 @@ public class ProcessDefinitionDetailPanel extends AbstractProcessDefinitionDetai
           formService.submitStartFormData(processDefinition.getId(), event.getFormProperties());
           
           // Show notification
-          ExplorerApp.get().getMainWindow().showNotification(MessageFormat.format(
-            i18nManager.getMessage(Messages.PROCESS_STARTED_NOTIFICATION), getProcessDisplayName(processDefinition)));
+          ExplorerApp.get().getMainWindow().showNotification("Process '" + 
+                  getProcessDisplayName(processDefinition) + "' started successfully");
           initProcessDefinitionInfo();
         }
         protected void handleFormCancel(FormPropertiesEvent event) {

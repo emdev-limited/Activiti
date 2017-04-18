@@ -26,8 +26,6 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class MessageImplicitDataInputAssociation extends AbstractDataAssociation {
 
-  private static final long serialVersionUID = 1L;
-
   public MessageImplicitDataInputAssociation(String source, String target) {
     super(source, target);
   }

@@ -134,7 +134,7 @@ public class Tree {
 			}
 		}
 		ValueExpression[] expressions = null;
-		if (!identifiers.isEmpty()) {
+		if (identifiers.size() > 0) {
 			expressions = new ValueExpression[identifiers.size()];
 			for (IdentifierNode node: identifiers) {
 				ValueExpression expression = null;

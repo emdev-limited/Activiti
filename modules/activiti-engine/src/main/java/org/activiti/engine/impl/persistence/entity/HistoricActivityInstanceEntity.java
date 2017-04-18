@@ -14,16 +14,13 @@
 
 package org.activiti.engine.impl.persistence.entity;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.history.HistoricActivityInstance;
 
 /**
  * @author Christian Stettler
- * @author Joram Barrez
  */
 public class HistoricActivityInstanceEntity extends HistoricScopeInstanceEntity implements HistoricActivityInstance {
 
@@ -36,11 +33,6 @@ public class HistoricActivityInstanceEntity extends HistoricScopeInstanceEntity 
   protected String assignee;
   protected String taskId;
   protected String calledProcessInstanceId;
-  protected String tenantId = ProcessEngineConfiguration.NO_TENANT_ID;
-  
-  public HistoricActivityInstanceEntity() {
-  	
-  }
   
   public Object getPersistentState() {
     Map<String, Object> persistentState = (Map<String, Object>) new HashMap<String, Object>();
@@ -103,21 +95,9 @@ public class HistoricActivityInstanceEntity extends HistoricScopeInstanceEntity 
     this.calledProcessInstanceId = calledProcessInstanceId;
   }
 
-  public String getTenantId() {
-		return tenantId;
-	}
+  // common methods  //////////////////////////////////////////////////////////
 
-	public void setTenantId(String tenantId) {
-		this.tenantId = tenantId;
-	}
-	
-	public Date getTime() {
-		return getStartTime();
-	}
-	
-	// common methods  //////////////////////////////////////////////////////////
-
-	@Override
+  @Override
   public String toString() {
     return "HistoricActivityInstanceEntity[activityId=" + activityId + ", activityName=" + activityName + "]";
   }

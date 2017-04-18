@@ -23,7 +23,6 @@ import org.activiti.bpmn.model.TerminateEventDefinition;
 
 /**
  * @author Tijs Rademakers
- * @author Joram Barrez
  */
 public class TerminateEventDefinitionParser extends BaseChildElementParser {
 
@@ -35,15 +34,8 @@ public class TerminateEventDefinitionParser extends BaseChildElementParser {
     if (parentElement instanceof EndEvent == false) return;
     
     TerminateEventDefinition eventDefinition = new TerminateEventDefinition();
-    
-    String terminateAllValue = xtr.getAttributeValue(ACTIVITI_EXTENSIONS_NAMESPACE, ATTRIBUTE_TERMINATE_ALL);
-    if (terminateAllValue != null && "true".equals(terminateAllValue)) {
-    	eventDefinition.setTerminateAll(true);
-    } else {
-    	eventDefinition.setTerminateAll(false);
-    }
-    
     BpmnXMLUtil.addXMLLocation(eventDefinition, xtr);
+    
     BpmnXMLUtil.parseChildElements(ELEMENT_EVENT_TERMINATEDEFINITION, eventDefinition, xtr, model);
     
     ((Event) parentElement).getEventDefinitions().add(eventDefinition);

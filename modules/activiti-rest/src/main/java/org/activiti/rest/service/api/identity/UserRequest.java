@@ -13,7 +13,7 @@
 
 package org.activiti.rest.service.api.identity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 
 /**

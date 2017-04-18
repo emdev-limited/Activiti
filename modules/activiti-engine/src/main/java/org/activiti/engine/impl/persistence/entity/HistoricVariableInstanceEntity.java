@@ -14,12 +14,11 @@
 package org.activiti.engine.impl.persistence.entity;
 
 import java.io.Serializable;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.activiti.engine.history.HistoricVariableInstance;
 import org.activiti.engine.impl.context.Context;
-import org.activiti.engine.impl.db.BulkDeleteable;
 import org.activiti.engine.impl.db.HasRevision;
 import org.activiti.engine.impl.db.PersistentObject;
 import org.activiti.engine.impl.variable.ValueFields;
@@ -28,9 +27,8 @@ import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author Christian Lipphardt (camunda)
- * @author Joram Barrez
  */
-public class HistoricVariableInstanceEntity implements ValueFields, HistoricVariableInstance, PersistentObject, HasRevision, BulkDeleteable, Serializable {
+public class HistoricVariableInstanceEntity implements ValueFields, HistoricVariableInstance, PersistentObject, HasRevision, Serializable {
 
   private static final long serialVersionUID = 1L;
 
@@ -43,9 +41,6 @@ public class HistoricVariableInstanceEntity implements ValueFields, HistoricVari
   protected String processInstanceId;
   protected String executionId;
   protected String taskId;
-  
-  protected Date createTime;
-  protected Date lastUpdatedTime;
   
   protected Long longValue;
   protected Double doubleValue;
@@ -71,10 +66,6 @@ public class HistoricVariableInstanceEntity implements ValueFields, HistoricVari
     
     historicVariableInstance.copyValue(variableInstance);
     
-    Date time = Context.getProcessEngineConfiguration().getClock().getCurrentTime();
-    historicVariableInstance.setCreateTime(time);
-    historicVariableInstance.setLastUpdatedTime(time);
-    
     Context.getCommandContext()
       .getDbSqlSession()
       .insert(historicVariableInstance);
@@ -92,8 +83,6 @@ public class HistoricVariableInstanceEntity implements ValueFields, HistoricVari
     if (variableInstance.getByteArrayValueId()!=null) {
       setByteArrayValue(variableInstance.getByteArrayValue().getBytes());
     }
-    
-    this.lastUpdatedTime = Context.getProcessEngineConfiguration().getClock().getCurrentTime();
   }
 
   public void delete() {
@@ -106,17 +95,14 @@ public class HistoricVariableInstanceEntity implements ValueFields, HistoricVari
   }
 
   public Object getPersistentState() {
-  	HashMap<String, Object> persistentState = new HashMap<String, Object>();
-  	
-  	persistentState.put("textValue", textValue);
-  	persistentState.put("textValue2", textValue2);
-  	persistentState.put("doubleValue", doubleValue);
-  	persistentState.put("longValue", longValue);
-  	persistentState.put("byteArrayRef", byteArrayRef.getId());
-  	persistentState.put("createTime", createTime);
-  	persistentState.put("lastUpdatedTime", lastUpdatedTime);
-  	
-  	return persistentState;
+    List<Object> state = new ArrayList<Object>(5);
+    // type???
+    state.add(textValue);
+    state.add(textValue2);
+    state.add(doubleValue);
+    state.add(longValue);
+    state.add(byteArrayRef.getId());
+    return state;
   }
   
   public int getRevisionNext() {
@@ -251,32 +237,12 @@ public class HistoricVariableInstanceEntity implements ValueFields, HistoricVari
     this.taskId = taskId;
   }
   
-  public Date getCreateTime() {
-		return createTime;
-	}
-
-	public void setCreateTime(Date createTime) {
-		this.createTime = createTime;
-	}
-
-	public Date getLastUpdatedTime() {
-		return lastUpdatedTime;
-	}
-
-	public void setLastUpdatedTime(Date lastUpdatedTime) {
-		this.lastUpdatedTime = lastUpdatedTime;
-	}
-
-	public String getExecutionId() {
+  public String getExecutionId() {
     return executionId;
   }
   
   public void setExecutionId(String executionId) {
     this.executionId = executionId;
-  }
-  
-  public Date getTime() {
-    return getCreateTime();
   }
 
   // common methods  //////////////////////////////////////////////////////////
@@ -287,7 +253,6 @@ public class HistoricVariableInstanceEntity implements ValueFields, HistoricVari
     sb.append("HistoricVariableInstanceEntity[");
     sb.append("id=").append(id);
     sb.append(", name=").append(name);
-    sb.append(", revision=").append(revision);
     sb.append(", type=").append(variableType != null ? variableType.getTypeName() : "null");
     if (longValue != null) {
       sb.append(", longValue=").append(longValue);

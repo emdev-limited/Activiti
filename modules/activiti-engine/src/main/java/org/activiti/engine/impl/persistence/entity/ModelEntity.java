@@ -18,7 +18,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.impl.db.HasRevision;
 import org.activiti.engine.impl.db.PersistentObject;
 import org.activiti.engine.repository.Model;
@@ -28,7 +27,7 @@ import org.activiti.engine.repository.Model;
  * @author Tijs Rademakers
  * @author Joram Barrez
  */
-public class ModelEntity implements Model, HasRevision, PersistentObject, Serializable {
+public class ModelEntity implements Serializable, Model, HasRevision, PersistentObject {
 
   private static final long serialVersionUID = 1L;
   
@@ -44,7 +43,6 @@ public class ModelEntity implements Model, HasRevision, PersistentObject, Serial
   protected String deploymentId;
   protected String editorSourceValueId;
   protected String editorSourceExtraValueId;
-  protected String tenantId = ProcessEngineConfiguration.NO_TENANT_ID;
 
   public Object getPersistentState() {
     Map<String, Object> persistentState = new HashMap<String, Object>();
@@ -162,21 +160,5 @@ public class ModelEntity implements Model, HasRevision, PersistentObject, Serial
   public void setRevision(int revision) {
     this.revision = revision;
   }
-
-	public String getTenantId() {
-		return tenantId;
-	}
-
-	public void setTenantId(String tenantId) {
-		this.tenantId = tenantId;
-	}
-	
-	public boolean hasEditorSource() {
-	  return this.editorSourceValueId != null;
-	}
-	
-	public boolean hasEditorSourceExtra() {
-	  return this.editorSourceExtraValueId != null;
-	}
   
 }

@@ -17,10 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
+import org.codehaus.jackson.annotate.JsonTypeName;
 
 
 /**
@@ -70,7 +67,7 @@ public class ListStepDefinition<T> extends AbstractStepDefinitionContainer<ListS
     setParameters(new HashMap<String, Object>(otherDefinition.getParameters()));
     
     steps = new ArrayList<StepDefinition>();
-    if (definition.getSteps() != null && !definition.getSteps().isEmpty()) {
+    if (definition.getSteps() != null && definition.getSteps().size() > 0) {
       for (StepDefinition stepDefinition : definition.getSteps()) {
         steps.add(stepDefinition.clone());
       }
@@ -86,7 +83,6 @@ public class ListStepDefinition<T> extends AbstractStepDefinitionContainer<ListS
   }
 
   @Override
-  @JsonSerialize(include=Inclusion.NON_EMPTY)
   public Map<String, Object> getParameters() {
     return parameters;
   }

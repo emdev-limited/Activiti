@@ -22,16 +22,12 @@ import org.activiti.engine.impl.bpmn.parser.BpmnParse;
 import org.activiti.engine.impl.pvm.process.ActivityImpl;
 import org.activiti.engine.impl.pvm.process.ScopeImpl;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 
 /**
  * @author Joram Barrez
  */
 public class EndEventParseHandler extends AbstractActivityBpmnParseHandler<EndEvent> {
-	
-	private static final Logger logger = LoggerFactory.getLogger(EndEventParseHandler.class);
   
   public Class< ? extends BaseElement> getHandledType() {
     return EndEvent.class;
@@ -41,7 +37,7 @@ public class EndEventParseHandler extends AbstractActivityBpmnParseHandler<EndEv
     
     ActivityImpl endEventActivity = createActivityOnCurrentScope(bpmnParse, endEvent, BpmnXMLConstants.ELEMENT_EVENT_END);
     EventDefinition eventDefinition = null;
-    if (!endEvent.getEventDefinitions().isEmpty()) {
+    if (endEvent.getEventDefinitions().size() > 0) {
       eventDefinition = endEvent.getEventDefinitions().get(0);
     }
     
@@ -51,7 +47,7 @@ public class EndEventParseHandler extends AbstractActivityBpmnParseHandler<EndEv
       if (bpmnParse.getBpmnModel().containsErrorRef(errorDefinition.getErrorCode())) {
         String errorCode = bpmnParse.getBpmnModel().getErrors().get(errorDefinition.getErrorCode());
         if (StringUtils.isEmpty(errorCode)) {
-          logger.warn("errorCode is required for an error event " + endEvent.getId());
+          bpmnParse.getBpmnModel().addProblem("errorCode is required for an error event", errorDefinition);
         }
         endEventActivity.setProperty("type", "errorEndEvent");
         errorDefinition.setErrorCode(errorCode);
@@ -62,7 +58,7 @@ public class EndEventParseHandler extends AbstractActivityBpmnParseHandler<EndEv
     } else if (eventDefinition instanceof CancelEventDefinition) {
       ScopeImpl scope = bpmnParse.getCurrentScope();
       if (scope.getProperty("type")==null || !scope.getProperty("type").equals("transaction")) {
-        logger.warn("end event with cancelEventDefinition only supported inside transaction subprocess (id=" + endEvent.getId() + ")");
+        bpmnParse.getBpmnModel().addProblem("end event with cancelEventDefinition only supported inside transaction subprocess", endEvent);
       } else {
         endEventActivity.setProperty("type", "cancelEndEvent");
         endEventActivity.setActivityBehavior(bpmnParse.getActivityBehaviorFactory().createCancelEndEventActivityBehavior(endEvent));
@@ -70,14 +66,10 @@ public class EndEventParseHandler extends AbstractActivityBpmnParseHandler<EndEv
     
     // Terminate end event  
     } else if (eventDefinition instanceof TerminateEventDefinition) {
-      endEventActivity.setAsync(endEvent.isAsynchronous());
-      endEventActivity.setExclusive(!endEvent.isNotExclusive());
       endEventActivity.setActivityBehavior(bpmnParse.getActivityBehaviorFactory().createTerminateEndEventActivityBehavior(endEvent));
       
     // None end event  
     } else if (eventDefinition == null) {
-      endEventActivity.setAsync(endEvent.isAsynchronous());
-      endEventActivity.setExclusive(!endEvent.isNotExclusive());
       endEventActivity.setActivityBehavior(bpmnParse.getActivityBehaviorFactory().createNoneEndEventActivityBehavior(endEvent));
     }
   }

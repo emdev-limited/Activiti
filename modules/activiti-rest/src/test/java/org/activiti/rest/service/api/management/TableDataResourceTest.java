@@ -4,27 +4,28 @@ import java.util.List;
 
 import org.activiti.engine.impl.persistence.entity.VariableInstanceEntity;
 import org.activiti.engine.task.Task;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ArrayNode;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
+import org.restlet.resource.ResourceException;
 
 /**
  * Test for all REST-operations related to the Table columns.
  * 
  * @author Frederik Heremans
  */
-public class TableDataResourceTest extends BaseSpringRestTestCase {
+public class TableDataResourceTest extends BaseRestTestCase {
 
   /**
    * Test getting a single table's row data. GET
    * management/tables/{tableName}/data
    */
   public void testGetTableColumns() throws Exception {
+
     try {
       
       Task task = taskService.newTask();
@@ -36,16 +37,16 @@ public class TableDataResourceTest extends BaseSpringRestTestCase {
       // We use variable-table as a reference
       String tableName = managementService.getTableName(VariableInstanceEntity.class);
 
-      CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName)), HttpStatus.SC_OK);
-      
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName));
+      Representation response = client.get();
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
       // Check paging result
-      JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
+      JsonNode responseNode = objectMapper.readTree(response.getStream());
       assertNotNull(responseNode);
-      assertEquals(3, responseNode.get("total").intValue());
-      assertEquals(3, responseNode.get("size").intValue());
-      assertEquals(0, responseNode.get("start").intValue());
+      assertEquals(3, responseNode.get("total").getIntValue());
+      assertEquals(3, responseNode.get("size").getIntValue());
+      assertEquals(0, responseNode.get("start").getIntValue());
       assertTrue(responseNode.get("order").isNull());
       assertTrue(responseNode.get("sort").isNull());
       
@@ -56,57 +57,60 @@ public class TableDataResourceTest extends BaseSpringRestTestCase {
       
       
       // Check sorting, ascending
-      response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderAscendingColumn=LONG_"), HttpStatus.SC_OK);
-      responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
+      client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderAscendingColumn=LONG_");
+      response = client.get();
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
+      responseNode = objectMapper.readTree(response.getStream());
       assertNotNull(responseNode);
-      assertEquals(3, responseNode.get("total").intValue());
-      assertEquals(3, responseNode.get("size").intValue());
-      assertEquals(0, responseNode.get("start").intValue());
-      assertEquals("asc", responseNode.get("order").textValue());
-      assertEquals("LONG_", responseNode.get("sort").textValue());
+      assertEquals(3, responseNode.get("total").getIntValue());
+      assertEquals(3, responseNode.get("size").getIntValue());
+      assertEquals(0, responseNode.get("start").getIntValue());
+      assertEquals("asc", responseNode.get("order").getTextValue());
+      assertEquals("LONG_", responseNode.get("sort").getTextValue());
       rows = (ArrayNode) responseNode.get("data");
       assertNotNull(rows);
       assertEquals(3, rows.size());
       
-      assertEquals("var1", rows.get(0).get("NAME_").textValue());
-      assertEquals("var2", rows.get(1).get("NAME_").textValue());
-      assertEquals("var3", rows.get(2).get("NAME_").textValue());
+      assertEquals("var1", rows.get(0).get("NAME_").getTextValue());
+      assertEquals("var2", rows.get(1).get("NAME_").getTextValue());
+      assertEquals("var3", rows.get(2).get("NAME_").getTextValue());
       
       // Check sorting, descending
-      response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderDescendingColumn=LONG_"), HttpStatus.SC_OK);
-      responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
+      client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderDescendingColumn=LONG_");
+      response = client.get();
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
+      responseNode = objectMapper.readTree(response.getStream());
       assertNotNull(responseNode);
-      assertEquals(3, responseNode.get("total").intValue());
-      assertEquals(3, responseNode.get("size").intValue());
-      assertEquals(0, responseNode.get("start").intValue());
-      assertEquals("desc", responseNode.get("order").textValue());
-      assertEquals("LONG_", responseNode.get("sort").textValue());
+      assertEquals(3, responseNode.get("total").getIntValue());
+      assertEquals(3, responseNode.get("size").getIntValue());
+      assertEquals(0, responseNode.get("start").getIntValue());
+      assertEquals("desc", responseNode.get("order").getTextValue());
+      assertEquals("LONG_", responseNode.get("sort").getTextValue());
       rows = (ArrayNode) responseNode.get("data");
       assertNotNull(rows);
       assertEquals(3, rows.size());
       
-      assertEquals("var3", rows.get(0).get("NAME_").textValue());
-      assertEquals("var2", rows.get(1).get("NAME_").textValue());
-      assertEquals("var1", rows.get(2).get("NAME_").textValue());
+      assertEquals("var3", rows.get(0).get("NAME_").getTextValue());
+      assertEquals("var2", rows.get(1).get("NAME_").getTextValue());
+      assertEquals("var1", rows.get(2).get("NAME_").getTextValue());
       
       
       // Finally, check result limiting
-      response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderAscendingColumn=LONG_&start=1&size=1"), HttpStatus.SC_OK);
-      responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
+      client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderAscendingColumn=LONG_&start=1&size=1");
+      response = client.get();
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
+      responseNode = objectMapper.readTree(response.getStream());
       assertNotNull(responseNode);
-      assertEquals(3, responseNode.get("total").intValue());
-      assertEquals(1, responseNode.get("size").intValue());
-      assertEquals(1, responseNode.get("start").intValue());
+      assertEquals(3, responseNode.get("total").getIntValue());
+      assertEquals(1, responseNode.get("size").getIntValue());
+      assertEquals(1, responseNode.get("start").getIntValue());
       rows = (ArrayNode) responseNode.get("data");
       assertNotNull(rows);
       assertEquals(1, rows.size());
-      assertEquals("var2", rows.get(0).get("NAME_").textValue());
+      assertEquals("var2", rows.get(0).get("NAME_").getTextValue());
 
     } finally {
       // Clean adhoc-tasks even if test fails
@@ -118,14 +122,26 @@ public class TableDataResourceTest extends BaseSpringRestTestCase {
   }
 
   public void testGetDataForUnexistingTable() throws Exception {
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, "unexisting")), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, "unexisting"));
+    try {
+      client.get();
+      fail();
+    } catch (ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, client.getResponse().getStatus());
+      assertEquals("Could not find a table with name 'unexisting'.", client.getResponse().getStatus().getDescription());
+    }
   }
   
   public void testGetDataSortByIllegalColumn() throws Exception {
     // We use variable-table as a reference
     String tableName = managementService.getTableName(VariableInstanceEntity.class);
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderAscendingColumn=unexistingColumn"), HttpStatus.SC_INTERNAL_SERVER_ERROR));
+
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE_DATA, tableName) + "?orderAscendingColumn=unexistingColumn");
+    try {
+      client.get();
+      fail("404 expected, but was: " + client.getResponse().getStatus());
+    } catch (ResourceException expected) {
+      assertEquals(Status.SERVER_ERROR_INTERNAL, client.getResponse().getStatus());
+    }
   }
 }

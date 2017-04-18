@@ -17,7 +17,6 @@ import java.io.Writer;
 import java.util.List;
 
 import org.activiti.workflow.simple.definition.ChoiceStepsDefinition;
-import org.activiti.workflow.simple.definition.DelayStepDefinition;
 import org.activiti.workflow.simple.definition.FeedbackStepDefinition;
 import org.activiti.workflow.simple.definition.HumanStepDefinition;
 import org.activiti.workflow.simple.definition.ListConditionStepDefinition;
@@ -33,8 +32,7 @@ import org.activiti.workflow.simple.definition.form.NumberPropertyDefinition;
 import org.activiti.workflow.simple.definition.form.ReferencePropertyDefinition;
 import org.activiti.workflow.simple.definition.form.TextPropertyDefinition;
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * A converter capable of converting {@link WorkflowDefinition}s from and to a
@@ -127,14 +125,14 @@ public class SimpleWorkflowJsonConverter {
 			synchronized (this) {
 				if (objectMapper == null) {
 					objectMapper = new ObjectMapper();
-				
+
 					// Register all property-definition model classes as sub-types
 					objectMapper.registerSubtypes(ListPropertyDefinition.class, TextPropertyDefinition.class,
 					    ReferencePropertyDefinition.class, DatePropertyDefinition.class, NumberPropertyDefinition.class, BooleanPropertyDefinition.class);
 
 					// Register all step-types
 					objectMapper.registerSubtypes(HumanStepDefinition.class, FeedbackStepDefinition.class, ParallelStepsDefinition.class, ChoiceStepsDefinition.class, 
-					    ListStepDefinition.class, ListConditionStepDefinition.class, ScriptStepDefinition.class, DelayStepDefinition.class);
+					    ListStepDefinition.class, ListConditionStepDefinition.class, ScriptStepDefinition.class);
 					// Register additional sub-types to allow custom model entities to be
 					// deserialized correctly
 					if (additionalModelClasses != null) {

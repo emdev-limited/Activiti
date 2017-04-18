@@ -35,7 +35,7 @@ public class TimerSuspendProcessDefinitionHandler extends TimerChangeProcessDefi
     boolean suspendProcessInstances = getIncludeProcessInstances(cfgJson);
     
     SuspendProcessDefinitionCmd suspendProcessDefinitionCmd = 
-            new SuspendProcessDefinitionCmd(processDefinitionId, null, suspendProcessInstances, null, job.getTenantId());
+            new SuspendProcessDefinitionCmd(processDefinitionId, null, suspendProcessInstances, null);
     suspendProcessDefinitionCmd.execute(commandContext);
   }
   

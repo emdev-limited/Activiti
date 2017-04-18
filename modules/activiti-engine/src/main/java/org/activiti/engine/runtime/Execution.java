@@ -52,25 +52,4 @@ public interface Execution {
    * Gets the id of the parent of this execution. If null, the execution represents a process-instance.
    */
   String getParentId();
-  
-  /**
-   * Gets the id of the super execution of this execution.
-   */
-  String getSuperExecutionId();
-  
-  /** 
-   * The tenant identifier of this process instance 
-   */
-  String getTenantId();
-  
-  /**
-   * Returns the name of this execution.
-   */
-  String getName();
-  
-  /**
-   * Returns the description of this execution.
-   */
-  String getDescription();
-  
 }

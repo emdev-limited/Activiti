@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.activiti.engine.identity.Group;
-import org.activiti.engine.runtime.ClockReader;
+import org.activiti.engine.impl.util.ClockUtil;
 
 
 /**
@@ -34,22 +34,20 @@ import org.activiti.engine.runtime.ClockReader;
  * @author Joram Barrez
  */
 public class LDAPGroupCache {
-
-  private final ClockReader clockReader;
+  
   protected Map<String, LDAPGroupCacheEntry> groupCache;
   protected long expirationTime;
   
   protected LDAPGroupCacheListener ldapCacheListener;
   
-  public LDAPGroupCache(final int cacheSize, final long expirationTime, final ClockReader clockReader) {
-    this.clockReader = clockReader;
-
+  public LDAPGroupCache(final int cacheSize, final long expirationTime) {
+    
     // From http://stackoverflow.com/questions/224868/easy-simple-to-use-lru-cache-in-java
     this.groupCache =new LinkedHashMap<String, LDAPGroupCache.LDAPGroupCacheEntry>(cacheSize + 1, 0.75f, true) {
 
       private static final long serialVersionUID = 5207574193173514579L;
 
-      protected boolean removeEldestEntry(Map.Entry<String, LDAPGroupCacheEntry> eldest) {
+      protected boolean removeEldestEntry(java.util.Map.Entry<String, LDAPGroupCacheEntry> eldest) {
         boolean removeEldest = size() > cacheSize;
         
         if (removeEldest && ldapCacheListener != null) {
@@ -64,13 +62,13 @@ public class LDAPGroupCache {
   }
   
   public void add(String userId, List<Group> groups) {
-    this.groupCache.put(userId, new LDAPGroupCacheEntry(clockReader.getCurrentTime(), groups));
+    this.groupCache.put(userId, new LDAPGroupCacheEntry(ClockUtil.getCurrentTime(), groups));
   }
   
   public List<Group> get(String userId) {
     LDAPGroupCacheEntry cacheEntry = groupCache.get(userId);
     if (cacheEntry != null) {
-      if ((clockReader.getCurrentTime().getTime() - cacheEntry.getTimestamp().getTime()) < expirationTime) {
+      if ((ClockUtil.getCurrentTime().getTime() - cacheEntry.getTimestamp().getTime()) < expirationTime) {
         
         if (ldapCacheListener != null) {
           ldapCacheListener.cacheHit(userId);

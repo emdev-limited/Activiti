@@ -14,33 +14,27 @@
 package org.activiti.rest.service.api.identity;
 
 import java.util.HashMap;
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.util.Set;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
-import org.activiti.engine.IdentityService;
 import org.activiti.engine.identity.User;
 import org.activiti.engine.identity.UserQuery;
 import org.activiti.engine.impl.UserQueryProperty;
 import org.activiti.engine.query.QueryProperty;
+import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.common.api.DataResponse;
-import org.activiti.rest.exception.ActivitiConflictException;
-import org.activiti.rest.service.api.RestResponseFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.SecuredResource;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Form;
+import org.restlet.data.Status;
+import org.restlet.resource.Get;
+import org.restlet.resource.Post;
+import org.restlet.resource.ResourceException;
 
 /**
  * @author Frederik Heremans
  */
-@RestController
-public class UserCollectionResource {
+public class UserCollectionResource extends SecuredResource {
 
   protected static HashMap<String, QueryProperty> properties = new HashMap<String, QueryProperty>();
   
@@ -51,69 +45,68 @@ public class UserCollectionResource {
     properties.put("email", UserQueryProperty.EMAIL);
   }
   
-  @Autowired
-  protected RestResponseFactory restResponseFactory;
-  
-  @Autowired
-  protected IdentityService identityService;
-  
-  @RequestMapping(value="/identity/users", method = RequestMethod.GET, produces = "application/json")
-  public DataResponse getUsers(@RequestParam Map<String,String> allRequestParams, HttpServletRequest request) {
-    UserQuery query = identityService.createUserQuery();
+  @Get
+  public DataResponse getUsers() {
+    if(!authenticate())
+      return null;
+
+    UserQuery query = ActivitiUtil.getIdentityService().createUserQuery();
+    Form form = getQuery();
+    Set<String> names = form.getNames();
     
-    if (allRequestParams.containsKey("id")) {
-      query.userId(allRequestParams.get("id"));
+    if(names.contains("id")) {
+      query.userId(getQueryParameter("id", form));
     }
-    if (allRequestParams.containsKey("firstName")) {
-      query.userFirstName(allRequestParams.get("firstName"));
+    if(names.contains("firstName")) {
+      query.userFirstName(getQueryParameter("firstName", form));
     }
-    if (allRequestParams.containsKey("lastName")) {
-      query.userLastName(allRequestParams.get("lastName"));
+    if(names.contains("lastName")) {
+      query.userLastName(getQueryParameter("lastName", form));
     }
-    if (allRequestParams.containsKey("email")) {
-      query.userEmail(allRequestParams.get("email"));
+    if(names.contains("email")) {
+      query.userEmail(getQueryParameter("email", form));
     }
-    if (allRequestParams.containsKey("firstNameLike")) {
-      query.userFirstNameLike(allRequestParams.get("firstNameLike"));
+    if(names.contains("firstNameLike")) {
+      query.userFirstNameLike(getQueryParameter("firstNameLike", form));
     }
-    if (allRequestParams.containsKey("lastNameLike")) {
-      query.userLastNameLike(allRequestParams.get("lastNameLike"));
+    if(names.contains("lastNameLike")) {
+      query.userLastNameLike(getQueryParameter("lastNameLike", form));
     }
-    if (allRequestParams.containsKey("emailLike")) {
-      query.userEmailLike(allRequestParams.get("emailLike"));
+    if(names.contains("emailLike")) {
+      query.userEmailLike(getQueryParameter("emailLike", form));
     }
-    if (allRequestParams.containsKey("memberOfGroup")) {
-      query.memberOfGroup(allRequestParams.get("memberOfGroup"));
+    if(names.contains("memberOfGroup")) {
+      query.memberOfGroup(getQueryParameter("memberOfGroup", form));
     }
-    if (allRequestParams.containsKey("potentialStarter")) {
-      query.potentialStarter(allRequestParams.get("potentialStarter"));
+    if(names.contains("potentialStarter")) {
+      query.potentialStarter(getQueryParameter("potentialStarter", form));
     }
 
-    return new UserPaginateList(restResponseFactory)
-        .paginateList(allRequestParams, query, "id", properties);
+    return new UserPaginateList(this).paginateList(form, query, "id", properties);
   }
   
-  @RequestMapping(value="/identity/users", method = RequestMethod.POST, produces = "application/json")
-  public UserResponse createUser(@RequestBody UserRequest userRequest, HttpServletRequest request, HttpServletResponse response) {
-    if (userRequest.getId() == null) {
+  @Post
+  public UserResponse createUser(UserRequest request) {
+    if(request.getId() == null) {
       throw new ActivitiIllegalArgumentException("Id cannot be null.");
     }
 
     // Check if a user with the given ID already exists so we return a CONFLICT
-    if (identityService.createUserQuery().userId(userRequest.getId()).count() > 0) {
-      throw new ActivitiConflictException("A user with id '" + userRequest.getId() + "' already exists.");
+    if(ActivitiUtil.getIdentityService().createUserQuery().userId(request.getId()).count() > 0) {
+      throw new ResourceException(Status.CLIENT_ERROR_CONFLICT.getCode(), "A user with id '" + request.getId() + "' already exists.", null, null);
     }
     
-    User created = identityService.newUser(userRequest.getId());
-    created.setEmail(userRequest.getEmail());
-    created.setFirstName(userRequest.getFirstName());
-    created.setLastName(userRequest.getLastName());
-    created.setPassword(userRequest.getPassword());
-    identityService.saveUser(created);
+    User created = ActivitiUtil.getIdentityService().newUser(request.getId());
+    created.setEmail(request.getEmail());
+    created.setFirstName(request.getFirstName());
+    created.setLastName(request.getLastName());
+    created.setPassword(request.getPassword());
+    ActivitiUtil.getIdentityService().saveUser(created);
     
-    response.setStatus(HttpStatus.CREATED.value());
+    setStatus(Status.SUCCESS_CREATED);
     
-    return restResponseFactory.createUserResponse(created, true);
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createUserResponse(this, created, true);
   }
   
 }

@@ -17,7 +17,6 @@ import javax.xml.stream.XMLStreamWriter;
 
 import org.activiti.bpmn.converter.util.BpmnXMLUtil;
 import org.activiti.bpmn.model.BaseElement;
-import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.EndEvent;
 
 /**
@@ -25,7 +24,11 @@ import org.activiti.bpmn.model.EndEvent;
  */
 public class EndEventXMLConverter extends BaseBpmnXMLConverter {
   
-  public Class<? extends BaseElement> getBpmnElementType() {
+  public static String getXMLType() {
+    return ELEMENT_EVENT_END;
+  }
+  
+  public static Class<? extends BaseElement> getBpmnElementType() {
     return EndEvent.class;
   }
   
@@ -35,20 +38,24 @@ public class EndEventXMLConverter extends BaseBpmnXMLConverter {
   }
   
   @Override
-  protected BaseElement convertXMLToElement(XMLStreamReader xtr, BpmnModel model) throws Exception {
+  protected BaseElement convertXMLToElement(XMLStreamReader xtr) throws Exception {
     EndEvent endEvent = new EndEvent();
     BpmnXMLUtil.addXMLLocation(endEvent, xtr);
-    parseChildElements(getXMLElementName(), endEvent, model, xtr);
+    parseChildElements(getXMLElementName(), endEvent, xtr);
     return endEvent;
   }
 
   @Override
-  protected void writeAdditionalAttributes(BaseElement element, BpmnModel model, XMLStreamWriter xtw) throws Exception { 
+  protected void writeAdditionalAttributes(BaseElement element, XMLStreamWriter xtw) throws Exception { 
+  }
+  
+  @Override
+  protected void writeExtensionChildElements(BaseElement element, XMLStreamWriter xtw) throws Exception {
   }
 
   @Override
-  protected void writeAdditionalChildElements(BaseElement element, BpmnModel model, XMLStreamWriter xtw) throws Exception {
+  protected void writeAdditionalChildElements(BaseElement element, XMLStreamWriter xtw) throws Exception {
     EndEvent endEvent = (EndEvent) element;
-    writeEventDefinitions(endEvent, endEvent.getEventDefinitions(), model, xtw);
+    writeEventDefinitions(endEvent.getEventDefinitions(), xtw);
   }
 }

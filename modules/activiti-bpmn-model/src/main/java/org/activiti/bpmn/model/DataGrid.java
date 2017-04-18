@@ -29,19 +29,4 @@ public class DataGrid implements ComplexDataType {
   public void setRows(List<DataGridRow> rows) {
     this.rows = rows;
   }
-  
-  public DataGrid clone() {
-    DataGrid clone = new DataGrid();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(DataGrid otherGrid) {
-    rows = new ArrayList<DataGridRow>();
-    if (otherGrid.getRows() != null && !otherGrid.getRows().isEmpty()) {
-      for (DataGridRow row : otherGrid.getRows()) {
-        rows.add(row.clone());
-      }
-    }
-  }
 }

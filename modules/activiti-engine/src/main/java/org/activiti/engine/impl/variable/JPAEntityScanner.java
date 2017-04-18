@@ -31,34 +31,27 @@ public class JPAEntityScanner {
 
   public EntityMetaData scanClass(Class<?> clazz) {
     EntityMetaData metaData = new EntityMetaData();
-    // in case with JPA Enhancement
-    // method should iterate over superclasses list
-    // to find @Entity and @Id annotations
-    while(clazz != null && !clazz.equals(Object.class)) {
-
-      // Class should have @Entity annotation
-      boolean isEntity = isEntityAnnotationPresent(clazz);
-
-      if (isEntity) {
-        metaData.setEntityClass(clazz);
-        metaData.setJPAEntity(true);
-        // Try to find a field annotated with @Id
-        Field idField = getIdField(clazz);
-        if (idField != null) {
-          metaData.setIdField(idField);
+    metaData.setEntityClass(clazz);
+    
+    // Class should have @Entity annotation
+    boolean isEntity = isEntityAnnotationPresent(clazz);
+    metaData.setJPAEntity(isEntity);
+    
+    if(isEntity) {
+      // Try to find a field annotated with @Id
+      Field idField = getIdField(clazz);
+      if(idField != null) {
+        metaData.setIdField(idField);
+      } else {
+        // Try to find a method annotated with @Id
+        Method idMethod = getIdMethod(clazz);
+        if(idMethod != null) {
+          metaData.setIdMethod(idMethod);
         } else {
-          // Try to find a method annotated with @Id
-          Method idMethod = getIdMethod(clazz);
-          if (idMethod != null) {
-            metaData.setIdMethod(idMethod);
-          } else {
-            throw new ActivitiException("Cannot find field or method with annotation @Id on class '" +
-                    clazz.getName() + "', only single-valued primary keys are supported on JPA-enities");
-          }
+          throw new ActivitiException("Cannot find field or method with annotation @Id on class '" +
+            clazz.getName() + "', only single-valued primary keys are supported on JPA-enities");
         }
-        break;
       }
-      clazz = clazz.getSuperclass();
     }
     return metaData;
   }
@@ -71,7 +64,7 @@ public class JPAEntityScanner {
     Id idAnnotation = null;
     for(Method method : methods) {
       idAnnotation = method.getAnnotation(Id.class);
-      if(idAnnotation != null && !method.isBridge()) {
+      if(idAnnotation != null) {
         idMethod = method;
         break;
       }

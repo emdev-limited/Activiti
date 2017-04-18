@@ -18,12 +18,10 @@ import java.util.Map;
 
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.delegate.BpmnError;
-import org.activiti.engine.history.HistoricActivityInstance;
 import org.activiti.engine.history.HistoricProcessInstance;
 import org.activiti.engine.impl.history.HistoryLevel;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
 import org.activiti.engine.impl.util.CollectionUtil;
-import org.activiti.engine.impl.util.JvmUtil;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
 
@@ -48,6 +46,17 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
     assertEquals("task after catching the error", task.getName());
   }
 
+  public void testThrowErrorWithoutErrorCode() {
+    try {
+      repositoryService.createDeployment()
+        .addClasspathResource("org/activiti/engine/test/bpmn/event/error/BoundaryErrorEventTest.testThrowErrorWithoutErrorCode.bpmn20.xml")
+        .deploy();
+      fail("ActivitiException expected");
+    } catch (ActivitiException re) {
+      assertTextPresent("errorCode is required for an error event", re.getMessage());
+    }
+  }
+
   public void testThrowErrorWithEmptyErrorCode() {
     try {
       repositoryService.createDeployment()
@@ -55,6 +64,7 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
         .deploy();
       fail("ActivitiException expected");
     } catch (ActivitiException re) {
+      assertTextPresent("errorCode is required for an error event", re.getMessage());
     }
   }
 
@@ -79,7 +89,7 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
     
     // Completing task 2, will cause the end error event to throw error with code 123
     taskService.complete(tasks.get(1).getId());
-    taskService.createTaskQuery().list();
+    tasks = taskService.createTaskQuery().list();
     Task taskAfterError = taskService.createTaskQuery().singleResult();
     assertEquals("task outside subprocess", taskAfterError.getName());
   }
@@ -108,7 +118,7 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
     assertProcessEnded(procId);
     
     // Completing task B will lead to task C
-    runtimeService.startProcessInstanceByKey(processDefinitionKey).getId();
+    procId = runtimeService.startProcessInstanceByKey(processDefinitionKey).getId();
     tasks = taskService.createTaskQuery().orderByTaskName().asc().list();
     assertEquals(2, tasks.size());
     assertEquals("task A", tasks.get(0).getName());
@@ -205,7 +215,6 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
       // Completing the task will reach the end error event,
       // which is never caught in the process
       taskService.complete(task.getId());
-      fail("No catching boundary event found for error with errorCode 'myError', neither in same process nor in parent process but no Exception is thrown"); 
     } catch (BpmnError e) {
       assertTextPresent("No catching boundary event found for error with errorCode 'myError', neither in same process nor in parent process", e.getMessage());
     }
@@ -371,21 +380,11 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
   }
 
   @Deployment(resources = {
-          "org/activiti/engine/test/bpmn/event/error/BoundaryErrorEventTest.testCatchErrorOnGroovyScriptTask.bpmn20.xml"
+          "org/activiti/engine/test/bpmn/event/error/BoundaryErrorEventTest.testCatchErrorOnScriptTask.bpmn20.xml"
   })
-  public void testCatchErrorOnGroovyScriptTask() {
+  public void testCatchErrorOnScriptTask() {
       String procId = runtimeService.startProcessInstanceByKey("catchErrorOnScriptTask").getId();
       assertProcessEnded(procId);
-  }
-  
-  @Deployment(resources = {
-          "org/activiti/engine/test/bpmn/event/error/BoundaryErrorEventTest.testCatchErrorOnJavaScriptScriptTask.bpmn20.xml"
-  })
-  public void testCatchErrorOnJavaScriptScriptTask() {
-  	if (JvmUtil.isAtLeastJDK7()) {
-  		String procId = runtimeService.startProcessInstanceByKey("catchErrorOnScriptTask").getId();
-  		assertProcessEnded(procId);
-  	}
   }
 
   @Deployment(resources = {
@@ -402,10 +401,9 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
   public void testUncaughtErrorOnScriptTask() {
     try {
       String procId = runtimeService.startProcessInstanceByKey("uncaughtErrorOnScriptTask").getId();
-      fail("The script throws error event with errorCode 'errorUncaught', but no catching boundary event was defined. An exception is expected which did not occur");
       assertProcessEnded(procId);
-    } catch (BpmnError e) {
-    	assertTextPresent("No catching boundary event found for error with errorCode 'errorUncaught', neither in same process nor in parent process (errorCode='errorUncaught')", e.getMessage());
+    } catch (NullPointerException e) {
+      fail("The script throws error event with errorCode 'errorUncaught', but no catching boundary event was defined. Execution should simply be ended (none end event semantics).");
     }
   }
 
@@ -441,14 +439,6 @@ public class BoundaryErrorEventTest extends PluggableActivitiTestCase {
     // Completing the task will end the process instance
     taskService.complete(task.getId());
     assertProcessEnded(procId);
-    
-    if (processEngineConfiguration.getHistoryLevel().isAtLeast(HistoryLevel.AUDIT)) {
-      List<HistoricActivityInstance> historicActivityInstances = historyService.createHistoricActivityInstanceQuery().processInstanceId(procId).list();
-      for (HistoricActivityInstance historicActivityInstance : historicActivityInstances) {
-        assertNotNull("Historic activity " + historicActivityInstance.getActivityName() + " has a null end time, while the process instance is finished",
-            historicActivityInstance.getEndTime());
-      }
-    }
   }
   
   @Deployment

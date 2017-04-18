@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
  * @author Guillaume Nodet
  */
 public class JtaTransactionInterceptor extends AbstractCommandInterceptor {
-
   private static final Logger LOGGER = LoggerFactory.getLogger(JtaTransactionInterceptor.class);
 
   private final TransactionManager transactionManager;
@@ -44,11 +43,11 @@ public class JtaTransactionInterceptor extends AbstractCommandInterceptor {
 
   public <T> T execute(CommandConfig config, Command<T> command) {
     LOGGER.debug("Running command with propagation {}", config.getTransactionPropagation());
-
+    
     if (config.getTransactionPropagation() == TransactionPropagation.NOT_SUPPORTED) {
       return next.execute(config, command);
     }
-
+    
     boolean requiresNew = config.getTransactionPropagation() == TransactionPropagation.REQUIRES_NEW;
     Transaction oldTx = null;
     try {
@@ -64,13 +63,13 @@ public class JtaTransactionInterceptor extends AbstractCommandInterceptor {
       try {
         result = next.execute(config, command);
       } catch (RuntimeException ex) {
-        doRollback(isNew, ex);
+        doRollback(isNew);
         throw ex;
       } catch (Error err) {
-        doRollback(isNew, err);
+        doRollback(isNew);
         throw err;
       } catch (Exception ex) {
-        doRollback(isNew, ex);
+        doRollback(isNew);
         throw new UndeclaredThrowableException(ex, "TransactionCallback threw undeclared checked exception");
       }
       if (isNew) {
@@ -132,16 +131,15 @@ public class JtaTransactionInterceptor extends AbstractCommandInterceptor {
     } catch (SystemException e) {
       throw new TransactionException("Unable to commit transaction", e);
     } catch (RuntimeException e) {
-      doRollback(true, e);
+      doRollback(true);
       throw e;
     } catch (Error e) {
-      doRollback(true, e);
+      doRollback(true);
       throw e;
     }
   }
 
-  private void doRollback(boolean isNew, Throwable originalException) {
-    Throwable rollbackEx = null;
+  private void doRollback(boolean isNew) {
     try {
       if (isNew) {
         transactionManager.rollback();
@@ -150,21 +148,10 @@ public class JtaTransactionInterceptor extends AbstractCommandInterceptor {
       }
     } catch (SystemException e) {
       LOGGER.debug("Error when rolling back transaction", e);
-    } catch (RuntimeException e) {
-      rollbackEx = e;
-      throw e;
-    } catch (Error e) {
-      rollbackEx = e;
-      throw e;
-    } finally {
-      if (rollbackEx != null && originalException != null) {
-        LOGGER.error("Error when rolling back transaction, orginal exception was:", originalException);
-      }
     }
   }
 
   private static class TransactionException extends RuntimeException {
-
     private static final long serialVersionUID = 1L;
 
     private TransactionException() {

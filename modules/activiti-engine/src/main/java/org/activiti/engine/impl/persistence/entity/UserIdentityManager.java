@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.activiti.engine.identity.Group;
-import org.activiti.engine.identity.Picture;
 import org.activiti.engine.identity.User;
 import org.activiti.engine.identity.UserQuery;
 import org.activiti.engine.impl.Page;
@@ -32,9 +31,9 @@ public interface UserIdentityManager {
 
   void insertUser(User user);
 
-  void updateUser(User updatedUser);
+  void updateUser(UserEntity updatedUser);
 
-  User findUserById(String userId);
+  UserEntity findUserById(String userId);
   
   void deleteUser(String userId);
   
@@ -57,11 +56,5 @@ public interface UserIdentityManager {
   List<User> findUsersByNativeQuery(Map<String, Object> parameterMap, int firstResult, int maxResults);
   
   long findUserCountByNativeQuery(Map<String, Object> parameterMap);
-
-	boolean isNewUser(User user);
-	
-	Picture getUserPicture(String userId);
-	
-	void setUserPicture(String userId, Picture picture);
   
 }

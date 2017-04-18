@@ -16,6 +16,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.activiti.engine.ActivitiObjectNotFoundException;
+import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.interceptor.Command;
 import org.activiti.engine.impl.interceptor.CommandContext;
 import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
@@ -37,7 +38,8 @@ public class GetIdentityLinksForProcessInstanceCmd implements Command<List<Ident
   
   @SuppressWarnings({"unchecked", "rawtypes"})
   public List<IdentityLink> execute(CommandContext commandContext) {
-    ExecutionEntity processInstance = commandContext
+    ExecutionEntity processInstance = Context
+        .getCommandContext()
         .getExecutionEntityManager()
         .findExecutionById(processInstanceId);
       

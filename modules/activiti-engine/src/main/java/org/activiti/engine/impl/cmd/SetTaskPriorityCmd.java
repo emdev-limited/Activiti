@@ -31,7 +31,7 @@ public class SetTaskPriorityCmd extends NeedsActiveTaskCmd<Void> {
   }
   
   protected Void execute(CommandContext commandContext, TaskEntity task) {
-    task.setPriority(priority, true);
+    task.setPriority(priority);
     return null;
   }
 

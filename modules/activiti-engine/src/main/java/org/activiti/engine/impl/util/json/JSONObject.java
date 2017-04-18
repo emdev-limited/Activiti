@@ -925,7 +925,7 @@ public class JSONObject {
                     } else if (name.startsWith("is")) {
                         key = name.substring(2);
                     }
-                    if (!key.isEmpty() &&
+                    if (key.length() > 0 &&
                             Character.isUpperCase(key.charAt(0)) &&
                             method.getParameterTypes().length == 0) {
                         if (key.length() == 1) {
@@ -1110,7 +1110,7 @@ public class JSONObject {
         char         c = 0;
         int          i;
         int          len = string.length();
-        StringBuilder sb = new StringBuilder(len + 4);
+        StringBuffer sb = new StringBuffer(len + 4);
         String       t;
 
         sb.append('"');
@@ -1290,7 +1290,7 @@ public class JSONObject {
     public String toString() {
         try {
             Iterator     keys = keys();
-            StringBuilder sb = new StringBuilder("{");
+            StringBuffer sb = new StringBuffer("{");
 
             while (keys.hasNext()) {
                 if (sb.length() > 1) {
@@ -1346,7 +1346,7 @@ public class JSONObject {
             return "{}";
         }
         Iterator     keys = sortedKeys();
-        StringBuilder sb = new StringBuilder("{");
+        StringBuffer sb = new StringBuffer("{");
         int          newindent = indent + indentFactor;
         Object       o;
         if (n == 1) {

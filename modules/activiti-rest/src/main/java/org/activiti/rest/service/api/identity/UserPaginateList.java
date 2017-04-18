@@ -13,25 +13,34 @@
 
 package org.activiti.rest.service.api.identity;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.activiti.engine.identity.User;
 import org.activiti.rest.common.api.AbstractPaginateList;
+import org.activiti.rest.common.api.SecuredResource;
 import org.activiti.rest.service.api.RestResponseFactory;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
 
 /**
  * @author Frederik Heremans
  */
 public class UserPaginateList extends AbstractPaginateList {
 
-  protected RestResponseFactory restResponseFactory;
+  private SecuredResource resource;
   
-  public UserPaginateList(RestResponseFactory restResponseFactory) {
-    this.restResponseFactory = restResponseFactory;
+  public UserPaginateList(SecuredResource resource) {
+    this.resource = resource;
   }
   
-  @SuppressWarnings({ "rawtypes", "unchecked" })
+  @SuppressWarnings("rawtypes")
   @Override
   protected List processList(List list) {
-    return restResponseFactory.createUserResponseList(list, false);
+    List<UserResponse> responseList = new ArrayList<UserResponse>();
+    RestResponseFactory restResponseFactory = resource.getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
+    for (Object user : list) {
+      responseList.add(restResponseFactory.createUserResponse(resource, (User) user, false));
+    }
+    return responseList;
   }
 }

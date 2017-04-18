@@ -42,10 +42,10 @@ public class FieldExtensionExport implements BpmnXMLConstants {
           
           if (StringUtils.isNotEmpty(fieldExtension.getStringValue())) {
             xtw.writeStartElement(ACTIVITI_EXTENSIONS_PREFIX, ELEMENT_FIELD_STRING, ACTIVITI_EXTENSIONS_NAMESPACE);
-            xtw.writeCData(fieldExtension.getStringValue());
+            xtw.writeCharacters(fieldExtension.getStringValue());
           } else {
             xtw.writeStartElement(ACTIVITI_EXTENSIONS_PREFIX, ATTRIBUTE_FIELD_EXPRESSION, ACTIVITI_EXTENSIONS_NAMESPACE);
-            xtw.writeCData(fieldExtension.getExpression());
+            xtw.writeCharacters(fieldExtension.getExpression());
           }
           xtw.writeEndElement();
           xtw.writeEndElement(); 

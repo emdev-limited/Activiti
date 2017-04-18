@@ -14,72 +14,74 @@
 package org.activiti.rest.service.api.runtime.process;
 
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.runtime.Execution;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Status;
+import org.restlet.resource.Get;
+import org.restlet.resource.Put;
 
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class ExecutionResource extends ExecutionBaseResource {
 
-  @RequestMapping(value="/runtime/executions/{executionId}", method = RequestMethod.GET, produces="application/json")
-  public ExecutionResponse getExecution(@PathVariable String executionId, HttpServletRequest request) {
-    return restResponseFactory.createExecutionResponse(getExecutionFromRequest(executionId));
+  @Get
+  public ExecutionResponse getExecution() {
+    if(!authenticate()) {
+      return null;
+    }
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createExecutionResponse(this, getExecutionFromRequest());
   }
   
-  @RequestMapping(value="/runtime/executions/{executionId}", method = RequestMethod.PUT, produces="application/json")
-  public ExecutionResponse performExecutionAction(@PathVariable String executionId, @RequestBody ExecutionActionRequest actionRequest, 
-      HttpServletRequest request, HttpServletResponse response) {
+  @Put
+  public ExecutionResponse performExecutionAction(ExecutionActionRequest actionRequest) {
+    if(!authenticate()) {
+      return null;
+    }
     
-    Execution execution = getExecutionFromRequest(executionId);
+    Execution execution = getExecutionFromRequest();
     
-    if (ExecutionActionRequest.ACTION_SIGNAL.equals(actionRequest.getAction())) {
-      if (actionRequest.getVariables() != null) {
-        runtimeService.signal(execution.getId(), getVariablesToSet(actionRequest));
+    if(ExecutionActionRequest.ACTION_SIGNAL.equals(actionRequest.getAction())) {
+      if(actionRequest.getVariables() != null) {
+        ActivitiUtil.getRuntimeService().signal(execution.getId(), getVariablesToSet(actionRequest));
       } else {
-        runtimeService.signal(execution.getId());
+        ActivitiUtil.getRuntimeService().signal(execution.getId());
       }
     } else if(ExecutionActionRequest.ACTION_SIGNAL_EVENT_RECEIVED.equals(actionRequest.getAction())) {
-      if (actionRequest.getSignalName() == null) {
+      if(actionRequest.getSignalName() == null) {
         throw new ActivitiIllegalArgumentException("Signal name is required");
       }
-      if (actionRequest.getVariables() != null) {
-        runtimeService.signalEventReceived(actionRequest.getSignalName(), execution.getId(), getVariablesToSet(actionRequest));
+      if(actionRequest.getVariables() != null) {
+        ActivitiUtil.getRuntimeService().signalEventReceived(actionRequest.getSignalName(), execution.getId(), getVariablesToSet(actionRequest));
       } else {
-        runtimeService.signalEventReceived(actionRequest.getSignalName(), execution.getId());
+        ActivitiUtil.getRuntimeService().signalEventReceived(actionRequest.getSignalName(), execution.getId());
       }
-    } else if (ExecutionActionRequest.ACTION_MESSAGE_EVENT_RECEIVED.equals(actionRequest.getAction())) {
-      if (actionRequest.getMessageName() == null) {
+    } else if(ExecutionActionRequest.ACTION_MESSAGE_EVENT_RECEIVED.equals(actionRequest.getAction())) {
+      if(actionRequest.getMessageName() == null) {
         throw new ActivitiIllegalArgumentException("Message name is required");
       }
-      if (actionRequest.getVariables() != null) {
-        runtimeService.messageEventReceived(actionRequest.getMessageName(), execution.getId(), getVariablesToSet(actionRequest));
+      if(actionRequest.getVariables() != null) {
+        ActivitiUtil.getRuntimeService().messageEventReceived(actionRequest.getMessageName(), execution.getId(), getVariablesToSet(actionRequest));
       } else {
-        runtimeService.messageEventReceived(actionRequest.getMessageName(), execution.getId());
+        ActivitiUtil.getRuntimeService().messageEventReceived(actionRequest.getMessageName(), execution.getId());
       }
     } else {
       throw new ActivitiIllegalArgumentException("Invalid action: '" + actionRequest.getAction() + "'.");
     }
     
     // Re-fetch the execution, could have changed due to action or even completed
-    execution = runtimeService.createExecutionQuery().executionId(execution.getId()).singleResult();
-    if (execution == null) {
+    execution = ActivitiUtil.getRuntimeService().createExecutionQuery().executionId(execution.getId()).singleResult();
+    if(execution == null) {
       // Execution is finished, return empty body to inform user
-      response.setStatus(HttpStatus.NO_CONTENT.value());
+      setStatus(Status.SUCCESS_NO_CONTENT);
       return null;
     } else {
-      return restResponseFactory.createExecutionResponse(execution);
+      return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+      .createExecutionResponse(this, execution);
     }
   }
 }

@@ -10,7 +10,7 @@
     <groupId>org.activiti</groupId>
     <artifactId>activiti-root</artifactId>
     <relativePath>../..</relativePath>
-    <version>5.22-emdev</version>
+    <version>5.15-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -19,29 +19,9 @@
       <artifactId>activiti-bpmn-converter</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.activiti</groupId>
-      <artifactId>activiti-process-validation</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.activiti</groupId>
-      <artifactId>activiti-image-generator</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-email</artifactId>
-      <exclusions>
-      	<exclusion>
-      		<groupId>com.sun.mail</groupId>
-      		<artifactId>javax.mail</artifactId>
-      	</exclusion>
-      </exclusions>
     </dependency>
-    <dependency>
-	    <groupId>javax.mail</groupId>
-	    <artifactId>mail</artifactId>
-	    <version>1.4.1</version>
-	    <scope>provided</scope>
-	</dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
@@ -85,11 +65,7 @@
       <artifactId>geronimo-jta_1.1_spec</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>javax.enterprise.concurrent</groupId>
-      <artifactId>javax.enterprise.concurrent-api</artifactId>
-      <scope>provided</scope>
-  	</dependency>
+    
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
@@ -116,7 +92,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.postgresql</groupId>
+      <groupId>postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>test</scope>
     </dependency>
@@ -153,11 +129,6 @@
       <artifactId>slf4j-log4j12</artifactId>
       <scope>test</scope>
     </dependency>
-      <dependency>
-          <groupId>com.googlecode.catch-exception</groupId>
-          <artifactId>catch-exception</artifactId>
-          <scope>test</scope>
-      </dependency>
     
     <!-- Required for testing JTA -->
     <dependency>
@@ -167,21 +138,17 @@
       <scope>test</scope>
     </dependency>
     
-    <!-- EmDev -->
-    <dependency>
-		<groupId>com.liferay.portal</groupId>
-		<artifactId>com.liferay.portal.kernel</artifactId>
-		<version>2.0.0</version>
-		<scope>provided</scope>
-	</dependency>
-	<dependency>
-		<groupId>commons-collections</groupId>
-		<artifactId>commons-collections</artifactId>
-		<version>3.2.2</version>
-		<scope>provided</scope>
-	</dependency>
   </dependencies>
   
+  <repositories>
+    <!-- This repo declaration is here for as this will be part of the distro -->
+    <repository>
+      <id>activiti</id>
+      <name>Activiti</name>
+      <url>https://maven.alfresco.com/nexus/content/repositories/activiti/</url>
+    </repository>
+  </repositories>
+
   <properties>
     <activiti.artifact>
       org.activiti.engine
@@ -190,19 +157,19 @@
       org.activiti.db.mapping.entity
     </activiti.osgi.export.additional>
     <activiti.osgi.import.additional>
-      junit*;resolution:=optional,
-      org.junit*;resolution:=optional,
-      com.sun*;resolution:=optional,
-      javax.persistence*;resolution:=optional,
-      org.apache.commons.mail*;resolution:=optional,
-      org.apache.xerces*;resolution:=optional,
+      junit;resolution:=optional,
+      org.junit;resolution:=optional,
+      com.sun;resolution:=optional,
+      javax.persistence;resolution:=optional,
+      org.apache.commons.mail;resolution:=optional,
+      org.apache.tools.ant;resolution:=optional,
+      org.apache.xerces;resolution:=optional,
       org.activiti.camel;resolution:=optional,
       org.activiti.camel.impl;resolution:=optional,
-      org.springframework*;resolution:=optional,
-      org.drools*;resolution:=optional,
-      com.fasterxml*;resolution:=optional,
-      javax.transaction;resolution:=optional,
-      javax.enterprise.concurrent;resolution:=optional,
+      org.activiti.osgi;resolution:=optional,
+      org.springframework;resolution:=optional,
+      org.drools;resolution:=optional,
+      com.fasterxml;resolution:=optional,
     </activiti.osgi.import.additional>
   </properties>
 
@@ -215,7 +182,6 @@
             <exclude>**/*TestCase.java</exclude>
             <exclude>**/RepeatingServiceTaskTest.java</exclude>
           </excludes>
-          <runOrder>alphabetical</runOrder>
         </configuration>
       </plugin>
       <plugin>
@@ -396,57 +362,6 @@
     </profile>
     
     <profile>
-      <id>databasewithschema</id>
-      <activation>
-        <property>
-          <name>databasewithschema</name>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <!--
-              only worked with this version, there might be a bug with antrun
-              see http://jira.codehaus.org/browse/MANTRUN-109
-            -->
-            <version>1.4</version>
-            <executions>
-              <execution>
-                <id>database-test-create-schema</id>
-                <phase>process-test-classes</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <tasks>
-                    <echo message="updating activiti configuration to db ${databasewithschema}" />
-                    <copy file="${basedir}/../../qa/db/schema/activiti.cfg.xml" todir="target/test-classes" overwrite="true">
-                      <filterset filtersfile="${user.home}/.activiti/jdbc/build.${databasewithschema}.properties" />
-                    </copy>
-                  </tasks>
-                </configuration>
-              </execution>
-              <execution>
-                <id>database-test-drop-schema</id>
-                <phase>prepare-package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <tasks>
-                    <echo message="dropping schema in ${databasewithschema}" />
-                    <java classname="org.activiti.engine.impl.db.DbSchemaDrop" classpathref="maven.test.classpath" />
-                  </tasks>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    
-    <profile>
       <id>databasemssql</id>
       <activation>
         <property>
@@ -530,6 +445,7 @@
           <plugin>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
+              <encoding>UTF-8</encoding>
               <excludes>
                 <exclude>**/*TestCase.java</exclude>
                 
@@ -537,7 +453,6 @@
                 <exclude>**/ProcessDiagramRetrievalTest.java</exclude>
                 <exclude>org/activiti/standalone/**</exclude>
               </excludes>
-              <runOrder>alphabetical</runOrder>
             </configuration>
           </plugin>
         </plugins>
@@ -602,7 +517,6 @@
 							<exclude>**/ProcessDiagramRetrievalTest.java</exclude>
 							<exclude>org/activiti/standalone/**</exclude>
 						</excludes>
-						<runOrder>alphabetical</runOrder>
 					</configuration>
 				</plugin>
 			</plugins>
@@ -611,7 +525,7 @@
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-jdk14</artifactId>
-				<version>1.7.6</version>
+				<version>1.7.2</version>
 				<scope>test</scope>
 			</dependency>
 		</dependencies>
@@ -646,14 +560,13 @@
             <configuration>
               <excludes>
                 <exclude>**/*TestCase.java</exclude>
-                <exclude>**/CompetingJobAcquisitionTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-234 -->
-                <exclude>**/WSDLImporterTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-315 -->
-                <exclude>**/JobExecutorTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-427 -->
-                <exclude>**/HistoricTaskInstanceUpdateTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-485  -->
+                <exclude>**/CompetingJobAcquisitionTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-234 -->
+                <exclude>**/WSDLImporterTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-315 -->
+                <exclude>**/JobExecutorTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-427 -->
+                <exclude>**/HistoricTaskInstanceUpdateTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-485  -->
                 <exclude>**/RepeatingServiceTaskTest.java</exclude>
                 <exclude>org/activiti/standalone/**</exclude>
               </excludes>
-              <runOrder>alphabetical</runOrder>
             </configuration>
           </plugin>
         </plugins>
@@ -736,14 +649,13 @@
             <configuration>
               <excludes>
                 <exclude>**/*TestCase.java</exclude>
-                <exclude>**/CompetingJobAcquisitionTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-234 -->
-                <exclude>**/WSDLImporterTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-315 -->
-                <exclude>**/JobExecutorTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-427 -->
-                <exclude>**/HistoricTaskInstanceUpdateTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-485  -->
+                <exclude>**/CompetingJobAcquisitionTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-234 -->
+                <exclude>**/WSDLImporterTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-315 -->
+                <exclude>**/JobExecutorTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-427 -->
+                <exclude>**/HistoricTaskInstanceUpdateTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-485  -->
                 <exclude>**/RepeatingServiceTaskTest.java</exclude>
                 <exclude>org/activiti/standalone/**</exclude>
               </excludes>
-              <runOrder>alphabetical</runOrder>
             </configuration>
           </plugin>
         </plugins>
@@ -779,21 +691,16 @@
             <configuration>
               <excludes>
                 <exclude>**/*TestCase.java</exclude>
-                <exclude>**/CompetingJobAcquisitionTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-234 -->
-                <exclude>**/WSDLImporterTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-315 -->
-                <exclude>**/JobExecutorTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-427 -->
-                <exclude>**/HistoricTaskInstanceUpdateTest.java</exclude> <!-- https://activiti.atlassian.net/browse/ACT-485  -->
+                <exclude>**/CompetingJobAcquisitionTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-234 -->
+                <exclude>**/WSDLImporterTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-315 -->
+                <exclude>**/JobExecutorTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-427 -->
+                <exclude>**/HistoricTaskInstanceUpdateTest.java</exclude> <!-- http://jira.codehaus.org/browse/ACT-485  -->
+                
                 <exclude>**/Historic*InstanceTest.java</exclude>
                 <exclude>**/HistoryServiceTest.java</exclude>
                 <exclude>**/RepeatingServiceTaskTest.java</exclude>
-                <exclude>**/ProcessInstanceLogQueryTest.java</exclude>
                 <exclude>org/activiti/standalone/**</exclude>
-                <exclude>**/HistoricProcessInstanceQueryVersionTest.java</exclude>
-                <exclude>**/NonCascadeDeleteTest.java</exclude>
-                <exclude>**/HistoricProcessInstanceQueryAndWithExceptionTest.java</exclude>
-                <exclude>**/HistoricJPAVariableTest.java</exclude>
               </excludes>
-              <runOrder>alphabetical</runOrder>
             </configuration>
           </plugin>
         </plugins>
@@ -816,7 +723,6 @@
                 <include>**/JdbcMetaDataTest.java</include>
               </includes>
               <excludes />
-              <runOrder>alphabetical</runOrder>
             </configuration>
           </plugin>
           <plugin>
@@ -884,23 +790,6 @@
     </profile>
     
     <profile>
-      <id>oraclewithschema</id>
-      <activation>
-        <property>
-          <name>databasewithschema</name>
-          <value>oracle</value>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>com.oracle.jdbc</groupId>
-          <artifactId>ojdbc5</artifactId>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-    
-    <profile>
       <id>db2</id>
       <activation>
         <property>
@@ -946,23 +835,6 @@
         <dependency>
           <groupId>mysql</groupId>
           <artifactId>mysql-connector-java</artifactId>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hsql</id>
-      <activation>
-        <property>
-          <name>database</name>
-          <value>hsql</value>
-        </property>
-      </activation>
-      <dependencies>
-        <dependency>
-          <groupId>org.hsqldb</groupId>
-          <artifactId>hsqldb</artifactId>
           <scope>test</scope>
         </dependency>
       </dependencies>

@@ -12,6 +12,9 @@
  */
 package org.activiti.bpmn.converter.alfresco;
 
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+
 import org.activiti.bpmn.converter.UserTaskXMLConverter;
 import org.activiti.bpmn.model.BaseElement;
 import org.activiti.bpmn.model.alfresco.AlfrescoUserTask;
@@ -21,12 +24,31 @@ import org.activiti.bpmn.model.alfresco.AlfrescoUserTask;
  */
 public class AlfrescoUserTaskXMLConverter extends UserTaskXMLConverter {
   
-  public Class<? extends BaseElement> getBpmnElementType() {
+  public static String getXMLType() {
+    return ELEMENT_TASK_USER;
+  }
+  
+  public static Class<? extends BaseElement> getBpmnElementType() {
     return AlfrescoUserTask.class;
   }
   
   @Override
   protected String getXMLElementName() {
     return ELEMENT_TASK_USER;
+  }
+  
+  @Override
+  protected BaseElement convertXMLToElement(XMLStreamReader xtr) throws Exception {
+    return super.convertXMLToElement(xtr);
+  }
+  
+  @Override
+  protected void writeAdditionalAttributes(BaseElement element, XMLStreamWriter xtw) throws Exception {
+    super.writeAdditionalAttributes(element, xtw);
+  }
+  
+  @Override
+  protected void writeAdditionalChildElements(BaseElement element, XMLStreamWriter xtw) throws Exception {
+    super.writeAdditionalChildElements(element, xtw);
   }
 }

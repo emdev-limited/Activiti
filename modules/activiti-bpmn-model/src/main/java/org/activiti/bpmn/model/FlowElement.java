@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * @author Tijs Rademakers
  */
-public abstract class FlowElement extends BaseElement implements HasExecutionListeners {
+public class FlowElement extends BaseElement implements HasExecutionListeners {
 
   protected String name;
   protected String documentation;
@@ -46,20 +46,5 @@ public abstract class FlowElement extends BaseElement implements HasExecutionLis
   }
   public void setExecutionListeners(List<ActivitiListener> executionListeners) {
     this.executionListeners = executionListeners;
-  }
-  
-  public abstract FlowElement clone();
-  
-  public void setValues(FlowElement otherElement) {
-    super.setValues(otherElement);
-    setName(otherElement.getName());
-    setDocumentation(otherElement.getDocumentation());
-    
-    executionListeners = new ArrayList<ActivitiListener>();
-    if (otherElement.getExecutionListeners() != null && !otherElement.getExecutionListeners().isEmpty()) {
-      for (ActivitiListener listener : otherElement.getExecutionListeners()) {
-        executionListeners.add(listener.clone());
-      }
-    }
   }
 }

@@ -35,16 +35,4 @@ public class TextAnnotation extends Artifact {
   public void setTextFormat(String textFormat) {
     this.textFormat = textFormat;
   }
-  
-  public TextAnnotation clone() {
-    TextAnnotation clone = new TextAnnotation();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(TextAnnotation otherElement) {
-    super.setValues(otherElement);
-    setText(otherElement.getText());
-    setTextFormat(otherElement.getTextFormat());
-  }
 }

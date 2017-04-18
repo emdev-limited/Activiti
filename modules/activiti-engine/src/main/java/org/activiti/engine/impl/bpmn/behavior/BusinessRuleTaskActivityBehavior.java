@@ -18,13 +18,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.activiti.engine.delegate.BusinessRuleTaskDelegate;
 import org.activiti.engine.delegate.Expression;
-import org.activiti.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.activiti.engine.impl.pvm.PvmProcessDefinition;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.impl.rules.RulesAgendaFilter;
 import org.activiti.engine.impl.rules.RulesHelper;
-import org.activiti.engine.repository.ProcessDefinition;
 import org.drools.KnowledgeBase;
 import org.drools.runtime.StatefulKnowledgeSession;
 
@@ -34,9 +32,8 @@ import org.drools.runtime.StatefulKnowledgeSession;
  * 
  * @author Tijs Rademakers
  */
-public class BusinessRuleTaskActivityBehavior extends TaskActivityBehavior implements BusinessRuleTaskDelegate {
+public class BusinessRuleTaskActivityBehavior extends TaskActivityBehavior {
   
-  private static final long serialVersionUID = 1L;
   protected Set<Expression> variablesInputExpressions = new HashSet<Expression>();
   protected Set<Expression> rulesExpressions = new HashSet<Expression>();
   protected boolean exclude = false;
@@ -45,9 +42,7 @@ public class BusinessRuleTaskActivityBehavior extends TaskActivityBehavior imple
   public BusinessRuleTaskActivityBehavior() {}
   
   public void execute(ActivityExecution execution) throws Exception {
-    ProcessEngineConfigurationImpl processEngineConfiguration = (ProcessEngineConfigurationImpl) execution.getEngineServices().getProcessEngineConfiguration();
-    ProcessDefinition processDefinition = processEngineConfiguration.getDeploymentManager().findDeployedProcessDefinitionById(
-        execution.getProcessDefinitionId());
+    PvmProcessDefinition processDefinition = execution.getActivity().getProcessDefinition();
     String deploymentId = processDefinition.getDeploymentId();
     
     KnowledgeBase knowledgeBase = RulesHelper.findKnowledgeBaseByDeploymentId(deploymentId); 
@@ -61,7 +56,7 @@ public class BusinessRuleTaskActivityBehavior extends TaskActivityBehavior imple
       }
     }
     
-    if (!rulesExpressions.isEmpty()) {
+    if (rulesExpressions.size() > 0) {
       RulesAgendaFilter filter = new RulesAgendaFilter();
       Iterator<Expression> itRuleNames = rulesExpressions.iterator();
       while (itRuleNames.hasNext()) {
@@ -76,7 +71,7 @@ public class BusinessRuleTaskActivityBehavior extends TaskActivityBehavior imple
     }
     
     Collection<Object> ruleOutputObjects = ksession.getObjects();
-    if (ruleOutputObjects != null && !ruleOutputObjects.isEmpty()) {
+    if (ruleOutputObjects != null && ruleOutputObjects.size() > 0) {
       Collection<Object> outputVariables = new ArrayList<Object>();
       for (Object object : ruleOutputObjects) {
         outputVariables.add(object);

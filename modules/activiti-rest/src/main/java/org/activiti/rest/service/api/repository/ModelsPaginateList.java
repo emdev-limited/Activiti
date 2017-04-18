@@ -13,25 +13,34 @@
 
 package org.activiti.rest.service.api.repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.activiti.engine.repository.Model;
 import org.activiti.rest.common.api.AbstractPaginateList;
+import org.activiti.rest.common.api.SecuredResource;
 import org.activiti.rest.service.api.RestResponseFactory;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
 
 /**
  * @author Frederik Heremans
  */
 public class ModelsPaginateList extends AbstractPaginateList {
 
-  protected RestResponseFactory restResponseFactory;
+  private SecuredResource resource;
   
-  public ModelsPaginateList(RestResponseFactory restResponseFactory) {
-    this.restResponseFactory = restResponseFactory;
+  public ModelsPaginateList(SecuredResource resource) {
+    this.resource = resource;
   }
   
-  @SuppressWarnings({ "rawtypes", "unchecked" })
+  @SuppressWarnings("rawtypes")
   @Override
   protected List processList(List list) {
-    return restResponseFactory.createModelResponseList(list);
+    List<ModelResponse> responseList = new ArrayList<ModelResponse>();
+    RestResponseFactory restResponseFactory = resource.getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
+    for (Object entity : list) {
+      responseList.add(restResponseFactory.createModelResponse(resource, (Model) entity));
+    }
+    return responseList;
   }
 }

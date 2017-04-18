@@ -3,11 +3,10 @@ package org.activiti.workflow.simple.definition;
 import java.util.List;
 
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonValue;
+import org.codehaus.jackson.annotate.JsonCreator;
+import org.codehaus.jackson.annotate.JsonValue;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
+import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 
 /**
  * Reusable assignment details for a task to be performed by a user, 
@@ -109,7 +108,7 @@ public class HumanStepAssignment {
 		}
   }
   
-  @JsonInclude(Include.NON_NULL)
+  @JsonSerialize(include=Inclusion.NON_NULL)
   public String getAssignee() {
 	  return assignee;
   }
@@ -121,15 +120,15 @@ public class HumanStepAssignment {
 	  }
   }
   
-  @JsonInclude(Include.NON_NULL)
+  @JsonSerialize(include=Inclusion.NON_NULL)
   public List<String> getCandidateGroups() {
 	  return candidateGroups;
   }
   
   public void setCandidateGroups(List<String> candidateGroups) {
 	  this.candidateGroups = candidateGroups;
-	  if(candidateGroups != null && !candidateGroups.isEmpty()) {
-	  	if(this.candidateUsers != null && !this.candidateUsers.isEmpty()) {
+	  if(candidateGroups != null && candidateGroups.size() > 0) {
+	  	if(this.candidateUsers != null && this.candidateUsers.size() > 0) {
 	  		setType(HumanStepAssignmentType.MIXED);
 	  	} else {
 	  		setType(HumanStepAssignmentType.GROUPS);
@@ -137,15 +136,15 @@ public class HumanStepAssignment {
 	  }
   }
   
-  @JsonInclude(Include.NON_NULL)
+  @JsonSerialize(include=Inclusion.NON_NULL)
   public List<String> getCandidateUsers() {
 	  return candidateUsers;
   }
   
   public void setCandidateUsers(List<String> candidateUsers) {
   	this.candidateUsers = candidateUsers;
-  	if(candidateUsers != null && !candidateUsers.isEmpty()) {
-  		if(this.candidateGroups != null && !this.candidateGroups.isEmpty()) {
+  	if(candidateUsers != null && candidateUsers.size() > 0) {
+  		if(this.candidateGroups != null && this.candidateGroups.size() > 0) {
   			setType(HumanStepAssignmentType.MIXED);
   		} else {
   			setType(HumanStepAssignmentType.USERS);

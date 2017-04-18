@@ -22,7 +22,7 @@ public class GraphicInfo {
   protected double y;
   protected double height;
   protected double width;
-  protected BaseElement element;
+  protected FlowElement element;
   protected Boolean expanded;
   protected int xmlRowNumber;
   protected int xmlColumnNumber;
@@ -56,10 +56,10 @@ public class GraphicInfo {
   public void setExpanded(Boolean expanded) {
     this.expanded = expanded;
   }
-  public BaseElement getElement() {
+  public FlowElement getElement() {
     return element;
   }
-  public void setElement(BaseElement element) {
+  public void setElement(FlowElement element) {
     this.element = element;
   }
   public int getXmlRowNumber() {

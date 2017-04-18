@@ -50,7 +50,7 @@ public class ProcessParser implements BpmnXMLConstants {
         process.setCandidateStarterGroups(candidateGroups);
       }
 
-      BpmnXMLUtil.addCustomAttributes(xtr, process, ProcessExport.defaultProcessAttributes);
+      BpmnXMLUtil.addCustomAttributes(xtr, process, ProcessExport.defaultAttributes);
 
       model.getProcesses().add(process);
 

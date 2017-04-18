@@ -50,12 +50,4 @@ public interface Model {
   String getDeploymentId();
   void setDeploymentId(String deploymentId);
   
-  void setTenantId(String tenantId);
-  String getTenantId();
-  
-  /** whether this model has editor source */
-  boolean hasEditorSource();
-  
-  /** whether this model has editor source extra */
-  boolean hasEditorSourceExtra();
 }

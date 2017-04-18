@@ -35,7 +35,6 @@ import org.activiti.engine.impl.history.HistoryLevel;
 import org.activiti.engine.impl.persistence.entity.CommentEntity;
 import org.activiti.engine.impl.persistence.entity.HistoricDetailVariableInstanceUpdateEntity;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
-import org.activiti.engine.impl.util.CollectionUtil;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Attachment;
 import org.activiti.engine.task.Comment;
@@ -45,9 +44,6 @@ import org.activiti.engine.task.IdentityLink;
 import org.activiti.engine.task.IdentityLinkType;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
-
-import static com.googlecode.catchexception.CatchException.catchException;
-import static com.googlecode.catchexception.CatchException.caughtException;
 
 /**
  * @author Frederik Heremans
@@ -301,12 +297,6 @@ public class TaskServiceTest extends PluggableActivitiTestCase {
     assertEquals("johndoe", task.getOwner());
     assertEquals("joesmoe", task.getAssignee());
     assertEquals(DelegationState.PENDING, task.getDelegationState());
-    
-    // try to complete (should fail)
-    try {
-    	taskService.complete(task.getId());
-    	fail();
-    } catch (ActivitiException e) {}
 
     taskService.resolveTask(taskId);
     task = taskService.createTaskQuery().taskId(taskId).singleResult();
@@ -343,7 +333,7 @@ public class TaskServiceTest extends PluggableActivitiTestCase {
     // Fetch the task again and update
     task = taskService.createTaskQuery().taskId(taskId).singleResult();
 
-    taskService.delegateTask(task.getId(), "joesmoe");
+    taskService.delegateTask(taskId, "joesmoe");
     
     task = taskService.createTaskQuery().taskId(taskId).singleResult();
     assertEquals("johndoe", task.getOwner());
@@ -424,40 +414,6 @@ public class TaskServiceTest extends PluggableActivitiTestCase {
     existingTask = taskService.createTaskQuery().taskId(existingTask.getId()).singleResult();
     assertNull(existingTask);
   }
-  
-  public void testDeleteTaskIdentityLink() {
-    Task task = null;
-    try {
-      task = taskService.newTask();
-      task.setName("test");
-      taskService.saveTask(task);
-      
-      taskService.addCandidateGroup(task.getId(), "sales");
-      taskService.addCandidateUser(task.getId(), "kermit");
-      
-      assertNotNull(taskService.createTaskQuery().taskCandidateGroup("sales").singleResult());
-      assertNotNull(taskService.createTaskQuery().taskCandidateUser("kermit").singleResult());
-     
-      // Delete identity link for group
-      taskService.deleteGroupIdentityLink(task.getId(), "sales", "candidate");
-      
-      // Link should be removed
-      assertNull(taskService.createTaskQuery().taskCandidateGroup("sales").singleResult());
-      
-      // User link should remain unaffected
-      assertNotNull(taskService.createTaskQuery().taskCandidateUser("kermit").singleResult());
-      
-    } finally {
-      // Adhoc task not part of deployment, cleanup
-      if(task != null && task.getId() != null) {
-        taskService.deleteTask(task.getId());
-        if(processEngineConfiguration.getHistoryLevel().isAtLeast(HistoryLevel.AUDIT)) {
-          historyService.deleteHistoricTaskInstance(task.getId());
-        }
-      }
-    }
-  }
-
 
   public void testClaimNullArguments() {
     try {
@@ -638,55 +594,6 @@ public class TaskServiceTest extends PluggableActivitiTestCase {
     Map<String, Object> variables = runtimeService.getVariables(processInstance.getId());
     assertEquals(1, variables.size());
     assertEquals("myValue", variables.get("myParam"));
-  }
-  
-  @Deployment(resources = { 
-  "org/activiti/engine/test/api/twoTasksProcess.bpmn20.xml" })
-public void testCompleteWithParametersTask2() {
-  ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("twoTasksProcess");
-
-  // Fetch first task
-  Task task = taskService.createTaskQuery().singleResult();
-  assertEquals("First task", task.getName());
-
-  // Complete first task
-  Map<String, Object> taskParams = new HashMap<String, Object>();
-  taskParams.put("myParam", "myValue");
-  taskService.complete(task.getId(), taskParams, false); // Only difference with previous test
-
-  // Fetch second task
-  task = taskService.createTaskQuery().singleResult();
-  assertEquals("Second task", task.getName());
-
-  // Verify task parameters set on execution
-  Map<String, Object> variables = runtimeService.getVariables(processInstance.getId());
-  assertEquals(1, variables.size());
-  assertEquals("myValue", variables.get("myParam"));
-}
-  
-  @Deployment
-  public void testCompleteWithTaskLocalParameters() {
-  	ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("testTaskLocalVars");
-
-    // Fetch first task
-    Task task = taskService.createTaskQuery().singleResult();
-
-    // Complete first task
-    Map<String, Object> taskParams = new HashMap<String, Object>();
-    taskParams.put("a", 1);
-    taskParams.put("b", 1);
-    taskService.complete(task.getId(), taskParams, true);
-    
-    // Verify vars are not stored process instance wide
-    assertNull(runtimeService.getVariable(processInstance.getId(), "a"));
-    assertNull(runtimeService.getVariable(processInstance.getId(), "b"));
-    
-    // verify script listener has done its job
-    assertEquals(new Integer(2), runtimeService.getVariable(processInstance.getId(), "sum"));
-
-    // Fetch second task
-    taskService.createTaskQuery().singleResult();
-
   }
   
   public void testSetAssignee() {
@@ -1082,7 +989,7 @@ public void testCompleteWithParametersTask2() {
   }
 
   /**
-   * @see <a href="https://activiti.atlassian.net/browse/ACT-1059">https://activiti.atlassian.net/browse/ACT-1059</a>
+   * @see http://jira.codehaus.org/browse/ACT-1059
    */
   public void testSetDelegationState() {
     Task task = taskService.newTask();
@@ -1443,109 +1350,4 @@ public void testCompleteWithParametersTask2() {
     
   }
   
-  @Deployment
-  public void testFormKeyExpression() {
-  	runtimeService.startProcessInstanceByKey("testFormExpression", CollectionUtil.singletonMap("var", "abc"));
-
-  	Task task = taskService.createTaskQuery().singleResult();
-  	assertEquals("first-form.json", task.getFormKey());
-  	taskService.complete(task.getId());
-  	
-  	task = taskService.createTaskQuery().singleResult();
-  	assertEquals("form-abc.json", task.getFormKey());
-  	
-  	task.setFormKey("form-changed.json");
-  	taskService.saveTask(task);
-  	task = taskService.createTaskQuery().singleResult();
-  	assertEquals("form-changed.json", task.getFormKey());
-  	
-  	if (processEngineConfiguration.getHistoryLevel().isAtLeast(HistoryLevel.AUDIT)) {
-    	HistoricTaskInstance historicTaskInstance = historyService.createHistoricTaskInstanceQuery().taskId(task.getId()).singleResult();
-    	assertEquals("form-changed.json", historicTaskInstance.getFormKey());
-  	}
-  }
-
-    @Deployment(resources = {
-            "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
-    public void testGetVariableLocalWithCast() {
-        runtimeService.startProcessInstanceByKey("oneTaskProcess");
-
-        Task currentTask = taskService.createTaskQuery().singleResult();
-
-        taskService.setVariableLocal(currentTask.getId(), "variable1", "value1");
-
-        String variable = taskService.getVariableLocal(currentTask.getId(), "variable1", String.class);
-
-        assertEquals("value1", variable);
-    }
-
-    @Deployment(resources = {
-            "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
-    public void testGetVariableLocalNotExistingWithCast() {
-        runtimeService.startProcessInstanceByKey("oneTaskProcess");
-
-        Task currentTask = taskService.createTaskQuery().singleResult();
-
-        String variable = taskService.getVariableLocal(currentTask.getId(), "variable1", String.class);
-
-        assertNull(variable);
-    }
-
-    @Deployment(resources = {
-            "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
-    public void testGetVariableLocalWithInvalidCast() {
-        runtimeService.startProcessInstanceByKey("oneTaskProcess");
-
-        Task currentTask = taskService.createTaskQuery().singleResult();
-
-        taskService.setVariableLocal(currentTask.getId(), "variable1", "value1");
-
-        catchException(taskService).getVariableLocal(currentTask.getId(), "variable1", Boolean.class);
-
-        Exception e = caughtException();
-        assertNotNull(e);
-        assertTrue(e instanceof ClassCastException);
-    }
-
-    @Deployment(resources = {
-            "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
-    public void testGetVariableWithCast() {
-        runtimeService.startProcessInstanceByKey("oneTaskProcess");
-
-        Task currentTask = taskService.createTaskQuery().singleResult();
-
-        taskService.setVariable(currentTask.getId(), "variable1", "value1");
-
-        String variable = taskService.getVariable(currentTask.getId(), "variable1", String.class);
-
-        assertEquals("value1", variable);
-    }
-
-    @Deployment(resources = {
-            "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
-    public void testGetVariableNotExistingWithCast() {
-        runtimeService.startProcessInstanceByKey("oneTaskProcess");
-
-        Task currentTask = taskService.createTaskQuery().singleResult();
-
-        String variable = taskService.getVariable(currentTask.getId(), "variable1", String.class);
-
-        assertNull(variable);
-    }
-
-    @Deployment(resources = {
-            "org/activiti/engine/test/api/oneTaskProcess.bpmn20.xml" })
-    public void testGetVariableWithInvalidCast() {
-        runtimeService.startProcessInstanceByKey("oneTaskProcess");
-
-        Task currentTask = taskService.createTaskQuery().singleResult();
-
-        taskService.setVariable(currentTask.getId(), "variable1", "value1");
-
-        catchException(taskService).getVariable(currentTask.getId(), "variable1", Boolean.class);
-
-        Exception e = caughtException();
-        assertNotNull(e);
-        assertTrue(e instanceof ClassCastException);
-    }
 }

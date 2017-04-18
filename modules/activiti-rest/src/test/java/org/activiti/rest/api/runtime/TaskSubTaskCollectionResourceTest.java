@@ -14,13 +14,12 @@
 package org.activiti.rest.api.runtime;
 
 import org.activiti.engine.task.Task;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import org.codehaus.jackson.JsonNode;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
 
 
 /**
@@ -28,7 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * 
  * @author Tijs Rademakers
  */
-public class TaskSubTaskCollectionResourceTest extends BaseSpringRestTestCase {
+public class TaskSubTaskCollectionResourceTest extends BaseRestTestCase {
   
   /**
    * Test getting all sub tasks.
@@ -51,22 +50,23 @@ public class TaskSubTaskCollectionResourceTest extends BaseSpringRestTestCase {
     taskService.saveTask(subTask2);
 
     // Request all sub tasks
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_SUBTASKS_COLLECTION, parentTask.getId())), HttpStatus.SC_OK);
-    JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TASK_SUBTASKS_COLLECTION, parentTask.getId()));
+    Representation response = client.get();
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    
+    JsonNode responseNode = objectMapper.readTree(response.getStream());
     assertNotNull(responseNode);
     assertTrue(responseNode.isArray());
     assertEquals(2, responseNode.size());
     
     boolean foundSubtask1 = false;
     boolean foundSubtask2 = false;
-    for (int i=0; i< responseNode.size(); i++) {
+    for(int i=0; i< responseNode.size(); i++) {
       JsonNode var = responseNode.get(i);
-      if ("sub task 1".equals(var.get("name").asText())) {
+      if("sub task 1".equals(var.get("name").asText())) {
         foundSubtask1 = true;
         assertEquals(subTask.getId(), var.get("id").asText());
-      } else if ("sub task 2".equals(var.get("name").asText())) {
+      } else if("sub task 2".equals(var.get("name").asText())) {
         foundSubtask2 = true;
         assertEquals(subTask2.getId(), var.get("id").asText());
       }

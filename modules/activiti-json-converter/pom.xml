@@ -10,7 +10,7 @@
     <groupId>org.activiti</groupId>
     <artifactId>activiti-root</artifactId>
     <relativePath>../..</relativePath>
-    <version>5.22-emdev</version>
+    <version>5.15-SNAPSHOT</version>
   </parent>
   
   <properties>
@@ -18,9 +18,6 @@
     <activiti.artifact>
       org.activiti.json.converter
     </activiti.artifact>
-    <activiti.osgi.export.additional>
-      org.activiti.editor*
-    </activiti.osgi.export.additional>
   </properties>
 
   <build>
@@ -112,19 +109,15 @@
       <artifactId>commons-lang3</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
     </dependency>
     <dependency>
-      <groupId>joda-time</groupId>
-      <artifactId>joda-time</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>math.geom2d</groupId>
+      <groupId>math.geom</groupId>
       <artifactId>javaGeom</artifactId>
     </dependency>
     <dependency>
@@ -170,4 +163,18 @@
       </build>
     </profile>
   </profiles>
+  
+  <repositories>
+    <!-- This repo declaration is here for as this will be part of the distro -->
+    <repository>
+      <id>activiti</id>
+      <name>Activiti</name>
+      <url>https://maven.alfresco.com/nexus/content/repositories/activiti/</url>
+    </repository>
+    <repository>
+      <id>Alfresco thirdparty</id>
+      <url>https://maven.alfresco.com/nexus/content/repositories/thirdparty/</url>
+    </repository>
+  </repositories>
+
 </project>

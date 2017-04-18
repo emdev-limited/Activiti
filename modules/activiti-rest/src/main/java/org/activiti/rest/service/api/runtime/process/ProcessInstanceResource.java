@@ -13,65 +13,68 @@
 
 package org.activiti.rest.service.api.runtime.process;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.activiti.engine.ActivitiIllegalArgumentException;
+import org.activiti.engine.ActivitiObjectNotFoundException;
 import org.activiti.engine.runtime.ProcessInstance;
-import org.activiti.rest.exception.ActivitiConflictException;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.common.api.SecuredResource;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Status;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Get;
+import org.restlet.resource.Put;
+import org.restlet.resource.ResourceException;
 
 
 /**
  * @author Frederik Heremans
  */
-@RestController
-public class ProcessInstanceResource extends BaseProcessInstanceResource {
+public class ProcessInstanceResource extends SecuredResource {
 
-  @RequestMapping(value="/runtime/process-instances/{processInstanceId}", method = RequestMethod.GET, produces="application/json")
-  public ProcessInstanceResponse getProcessInstance(@PathVariable String processInstanceId, HttpServletRequest request) {
-    return restResponseFactory.createProcessInstanceResponse(getProcessInstanceFromRequest(processInstanceId));
+  @Get
+  public ProcessInstanceResponse getProcessInstance() {
+    if(!authenticate()) {
+      return null;
+    }
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createProcessInstanceResponse(this, getProcessInstanceFromRequest());
   }
   
-  @RequestMapping(value="/runtime/process-instances/{processInstanceId}", method = RequestMethod.DELETE)
-  public void deleteProcessInstance(@PathVariable String processInstanceId, 
-      @RequestParam(value="deleteReason", required=false) String deleteReason, HttpServletResponse response) {
+  @Delete
+  public void deleteProcessInstance() {
+    if(!authenticate()) {
+      return;
+    }
+    ProcessInstance processInstance = getProcessInstanceFromRequest();
+    String deleteReason = getQueryParameter("deleteReason", getQuery());
     
-    ProcessInstance processInstance = getProcessInstanceFromRequest(processInstanceId);
-    
-    runtimeService.deleteProcessInstance(processInstance.getId(), deleteReason);
-    response.setStatus(HttpStatus.NO_CONTENT.value());
+    ActivitiUtil.getRuntimeService().deleteProcessInstance(processInstance.getId(), deleteReason);
+    setStatus(Status.SUCCESS_NO_CONTENT);
   }
   
-  @RequestMapping(value="/runtime/process-instances/{processInstanceId}", method = RequestMethod.PUT, produces="application/json")
-  public ProcessInstanceResponse performProcessInstanceAction(@PathVariable String processInstanceId, 
-      @RequestBody ProcessInstanceActionRequest actionRequest, HttpServletRequest request) {
+  @Put
+  public ProcessInstanceResponse performProcessInstanceAction(ProcessInstanceActionRequest actionRequest) {
+    if(!authenticate()) {
+      return null;
+    }
     
-    ProcessInstance processInstance = getProcessInstanceFromRequest(processInstanceId);
-    
-    if (ProcessInstanceActionRequest.ACTION_ACTIVATE.equals(actionRequest.getAction())) {
+    ProcessInstance processInstance = getProcessInstanceFromRequest();
+    if(ProcessInstanceActionRequest.ACTION_ACTIVATE.equals(actionRequest.getAction())) {
       return activateProcessInstance(processInstance);
-      
-    } else if (ProcessInstanceActionRequest.ACTION_SUSPEND.equals(actionRequest.getAction())) {
+    } else if(ProcessInstanceActionRequest.ACTION_SUSPEND.equals(actionRequest.getAction())) {
       return suspendProcessInstance(processInstance);
     }
     throw new ActivitiIllegalArgumentException("Invalid action: '" + actionRequest.getAction() + "'.");
   }
   
   protected ProcessInstanceResponse activateProcessInstance(ProcessInstance processInstance) {
-    if (!processInstance.isSuspended()) {
-      throw new ActivitiConflictException("Process instance with id '" + 
-          processInstance.getId() + "' is already active.");
+    if(!processInstance.isSuspended()) {
+      throw new ResourceException(Status.CLIENT_ERROR_CONFLICT.getCode(), "Process instance with id '" + processInstance.getId() + "' is already active.", null, null);
     }
-    runtimeService.activateProcessInstanceById(processInstance.getId());
+    ActivitiUtil.getRuntimeService().activateProcessInstanceById(processInstance.getId());
    
-    ProcessInstanceResponse response = restResponseFactory.createProcessInstanceResponse(processInstance);
+    ProcessInstanceResponse response =  getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createProcessInstanceResponse(this, processInstance);
     
     // No need to re-fetch the instance, just alter the suspended state of the result-object
     response.setSuspended(false);
@@ -79,16 +82,31 @@ public class ProcessInstanceResource extends BaseProcessInstanceResource {
   }
 
   protected ProcessInstanceResponse suspendProcessInstance(ProcessInstance processInstance) {
-    if (processInstance.isSuspended()) {
-      throw new ActivitiConflictException("Process instance with id '" + 
-          processInstance.getId() + "' is already suspended.");
+    if(processInstance.isSuspended()) {
+      throw new ResourceException(Status.CLIENT_ERROR_CONFLICT.getCode(), "Process instance with id '" + processInstance.getId() + "' is already suspended.", null, null);
     }
-    runtimeService.suspendProcessInstanceById(processInstance.getId());
+    ActivitiUtil.getRuntimeService().suspendProcessInstanceById(processInstance.getId());
     
-    ProcessInstanceResponse response = restResponseFactory.createProcessInstanceResponse(processInstance);
+    ProcessInstanceResponse response =  getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createProcessInstanceResponse(this, processInstance);
     
     // No need to re-fetch the instance, just alter the suspended state of the result-object
     response.setSuspended(true);
     return response;
+  }
+  
+  
+  protected ProcessInstance getProcessInstanceFromRequest() {
+    String processInstanceId = getAttribute("processInstanceId");
+    if (processInstanceId == null) {
+      throw new ActivitiIllegalArgumentException("The processInstanceId cannot be null");
+    }
+    
+   ProcessInstance processInstance = ActivitiUtil.getRuntimeService().createProcessInstanceQuery()
+           .processInstanceId(processInstanceId).singleResult();
+    if (processInstance == null) {
+      throw new ActivitiObjectNotFoundException("Could not find a process instance with id '" + processInstanceId + "'.", ProcessInstance.class);
+    }
+    return processInstance;
   }
 }

@@ -12,6 +12,7 @@
  */
 package org.activiti.workflow.simple.converter;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +20,6 @@ import java.util.List;
 import org.activiti.workflow.simple.converter.listener.DefaultWorkflowDefinitionConversionListener;
 import org.activiti.workflow.simple.converter.listener.WorkflowDefinitionConversionListener;
 import org.activiti.workflow.simple.converter.step.ChoiceStepsDefinitionConverter;
-import org.activiti.workflow.simple.converter.step.DelayStepDefinitionConverter;
 import org.activiti.workflow.simple.converter.step.FeedbackStepDefinitionConverter;
 import org.activiti.workflow.simple.converter.step.HumanStepDefinitionConverter;
 import org.activiti.workflow.simple.converter.step.ParallelStepsDefinitionConverter;
@@ -38,7 +38,7 @@ import org.activiti.workflow.simple.definition.WorkflowDefinition;
  * @author Frederik Heremans
  * @author Joram Barrez
  */
-public class WorkflowDefinitionConversionFactory {
+public class WorkflowDefinitionConversionFactory implements Serializable {
 
   private static final long serialVersionUID = 229288964476630200L;
   
@@ -54,7 +54,6 @@ public class WorkflowDefinitionConversionFactory {
     initDefaultWorkflowDefinitionConversionListeners();
   }
   
-  @SuppressWarnings("rawtypes")
   protected void initDefaultStepConverters() {
     List<StepDefinitionConverter> converters = new ArrayList<StepDefinitionConverter>();
     converters.add(new ParallelStepsDefinitionConverter());
@@ -62,7 +61,6 @@ public class WorkflowDefinitionConversionFactory {
     converters.add(new HumanStepDefinitionConverter());
     converters.add(new FeedbackStepDefinitionConverter());
     converters.add(new ScriptStepDefinitionConverter());
-    converters.add(new DelayStepDefinitionConverter());
     setDefaultStepDefinitionConverters(converters);
   }
   

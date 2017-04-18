@@ -14,24 +14,20 @@
 package org.activiti.rest.service.api.identity;
 
 import org.activiti.engine.identity.User;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
+import org.restlet.resource.ResourceException;
 
 
 /**
  * @author Frederik Heremans
  */
-public class UserInfoResourceTest extends BaseSpringRestTestCase {
+public class UserInfoResourceTest extends BaseRestTestCase {
 
   /**
    * Test getting the collection of info for a user.
@@ -49,10 +45,13 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       identityService.setUserInfo(newUser.getId(), "key1", "Value 1");
       identityService.setUserInfo(newUser.getId(), "key2", "Value 2");
       
-      CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION, newUser.getId())), HttpStatus.SC_OK);
-      JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
+      
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION,
+              newUser.getId()));
+      Representation response = client.get();
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+      
+      JsonNode responseNode = objectMapper.readTree(response.getStream());
       assertNotNull(responseNode);
       assertTrue(responseNode.isArray());
       assertEquals(2, responseNode.size());
@@ -60,17 +59,17 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       boolean foundFirst = false;
       boolean foundSecond = false;
       
-      for (int i=0; i<responseNode.size(); i++) {
+      for(int i=0; i<responseNode.size(); i++) {
         ObjectNode info = (ObjectNode) responseNode.get(i);
-        assertNotNull(info.get("key").textValue());
-        assertNotNull(info.get("url").textValue());
+        assertNotNull(info.get("key").getTextValue());
+        assertNotNull(info.get("url").getTextValue());
         
-        if (info.get("key").textValue().equals("key1")) {
+        if(info.get("key").getTextValue().equals("key1")) {
           foundFirst = true;
-          assertTrue(info.get("url").textValue().endsWith(RestUrls.createRelativeResourceUrl(
+          assertTrue(info.get("url").getTextValue().endsWith(RestUrls.createRelativeResourceUrl(
                   RestUrls.URL_USER_INFO, newUser.getId(), "key1")));
-        } else if (info.get("key").textValue().equals("key2")) {
-          assertTrue(info.get("url").textValue().endsWith(RestUrls.createRelativeResourceUrl(
+        } else if(info.get("key").getTextValue().equals("key2")) {
+          assertTrue(info.get("url").getTextValue().endsWith(RestUrls.createRelativeResourceUrl(
                   RestUrls.URL_USER_INFO, newUser.getId(), "key2")));
           foundSecond = true;
         }
@@ -102,20 +101,23 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       
       identityService.setUserInfo(newUser.getId(), "key1", "Value 1");
       
-      CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, newUser.getId(), "key1")), HttpStatus.SC_OK);
-      JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
-      assertEquals("key1", responseNode.get("key").textValue());
-      assertEquals("Value 1", responseNode.get("value").textValue());
       
-      assertTrue(responseNode.get("url").textValue().endsWith(RestUrls.createRelativeResourceUrl(
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO,
+              newUser.getId(), "key1"));
+      Representation response = client.get();
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+      
+      JsonNode responseNode = objectMapper.readTree(response.getStream());
+      assertEquals("key1", responseNode.get("key").getTextValue());
+      assertEquals("Value 1", responseNode.get("value").getTextValue());
+      
+      assertTrue(responseNode.get("url").getTextValue().endsWith(RestUrls.createRelativeResourceUrl(
                   RestUrls.URL_USER_INFO, newUser.getId(), "key1")));
       
     } finally {
       
       // Delete user after test passes or fails
-      if (savedUser != null) {
+      if(savedUser != null) {
         identityService.deleteUser(savedUser.getId());
       }
     }
@@ -125,8 +127,15 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
    * Test getting the info for an unexisting user.
    */
   public void testGetInfoForUnexistingUser() throws Exception {
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "unexisting", "key1")), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "unexisting", "key1"));
+    
+    try {
+      client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Could not find a user with id 'unexisting'.", expected.getStatus().getDescription());
+    }
   }
   
   /**
@@ -142,8 +151,14 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       identityService.saveUser(newUser);
       savedUser = newUser;
       
-      closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "testuser", "key1")), HttpStatus.SC_NOT_FOUND));
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "testuser", "key1"));
+      try {
+        client.get();
+        fail("Exception expected");
+      } catch(ResourceException expected) {
+        assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+        assertEquals("User info with key 'key1' does not exists for user 'testuser'.", expected.getStatus().getDescription());
+      }
       
     } finally {
       
@@ -169,8 +184,12 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       
       identityService.setUserInfo(newUser.getId(), "key1", "Value 1");
       
-      closeResponse(executeRequest(new HttpDelete(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, newUser.getId(), "key1")), HttpStatus.SC_NO_CONTENT));
+      
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO,
+              newUser.getId(), "key1"));
+      Representation response = client.delete();
+      assertEquals(Status.SUCCESS_NO_CONTENT, client.getResponse().getStatus());
+      assertEquals(0, response.getSize());
       
       // Check if info is actually deleted
       assertNull(identityService.getUserInfo(newUser.getId(), "key1"));
@@ -200,22 +219,20 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       
       ObjectNode requestNode = objectMapper.createObjectNode();
       requestNode.put("value", "Updated value");
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO,
+              newUser.getId(), "key1"));
+      Representation response = client.put(requestNode);
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
       
-      HttpPut httpPut = new HttpPut(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, newUser.getId(), "key1"));
-      httpPut.setEntity(new StringEntity(requestNode.toString()));
-      CloseableHttpResponse response = executeRequest(httpPut, HttpStatus.SC_OK);
-      JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
-      assertEquals("key1", responseNode.get("key").textValue());
-      assertEquals("Updated value", responseNode.get("value").textValue());
+      JsonNode responseNode = objectMapper.readTree(response.getStream());
+      assertEquals("key1", responseNode.get("key").getTextValue());
+      assertEquals("Updated value", responseNode.get("value").getTextValue());
       
-      assertTrue(responseNode.get("url").textValue().endsWith(RestUrls.createRelativeResourceUrl(
+      assertTrue(responseNode.get("url").getTextValue().endsWith(RestUrls.createRelativeResourceUrl(
                   RestUrls.URL_USER_INFO, newUser.getId(), "key1")));
       
       // Check if info is actually updated
       assertEquals("Updated value", identityService.getUserInfo(newUser.getId(), "key1"));
-      
     } finally {
       
       // Delete user after test passes or fails
@@ -229,13 +246,19 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
    * Test update the info for an unexisting user.
    */
   public void testUpdateInfoForUnexistingUser() throws Exception {
+    
     ObjectNode requestNode = objectMapper.createObjectNode();
     requestNode.put("value", "Updated value");
     
-    HttpPut httpPut = new HttpPut(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "unexisting", "key1"));
-    httpPut.setEntity(new StringEntity(requestNode.toString()));
-    closeResponse(executeRequest(httpPut, HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "unexisting", "key1"));
+    
+    try {
+      client.put(requestNode);
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Could not find a user with id 'unexisting'.", expected.getStatus().getDescription());
+    }
   }
   
   /**
@@ -253,11 +276,14 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       
       ObjectNode requestNode = objectMapper.createObjectNode();
       requestNode.put("value", "Updated value");
-     
-      HttpPut httpPut = new HttpPut(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "testuser", "key1"));
-      httpPut.setEntity(new StringEntity(requestNode.toString()));
-      closeResponse(executeRequest(httpPut, HttpStatus.SC_NOT_FOUND));
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "testuser", "key1"));
+      try {
+        client.put(requestNode);
+        fail("Exception expected");
+      } catch(ResourceException expected) {
+        assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+        assertEquals("User info with key 'key1' does not exists for user 'testuser'.", expected.getStatus().getDescription());
+      }
       
     } finally {
       
@@ -272,8 +298,15 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
    * Test deleting the info for an unexisting user.
    */
   public void testDeleteInfoForUnexistingUser() throws Exception {
-    closeResponse(executeRequest(new HttpDelete(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "unexisting", "key1")), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "unexisting", "key1"));
+    
+    try {
+      client.delete();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Could not find a user with id 'unexisting'.", expected.getStatus().getDescription());
+    }
   }
   
   /**
@@ -289,8 +322,14 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       identityService.saveUser(newUser);
       savedUser = newUser;
       
-      closeResponse(executeRequest(new HttpDelete(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "testuser", "key1")), HttpStatus.SC_NOT_FOUND));
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO, "testuser", "key1"));
+      try {
+        client.delete();
+        fail("Exception expected");
+      } catch(ResourceException expected) {
+        assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+        assertEquals("User info with key 'key1' does not exists for user 'testuser'.", expected.getStatus().getDescription());
+      }
       
     } finally {
       
@@ -315,16 +354,15 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       requestNode.put("value", "Value 1");
       requestNode.put("key", "key1");
       
-      HttpPost httpPost = new HttpPost(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION, "testuser"));
-      httpPost.setEntity(new StringEntity(requestNode.toString()));
-      CloseableHttpResponse response = executeRequest(httpPost, HttpStatus.SC_CREATED);
-      JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-      closeResponse(response);
-      assertEquals("key1", responseNode.get("key").textValue());
-      assertEquals("Value 1", responseNode.get("value").textValue());
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION, "testuser"));
+      Representation response = client.post(requestNode);
+      assertEquals(Status.SUCCESS_CREATED, client.getResponse().getStatus());
       
-      assertTrue(responseNode.get("url").textValue().endsWith(RestUrls.createRelativeResourceUrl(
+      JsonNode responseNode = objectMapper.readTree(response.getStream());
+      assertEquals("key1", responseNode.get("key").getTextValue());
+      assertEquals("Value 1", responseNode.get("value").getTextValue());
+      
+      assertTrue(responseNode.get("url").getTextValue().endsWith(RestUrls.createRelativeResourceUrl(
                   RestUrls.URL_USER_INFO, newUser.getId(), "key1")));
       
     } finally {
@@ -350,17 +388,28 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       ObjectNode requestNode = objectMapper.createObjectNode();
       requestNode.put("key", "key1");
       
-      HttpPost httpPost = new HttpPost(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION, "testuser"));
-      httpPost.setEntity(new StringEntity(requestNode.toString()));
-      closeResponse(executeRequest(httpPost, HttpStatus.SC_BAD_REQUEST));
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION, "testuser"));
+      try {
+        client.post(requestNode);
+        fail("Exception expected");
+      } catch(ResourceException expected) {
+        assertEquals(Status.CLIENT_ERROR_BAD_REQUEST, expected.getStatus());
+        assertEquals("The value cannot be null.", expected.getStatus().getDescription());
+      }
+      client.release();
       
       // Test creating without key
       requestNode = objectMapper.createObjectNode();
       requestNode.put("value", "The value");
       
-      httpPost.setEntity(new StringEntity(requestNode.toString()));
-      closeResponse(executeRequest(httpPost, HttpStatus.SC_BAD_REQUEST));
+      try {
+        client.post(requestNode);
+        fail("Exception expected");
+      } catch(ResourceException expected) {
+        assertEquals(Status.CLIENT_ERROR_BAD_REQUEST, expected.getStatus());
+        assertEquals("The key cannot be null.", expected.getStatus().getDescription());
+      }
+      client.release();
       
       // Test creating an already existing info 
       identityService.setUserInfo(newUser.getId(), "key1", "The value");
@@ -368,19 +417,29 @@ public class UserInfoResourceTest extends BaseSpringRestTestCase {
       requestNode.put("key", "key1");
       requestNode.put("value", "The value");
       
-      httpPost.setEntity(new StringEntity(requestNode.toString()));
-      closeResponse(executeRequest(httpPost, HttpStatus.SC_CONFLICT));
+      try {
+        client.post(requestNode);
+        fail("Exception expected");
+      } catch(ResourceException expected) {
+        assertEquals(Status.CLIENT_ERROR_CONFLICT, expected.getStatus());
+        assertEquals("User info with key 'key1' already exists for this user.", expected.getStatus().getDescription());
+      }
+      client.release();
+            
       
       // Test creating info for unexisting user
-      httpPost = new HttpPost(SERVER_URL_PREFIX + 
-          RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION, "unexistinguser"));
-      httpPost.setEntity(new StringEntity(requestNode.toString()));
-      closeResponse(executeRequest(httpPost, HttpStatus.SC_NOT_FOUND));
-      
+      client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_USER_INFO_COLLECTION, "unexistinguser"));
+      try {
+        client.post(requestNode);
+        fail("Exception expected");
+      } catch(ResourceException expected) {
+        assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+        assertEquals("Could not find a user with id 'unexistinguser'.", expected.getStatus().getDescription());
+      }
     } finally {
       
       // Delete user after test passes or fails
-      if (savedUser != null) {
+      if(savedUser != null) {
         identityService.deleteUser(savedUser.getId());
       }
     }

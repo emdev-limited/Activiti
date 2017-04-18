@@ -12,7 +12,6 @@
  */
 package org.activiti.bpmn.model;
 
-
 /**
  * @author Tijs Rademakers
  */
@@ -32,16 +31,5 @@ public class DataGridField extends BaseElement {
   }
   public void setValue(String value) {
     this.value = value;
-  }
-  
-  public DataGridField clone() {
-    DataGridField clone = new DataGridField();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(DataGridField otherField) {
-    setName(otherField.getName());
-    setValue(otherField.getValue());
   }
 }

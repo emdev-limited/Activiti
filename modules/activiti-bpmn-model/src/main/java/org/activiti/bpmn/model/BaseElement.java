@@ -1,9 +1,9 @@
 /* Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  *      http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,8 +22,8 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * @author Tijs Rademakers
  */
-public abstract class BaseElement implements HasExtensionAttributes {
-
+public class BaseElement implements HasExtensionAttributes {
+  
   protected String id;
   protected int xmlRowNumber;
   protected int xmlColumnNumber;
@@ -58,7 +58,7 @@ public abstract class BaseElement implements HasExtensionAttributes {
   public Map<String, List<ExtensionElement>> getExtensionElements() {
     return extensionElements;
   }
-
+  
   public void addExtensionElement(ExtensionElement extensionElement) {
     if (extensionElement != null && StringUtils.isNotEmpty(extensionElement.getName())) {
       List<ExtensionElement> elementList = null;
@@ -84,8 +84,7 @@ public abstract class BaseElement implements HasExtensionAttributes {
     List<ExtensionAttribute> attributes = getAttributes().get(name);
     if (attributes != null && !attributes.isEmpty()) {
       for (ExtensionAttribute attribute : attributes) {
-        if ( (namespace == null && attribute.getNamespace() == null)
-            || namespace.equals(attribute.getNamespace()) )
+        if ( namespace == attribute.getNamespace())
           return attribute.getValue();
       }
     }
@@ -108,38 +107,4 @@ public abstract class BaseElement implements HasExtensionAttributes {
   public void setAttributes(Map<String, List<ExtensionAttribute>> attributes) {
     this.attributes = attributes;
   }
-
-  public void setValues(BaseElement otherElement) {
-    setId(otherElement.getId());
-
-    extensionElements = new LinkedHashMap<String, List<ExtensionElement>>();
-    if (otherElement.getExtensionElements() != null && !otherElement.getExtensionElements().isEmpty()) {
-      for (String key : otherElement.getExtensionElements().keySet()) {
-        List<ExtensionElement> otherElementList = otherElement.getExtensionElements().get(key);
-        if (otherElementList != null && !otherElementList.isEmpty()) {
-          List<ExtensionElement> elementList = new ArrayList<ExtensionElement>();
-          for (ExtensionElement extensionElement : otherElementList) {
-            elementList.add(extensionElement.clone());
-          }
-          extensionElements.put(key, elementList);
-        }
-      }
-    }
-
-    attributes = new LinkedHashMap<String, List<ExtensionAttribute>>();
-    if (otherElement.getAttributes() != null && !otherElement.getAttributes().isEmpty()) {
-      for (String key : otherElement.getAttributes().keySet()) {
-        List<ExtensionAttribute> otherAttributeList = otherElement.getAttributes().get(key);
-        if (otherAttributeList != null && !otherAttributeList.isEmpty()) {
-          List<ExtensionAttribute> attributeList = new ArrayList<ExtensionAttribute>();
-          for (ExtensionAttribute extensionAttribute : otherAttributeList) {
-            attributeList.add(extensionAttribute.clone());
-          }
-          attributes.put(key, attributeList);
-        }
-      }
-    }
-  }
-
-  public abstract BaseElement clone();
 }

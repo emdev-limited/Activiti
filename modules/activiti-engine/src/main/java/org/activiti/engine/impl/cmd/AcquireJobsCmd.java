@@ -23,7 +23,7 @@ import org.activiti.engine.impl.interceptor.CommandContext;
 import org.activiti.engine.impl.jobexecutor.AcquiredJobs;
 import org.activiti.engine.impl.jobexecutor.JobExecutor;
 import org.activiti.engine.impl.persistence.entity.JobEntity;
-import org.activiti.engine.impl.persistence.entity.MessageEntity;
+import org.activiti.engine.impl.util.ClockUtil;
 
 
 /**
@@ -52,25 +52,19 @@ public class AcquireJobsCmd implements Command<AcquiredJobs> {
     for (JobEntity job: jobs) {
       List<String> jobIds = new ArrayList<String>();
       if (job != null && !acquiredJobs.contains(job.getId())) {
-        if (job instanceof MessageEntity && job.isExclusive() && job.getProcessInstanceId() != null) {
-          // wait to get exclusive jobs within 100ms
-          try {
-            Thread.sleep(100);
-          } catch (InterruptedException e) {}
-          
+        if (job.isExclusive() && job.getProcessInstanceId() != null) {
           // acquire all exclusive jobs in the same process instance
           // (includes the current job)
           List<JobEntity> exclusiveJobs = commandContext.getJobEntityManager()
             .findExclusiveJobsToExecute(job.getProcessInstanceId());
           for (JobEntity exclusiveJob : exclusiveJobs) {
-            if (exclusiveJob != null) {
-              lockJob(commandContext, exclusiveJob, lockOwner, lockTimeInMillis);
+            if(exclusiveJob != null) {
+              lockJob(exclusiveJob, lockOwner, lockTimeInMillis);
               jobIds.add(exclusiveJob.getId());
             }
           }
-          
         } else {
-          lockJob(commandContext, job, lockOwner, lockTimeInMillis);
+          lockJob(job, lockOwner, lockTimeInMillis);
           jobIds.add(job.getId());
         }
         
@@ -82,10 +76,10 @@ public class AcquireJobsCmd implements Command<AcquiredJobs> {
     return acquiredJobs;
   }
 
-  protected void lockJob(CommandContext commandContext, JobEntity job, String lockOwner, int lockTimeInMillis) {    
+  protected void lockJob(JobEntity job, String lockOwner, int lockTimeInMillis) {    
     job.setLockOwner(lockOwner);
     GregorianCalendar gregorianCalendar = new GregorianCalendar();
-    gregorianCalendar.setTime(commandContext.getProcessEngineConfiguration().getClock().getCurrentTime());
+    gregorianCalendar.setTime(ClockUtil.getCurrentTime());
     gregorianCalendar.add(Calendar.MILLISECOND, lockTimeInMillis);
     job.setLockExpirationTime(gregorianCalendar.getTime());    
   }

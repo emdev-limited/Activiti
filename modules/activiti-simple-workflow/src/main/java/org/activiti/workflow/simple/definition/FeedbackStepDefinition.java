@@ -19,9 +19,8 @@ import java.util.List;
 import org.activiti.workflow.simple.converter.step.FeedbackStepDefinitionConverter;
 import org.activiti.workflow.simple.definition.form.FormDefinition;
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import org.codehaus.jackson.annotate.JsonTypeName;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 
 /**
@@ -121,7 +120,7 @@ public class FeedbackStepDefinition extends AbstractNamedStepDefinition {
     setDescription(stepDefinition.getDescription());
     setDescriptionForFeedbackProviders(stepDefinition.getDescriptionForFeedbackProviders());
     setFeedbackInitiator(stepDefinition.getFeedbackInitiator());
-    if (stepDefinition.getFeedbackProviders() != null && !stepDefinition.getFeedbackProviders().isEmpty()) {
+    if (stepDefinition.getFeedbackProviders() != null && stepDefinition.getFeedbackProviders().size() > 0) {
       setFeedbackProviders(new ArrayList<String>(stepDefinition.getFeedbackProviders()));
     }
     if (stepDefinition.getFormDefinitionForFeedbackProviders() != null) {

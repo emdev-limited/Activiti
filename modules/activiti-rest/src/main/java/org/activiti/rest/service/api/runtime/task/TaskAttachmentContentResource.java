@@ -15,65 +15,54 @@ package org.activiti.rest.service.api.runtime.task;
 
 import java.io.InputStream;
 
-import javax.servlet.http.HttpServletResponse;
-
-import org.activiti.engine.ActivitiException;
+import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
 import org.activiti.engine.history.HistoricTaskInstance;
 import org.activiti.engine.task.Attachment;
-import org.apache.commons.io.IOUtils;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.restlet.data.MediaType;
+import org.restlet.representation.InputRepresentation;
+import org.restlet.resource.Get;
 
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class TaskAttachmentContentResource extends TaskBaseResource {
 
-  @RequestMapping(value="/runtime/tasks/{taskId}/attachments/{attachmentId}/content", method = RequestMethod.GET)
-  public ResponseEntity<byte[]> getAttachmentContent(@PathVariable("taskId") String taskId, 
-      @PathVariable("attachmentId") String attachmentId, HttpServletResponse response) {
+  @Get
+  public InputRepresentation getAttachmentContent() {
+    if(!authenticate())
+      return null;
     
-    HistoricTaskInstance task = getHistoricTaskFromRequest(taskId);
-    Attachment attachment = taskService.getAttachment(attachmentId);
+    HistoricTaskInstance task = getHistoricTaskFromRequest();
     
-    if (attachment == null || !task.getId().equals(attachment.getTaskId())) {
+    String attachmentId = getAttribute("attachmentId");
+    if(attachmentId == null) {
+      throw new ActivitiIllegalArgumentException("AttachmentId is required.");
+    }
+    
+    Attachment attachment = ActivitiUtil.getTaskService().getAttachment(attachmentId);
+    
+    if(attachment == null || !task.getId().equals(attachment.getTaskId())) {
       throw new ActivitiObjectNotFoundException("Task '" + task.getId() +"' doesn't have an attachment with id '" + attachmentId + "'.", Attachment.class);
     }
     
-    InputStream attachmentStream = taskService.getAttachmentContent(attachmentId);
-    if (attachmentStream == null) {
-      throw new ActivitiObjectNotFoundException("Attachment with id '" + attachmentId + 
-          "' doesn't have content associated with it.", Attachment.class);
+    InputStream attachmentStream = ActivitiUtil.getTaskService().getAttachmentContent(attachmentId);
+    if(attachmentStream == null) {
+      throw new ActivitiObjectNotFoundException("Attachment with id '" + attachmentId + "' doesn't have content associated with it.", Attachment.class);
     }
     
-    HttpHeaders responseHeaders = new HttpHeaders();
-    MediaType mediaType = null;
-    if (attachment.getType() != null) {
-      try {
-        mediaType = MediaType.valueOf(attachment.getType());
-        responseHeaders.set("Content-Type", attachment.getType());
-      } catch (Exception e) {
-        // ignore if unknown media type
-      }
+    // Try extracting media-type is type is set and is a valid type
+    MediaType type = null;
+    if(attachment.getType() != null && MediaType.valueOf(attachment.getType()) != null) {
+      type = MediaType.valueOf(attachment.getType());
     }
     
-    if (mediaType == null) {
-      responseHeaders.set("Content-Type", "application/octet-stream");
+    if(type == null || !type.isConcrete()) {
+      type = MediaType.APPLICATION_OCTET_STREAM;
     }
     
-    try {
-      return new ResponseEntity<byte[]>(IOUtils.toByteArray(attachmentStream), responseHeaders, HttpStatus.OK);
-    } catch (Exception e) {
-      throw new ActivitiException("Error creating attachment data", e);
-    }
+    return new InputRepresentation(attachmentStream, type);
   }
 }

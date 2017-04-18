@@ -66,7 +66,6 @@ public class TaskEventsPanel extends Panel {
   protected String taskId;
   protected List<org.activiti.engine.task.Event> taskEvents;
   protected TextField commentInputField;
-  protected Button addCommentButton;
   protected GridLayout eventGrid;
 
   public TaskEventsPanel() {
@@ -129,8 +128,6 @@ public class TaskEventsPanel extends Panel {
         addTaskEventText(event, eventGrid);
       }
     }
-    addCommentButton.setEnabled(taskId != null);
-    commentInputField.setEnabled(taskId != null);
   }
 
   protected void addTaskEventPicture(final org.activiti.engine.task.Event taskEvent, GridLayout eventGrid) {
@@ -202,7 +199,7 @@ public class TaskEventsPanel extends Panel {
       }
     });
     
-    addCommentButton = new Button(i18nManager.getMessage(Messages.TASK_ADD_COMMENT));
+    Button addCommentButton = new Button(i18nManager.getMessage(Messages.TASK_ADD_COMMENT));
     layout.addComponent(addCommentButton);
     layout.setComponentAlignment(addCommentButton, Alignment.MIDDLE_LEFT);
     addCommentButton.addListener(new ClickListener() {

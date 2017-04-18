@@ -13,9 +13,7 @@
 package org.activiti.engine.test.bpmn.gateway;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
@@ -38,19 +36,6 @@ public class ExclusiveGatewayTest extends PluggableActivitiTestCase {
     }
   }
 
-  @Deployment
-  public void testSkipExpression() {
-    for (int i = 1; i <= 3; i++) {
-      Map<String,Object> variables = new HashMap<String,Object>();
-      variables.put("_ACTIVITI_SKIP_EXPRESSION_ENABLED", true);
-      variables.put("input", -i);
-      
-      ProcessInstance pi = runtimeService.startProcessInstanceByKey("exclusiveGwDivergingSkipExpression", variables);
-      assertEquals("Task " + i, taskService.createTaskQuery().singleResult().getName());
-      runtimeService.deleteProcessInstance(pi.getId(), "testing deletion");
-    }
-  }
-  
   @Deployment
   public void testMergingExclusiveGateway() {
     runtimeService.startProcessInstanceByKey("exclusiveGwMerging");
@@ -164,13 +149,45 @@ public class ExclusiveGatewayTest extends PluggableActivitiTestCase {
     assertEquals("Input is one", task.getName());
     runtimeService.deleteProcessInstance(procId, null);
     
-    runtimeService.startProcessInstanceByKey("exclusiveGwDefaultSequenceFlow",
+    procId = runtimeService.startProcessInstanceByKey("exclusiveGwDefaultSequenceFlow", 
             CollectionUtil.singletonMap("input", 5)).getId();
     task = taskService.createTaskQuery().singleResult();
     assertEquals("Default input", task.getName());
   }
 
+  @Deployment
+  public void testNoIdOnSequenceFlow() {
+    runtimeService.startProcessInstanceByKey("noIdOnSequenceFlow", CollectionUtil.singletonMap("input", 3));
+    Task task = taskService.createTaskQuery().singleResult();
+    assertEquals("Input is more than one", task.getName());
+  }
+  
   public void testInvalidProcessDefinition() {
+    String flowWithoutConditionNoDefaultFlow = "<?xml version='1.0' encoding='UTF-8'?>" +
+            "<definitions id='definitions' xmlns='http://www.omg.org/spec/BPMN/20100524/MODEL' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:activiti='http://activiti.org/bpmn' targetNamespace='Examples'>" +
+            "  <process id='exclusiveGwDefaultSequenceFlow'> " + 
+            "    <startEvent id='theStart' /> " + 
+            "    <sequenceFlow id='flow1' sourceRef='theStart' targetRef='exclusiveGw' /> " + 
+            
+            "    <exclusiveGateway id='exclusiveGw' name='Exclusive Gateway' /> " + // no default = "flow3" !!
+            "    <sequenceFlow id='flow2' sourceRef='exclusiveGw' targetRef='theTask1'> " + 
+            "      <conditionExpression xsi:type='tFormalExpression'>${input == 1}</conditionExpression> " + 
+            "    </sequenceFlow> " + 
+            "    <sequenceFlow id='flow3' sourceRef='exclusiveGw' targetRef='theTask2'/> " +  // one would be OK
+            "    <sequenceFlow id='flow4' sourceRef='exclusiveGw' targetRef='theTask2'/> " +  // but two unconditional not!
+    
+            "    <userTask id='theTask1' name='Input is one' /> " + 
+            "    <userTask id='theTask2' name='Default input' /> " + 
+            "  </process>" + 
+            "</definitions>";    
+    try {
+      repositoryService.createDeployment().addString("myprocess.bpmn20.xml", flowWithoutConditionNoDefaultFlow).deploy();
+      fail("Could deploy a process definition with a sequence flow out of a XOR Gateway without condition with is not the default flow.");
+    }
+    catch (ActivitiException ex) {
+      assertTrue(ex.getMessage().contains("Exclusive Gateway 'exclusiveGw' has outgoing sequence flow 'flow3' without condition which is not the default flow."));
+    }
+    
     String defaultFlowWithCondition = "<?xml version='1.0' encoding='UTF-8'?>" +
             "<definitions id='definitions' xmlns='http://www.omg.org/spec/BPMN/20100524/MODEL' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:activiti='http://activiti.org/bpmn' targetNamespace='Examples'>" +
             "  <process id='exclusiveGwDefaultSequenceFlow'> " + 
@@ -189,11 +206,13 @@ public class ExclusiveGatewayTest extends PluggableActivitiTestCase {
             "    <userTask id='theTask2' name='Default input' /> " + 
             "  </process>" + 
             "</definitions>";    
-    
     try {
-    	repositoryService.createDeployment().addString("myprocess.bpmn20.xml", defaultFlowWithCondition).deploy();
-    	fail();
-    } catch (Exception e) {}
+      repositoryService.createDeployment().addString("myprocess.bpmn20.xml", defaultFlowWithCondition).deploy();
+      fail("Could deploy a process definition with a sequence flow out of a XOR Gateway without condition with is not the default flow.");
+    }
+    catch (ActivitiException ex) {
+      assertTrue(ex.getMessage().contains("Exclusive Gateway 'exclusiveGw' has outgoing sequence flow 'flow3' which is the default flow but has a condition too."));
+    }
 
     String noOutgoingFlow = "<?xml version='1.0' encoding='UTF-8'?>" +
             "<definitions id='definitions' xmlns='http://www.omg.org/spec/BPMN/20100524/MODEL' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:activiti='http://activiti.org/bpmn' targetNamespace='Examples'>" +
@@ -205,22 +224,13 @@ public class ExclusiveGatewayTest extends PluggableActivitiTestCase {
             "</definitions>";    
     try {
       repositoryService.createDeployment().addString("myprocess.bpmn20.xml", noOutgoingFlow).deploy();
-      fail("Could deploy a process definition with a XOR Gateway without outgoing sequence flows.");
+      fail("Could deploy a process definition with a sequence flow out of a XOR Gateway without condition with is not the default flow.");
     }
     catch (ActivitiException ex) {
+      ex.printStackTrace();
+      assertTrue( ex.getMessage().contains("Exclusive Gateway 'exclusiveGw' has no outgoing sequence flows."));
     }
 
-  }
-
-  @Deployment
-  public void testExclusiveDirectlyToEnd() {
-    Map<String, Object> variables = new HashMap<String, Object>();
-    variables.put("input", 1);
-    ProcessInstance startProcessInstanceByKey = runtimeService.startProcessInstanceByKey("exclusiveGateway", variables);
-    long count = historyService.createHistoricActivityInstanceQuery()
-        .processInstanceId(startProcessInstanceByKey.getId()).unfinished()
-        .count();
-    assertEquals(0, count);
   }
   
 }

@@ -302,9 +302,7 @@ public class BeanELResolver extends ELResolver {
 			try {
 				result = method.invoke(base);
 			} catch (InvocationTargetException e) {
-			    // for an invocation target exception, the causing exception is not the Cause()
-			    // but the target exception
-			    throw new ELException(e.getTargetException());
+				throw new ELException(e.getCause());
 			} catch (Exception e) {
 				throw new ELException(e);
 			}
@@ -398,9 +396,7 @@ public class BeanELResolver extends ELResolver {
 			try {
 				method.invoke(base, value);
 			} catch (InvocationTargetException e) {
-                // for an invocation target exception, the causing exception is not the Cause()
-                // but the target exception
-                throw new ELException("Cannot write property: " + property, e.getTargetException());
+				throw new ELException("Cannot write property: " + property, e.getCause());
 			} catch (IllegalAccessException e) {
 				throw new PropertyNotWritableException("Cannot write property: " + property, e);
 			}
@@ -482,23 +478,21 @@ public class BeanELResolver extends ELResolver {
 			try {
 				result = target.invoke(base, coerceParams(getExpressionFactory(context), target, params));
 			} catch (InvocationTargetException e) {
-                // for an invocation target exception, the causing exception is not the Cause()
-                // but the target exception
-                throw new ELException(e.getTargetException());
+				throw new ELException(e.getCause());
 			} catch (IllegalAccessException e) {
 				throw new ELException(e);
 			}
 			context.setPropertyResolved(true);
 		}
 		return result;
-	}
+	};
 
-  private Method findMethod(Object base, String name, Class<?>[] types, int paramCount) {
+	private Method findMethod(Object base, String name, Class<?>[] types, int paramCount) {
 		if (types != null) {
 			try {
 				return findAccessibleMethod(base.getClass().getMethod(name, types));
 			} catch (NoSuchMethodException e) {
-				// try to get a method without a static type search
+				return null;
 			}
 		}
 		Method varArgsMethod = null;

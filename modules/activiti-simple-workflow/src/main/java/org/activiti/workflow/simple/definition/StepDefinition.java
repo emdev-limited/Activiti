@@ -12,11 +12,12 @@
  */
 package org.activiti.workflow.simple.definition;
 
+import java.io.Serializable;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.codehaus.jackson.annotate.JsonTypeInfo.As;
+import org.codehaus.jackson.annotate.JsonTypeInfo.Id;
 
 /**
  * Marker interface for all 'patterns' that are known by the simple workflow
@@ -26,8 +27,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
  * @author Frederik Heremans
  */
 @JsonTypeInfo(use = Id.NAME, include = As.PROPERTY, property = "type")
-public interface StepDefinition {
-	
+public interface StepDefinition extends Serializable {
   String getId();
 
   void setId(String id);

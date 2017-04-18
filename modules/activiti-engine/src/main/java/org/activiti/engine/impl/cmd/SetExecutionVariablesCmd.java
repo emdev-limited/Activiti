@@ -37,22 +37,11 @@ public class SetExecutionVariablesCmd extends NeedsActiveExecutionCmd<Object> {
   
   protected Object execute(CommandContext commandContext, ExecutionEntity execution) {
     if (isLocal) {
-    	if (variables != null) {
-    		for (String variableName : variables.keySet()) {
-    			execution.setVariableLocal(variableName, variables.get(variableName), false);
-    		}
-    	}
+      execution.setVariablesLocal(variables);
     } else {
-    	if (variables != null) {
-    		for (String variableName : variables.keySet()) {
-    			execution.setVariable(variableName, variables.get(variableName), false);
-    		}
-    	}
+      execution.setVariables(variables);
     }
     
-    // ACT-1887: Force an update of the execution's revision to prevent simultaneous inserts of the same
-    // variable. If not, duplicate variables may occur since optimistic locking doesn't work on inserts
-    execution.forceUpdate();
     return null;
   }
   

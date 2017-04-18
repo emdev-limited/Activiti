@@ -12,9 +12,8 @@
  */
 package org.activiti.engine.impl.transformer;
 
-import java.util.Date;
-
-import org.apache.commons.lang3.time.FastDateFormat;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * Transforms a {@link String} to a {@link Date}
@@ -23,7 +22,7 @@ import org.apache.commons.lang3.time.FastDateFormat;
  */
 public class StringToDate extends AbstractTransformer {
 
-  protected FastDateFormat format = FastDateFormat.getInstance("dd/MM/yyyy");
+  protected DateFormat format = new SimpleDateFormat("dd/MM/yyyy");
   
   @Override
   protected Object primTransform(Object anObject) throws Exception {

@@ -17,9 +17,8 @@ package org.activiti.rest.service.api.form;
 import java.util.List;
 
 import org.activiti.rest.service.api.RestActionRequest;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.codehaus.jackson.annotate.JsonTypeInfo.Id;
 
 /**
  * @author Tijs Rademakers

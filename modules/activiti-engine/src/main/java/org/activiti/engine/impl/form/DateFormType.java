@@ -15,11 +15,12 @@ package org.activiti.engine.impl.form;
 
 import java.text.Format;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
+import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.form.AbstractFormType;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.FastDateFormat;
 
 
 /**
@@ -27,14 +28,12 @@ import org.apache.commons.lang3.time.FastDateFormat;
  */
 public class DateFormType extends AbstractFormType {
   
-  private static final long serialVersionUID = 1L;
-  
   protected String datePattern; 
   protected Format dateFormat; 
 
   public DateFormType(String datePattern) {
     this.datePattern = datePattern;
-    this.dateFormat = FastDateFormat.getInstance(datePattern);
+    this.dateFormat = new SimpleDateFormat(datePattern);
   }
   
   public String getName() {

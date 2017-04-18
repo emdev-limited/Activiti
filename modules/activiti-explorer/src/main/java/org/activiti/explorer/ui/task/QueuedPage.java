@@ -17,6 +17,8 @@ import org.activiti.explorer.navigation.TaskNavigator;
 import org.activiti.explorer.navigation.UriFragment;
 import org.activiti.explorer.ui.task.data.QueuedListQuery;
 
+import com.vaadin.ui.Component;
+
 /**
  * Page showing all the queued tasks of one person.
  * 

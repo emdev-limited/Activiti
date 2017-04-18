@@ -18,18 +18,16 @@ import java.util.Date;
 
 import org.activiti.engine.impl.calendar.CycleBusinessCalendar;
 import org.activiti.engine.impl.test.PvmTestCase;
-import org.activiti.engine.impl.util.DefaultClockImpl;
-import org.activiti.engine.runtime.Clock;
+import org.activiti.engine.impl.util.ClockUtil;
 
 public class CycleBusinessCalendarTest extends PvmTestCase {
 
   public void testSimpleCron() throws Exception {
-    Clock testingClock = new DefaultClockImpl();
-    CycleBusinessCalendar businessCalendar = new CycleBusinessCalendar(testingClock);
+    CycleBusinessCalendar businessCalendar = new CycleBusinessCalendar();
 
     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy MM dd - HH:mm");
     Date now = simpleDateFormat.parse("2011 03 11 - 17:23");
-    testingClock.setCurrentTime(now);
+    ClockUtil.setCurrentTime(now);
 
     Date duedate = businessCalendar.resolveDuedate("0 0 0 1 * ?");
 
@@ -39,12 +37,11 @@ public class CycleBusinessCalendarTest extends PvmTestCase {
   }
 
   public void testSimpleDuration() throws Exception {
-    Clock testingClock = new DefaultClockImpl();
-    CycleBusinessCalendar businessCalendar = new CycleBusinessCalendar(testingClock);
+    CycleBusinessCalendar businessCalendar = new CycleBusinessCalendar();
 
     SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy MM dd - HH:mm");
     Date now = simpleDateFormat.parse("2010 06 11 - 17:23");
-    testingClock.setCurrentTime(now);
+    ClockUtil.setCurrentTime(now);
 
     Date duedate = businessCalendar.resolveDuedate("R/P2DT5H70M");
 

@@ -74,7 +74,7 @@ public class ProcessDeployer {
   public void deployProcesses() {
     // build a single deployment containing all discovered processes
     Set<String> resourceNames = getResourceNames();
-    if (resourceNames.isEmpty()) {
+    if (resourceNames.size() == 0) {
       logger.debug("Not creating a deployment");
       return;
     }

@@ -15,7 +15,6 @@ package org.activiti.bpmn.model;
 /**
  * @author Tijs Rademakers
  */
-public abstract class Artifact extends BaseElement {
+public class Artifact extends BaseElement {
 
-  public abstract Artifact clone();
 }

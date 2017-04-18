@@ -36,7 +36,13 @@ public class ScriptTaskListener implements TaskListener {
   protected boolean autoStoreVariables;
 
 	public void notify(DelegateTask delegateTask) {
-		validateParameters();
+		if (script == null) {
+			throw new IllegalArgumentException("The field 'script' should be set on the TaskListener");
+		}
+
+		if (language == null) {
+			throw new IllegalArgumentException("The field 'language' should be set on the TaskListener");
+		}
 
 		ScriptingEngines scriptingEngines = Context.getProcessEngineConfiguration().getScriptingEngines();
 
@@ -46,16 +52,6 @@ public class ScriptTaskListener implements TaskListener {
 			delegateTask.setVariable(resultVariable.getExpressionText(), result);
 		}
 	}
-
-  protected void validateParameters() {
-    if (script == null) {
-			throw new IllegalArgumentException("The field 'script' should be set on the TaskListener");
-		}
-
-		if (language == null) {
-			throw new IllegalArgumentException("The field 'language' should be set on the TaskListener");
-		}
-  }
 	
 	public void setScript(Expression script) {
 		this.script = script;

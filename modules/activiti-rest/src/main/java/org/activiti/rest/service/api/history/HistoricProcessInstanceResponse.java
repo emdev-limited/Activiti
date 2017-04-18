@@ -17,10 +17,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.activiti.rest.common.util.DateToStringSerializer;
 import org.activiti.rest.service.api.engine.variable.RestVariable;
-
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * @author Tijs Rademakers
@@ -32,9 +29,7 @@ public class HistoricProcessInstanceResponse {
   protected String businessKey;
   protected String processDefinitionId;
   protected String processDefinitionUrl;
-  @JsonSerialize(using = DateToStringSerializer.class, as=Date.class)
   protected Date startTime;
-  @JsonSerialize(using = DateToStringSerializer.class, as=Date.class)
   protected Date endTime;
   protected Long durationInMillis;
   protected String startUserId;
@@ -43,8 +38,6 @@ public class HistoricProcessInstanceResponse {
   protected String deleteReason;
   protected String superProcessInstanceId;
   protected List<RestVariable> variables = new ArrayList<RestVariable>();
-  protected String tenantId;
-  protected String name;
   
   public String getId() {
     return id;
@@ -132,17 +125,5 @@ public class HistoricProcessInstanceResponse {
   }
   public void addVariable(RestVariable variable) {
     variables.add(variable);
-  }
-  public void setTenantId(String tenantId) {
-	  this.tenantId = tenantId;
-  }
-  public String getTenantId() {
-	  return tenantId;
-  }
-  public void setName(String name) {
-	  this.name = name;
-  }
-  public String getName() {
-	  return name;
   }
 }

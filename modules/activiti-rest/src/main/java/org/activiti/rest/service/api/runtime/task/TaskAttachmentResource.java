@@ -13,54 +13,64 @@
 
 package org.activiti.rest.service.api.runtime.task;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
 import org.activiti.engine.history.HistoricTaskInstance;
 import org.activiti.engine.task.Attachment;
 import org.activiti.engine.task.Comment;
 import org.activiti.engine.task.Task;
+import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.service.api.engine.AttachmentResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Status;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Get;
 
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class TaskAttachmentResource extends TaskBaseResource {
 
-  @RequestMapping(value="/runtime/tasks/{taskId}/attachments/{attachmentId}", method = RequestMethod.GET, produces="application/json")
-  public AttachmentResponse getAttachment(@PathVariable("taskId") String taskId, 
-      @PathVariable("attachmentId") String attachmentId, HttpServletRequest request) {
+  @Get
+  public AttachmentResponse getAttachment() {
+    if(!authenticate())
+      return null;
     
-    HistoricTaskInstance task = getHistoricTaskFromRequest(taskId);
+    HistoricTaskInstance task = getHistoricTaskFromRequest();
     
-    Attachment attachment = taskService.getAttachment(attachmentId);
-    if (attachment == null || !task.getId().equals(attachment.getTaskId())) {
+    String attachmentId = getAttribute("attachmentId");
+    if(attachmentId == null) {
+      throw new ActivitiIllegalArgumentException("AttachmentId is required.");
+    }
+    
+    Attachment attachment = ActivitiUtil.getTaskService().getAttachment(attachmentId);
+    if(attachment == null || !task.getId().equals(attachment.getTaskId())) {
       throw new ActivitiObjectNotFoundException("Task '" + task.getId() +"' doesn't have an attachment with id '" + attachmentId + "'.", Comment.class);
     }
     
-    return restResponseFactory.createAttachmentResponse(attachment);
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createAttachmentResponse(this, attachment);
   }
   
-  @RequestMapping(value="/runtime/tasks/{taskId}/attachments/{attachmentId}", method = RequestMethod.DELETE)
-  public void deleteAttachment(@PathVariable("taskId") String taskId, 
-      @PathVariable("attachmentId") String attachmentId, HttpServletResponse response) {
+  @Delete
+  public void deleteAttachment() {
+    if(!authenticate())
+      return;
     
-    Task task = getTaskFromRequest(taskId);
+    Task task = getTaskFromRequest();
     
-    Attachment attachment = taskService.getAttachment(attachmentId);
-    if (attachment == null || !task.getId().equals(attachment.getTaskId())) {
+    String attachmentId = getAttribute("attachmentId");
+    if(attachmentId == null) {
+      throw new ActivitiIllegalArgumentException("AttachmentId is required.");
+    }
+    
+    Attachment attachment = ActivitiUtil.getTaskService().getAttachment(attachmentId);
+    if(attachment == null || !task.getId().equals(attachment.getTaskId())) {
       throw new ActivitiObjectNotFoundException("Task '" + task.getId() +"' doesn't have an attachment with id '" + attachmentId + "'.", Comment.class);
     }
     
-    taskService.deleteAttachment(attachmentId);
-    response.setStatus(HttpStatus.NO_CONTENT.value());
+    ActivitiUtil.getTaskService().deleteAttachment(attachmentId);
+    setStatus(Status.SUCCESS_NO_CONTENT);
   }
 }

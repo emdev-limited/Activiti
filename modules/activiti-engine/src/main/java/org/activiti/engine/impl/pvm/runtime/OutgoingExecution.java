@@ -37,15 +37,11 @@ public class OutgoingExecution {
   }
   
   public void take() {
-  	take(true);
-  }
-  
-  public void take(boolean fireActivityCompletedEvent) {
     if (outgoingExecution.getReplacedBy()!=null) {
       outgoingExecution = outgoingExecution.getReplacedBy();
     }    
     if(!outgoingExecution.isDeleteRoot()) {
-      outgoingExecution.take(outgoingTransition, fireActivityCompletedEvent);
+      outgoingExecution.take(outgoingTransition);
     } else {
       log.debug("Not taking transition '{}', outgoing execution has ended.", outgoingTransition);      
     }

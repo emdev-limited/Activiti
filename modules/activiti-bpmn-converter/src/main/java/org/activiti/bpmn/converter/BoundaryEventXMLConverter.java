@@ -18,7 +18,6 @@ import javax.xml.stream.XMLStreamWriter;
 import org.activiti.bpmn.converter.util.BpmnXMLUtil;
 import org.activiti.bpmn.model.BaseElement;
 import org.activiti.bpmn.model.BoundaryEvent;
-import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.ErrorEventDefinition;
 import org.activiti.bpmn.model.EventDefinition;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +27,11 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class BoundaryEventXMLConverter extends BaseBpmnXMLConverter {
   
-  public Class<? extends BaseElement> getBpmnElementType() {
+  public static String getXMLType() {
+    return ELEMENT_EVENT_BOUNDARY;
+  }
+  
+  public static Class<? extends BaseElement> getBpmnElementType() {
     return BoundaryEvent.class;
   }
   
@@ -38,7 +41,7 @@ public class BoundaryEventXMLConverter extends BaseBpmnXMLConverter {
   }
   
   @Override
-  protected BaseElement convertXMLToElement(XMLStreamReader xtr, BpmnModel model) throws Exception {
+  protected BaseElement convertXMLToElement(XMLStreamReader xtr) throws Exception {
     BoundaryEvent boundaryEvent = new BoundaryEvent();
     BpmnXMLUtil.addXMLLocation(boundaryEvent, xtr);
     if (StringUtils.isNotEmpty(xtr.getAttributeValue(null, ATTRIBUTE_BOUNDARY_CANCELACTIVITY))) {
@@ -48,7 +51,7 @@ public class BoundaryEventXMLConverter extends BaseBpmnXMLConverter {
       }
     }
     boundaryEvent.setAttachedToRefId(xtr.getAttributeValue(null, ATTRIBUTE_BOUNDARY_ATTACHEDTOREF));
-    parseChildElements(getXMLElementName(), boundaryEvent, model, xtr);
+    parseChildElements(getXMLElementName(), boundaryEvent, xtr);
     
     // Explicitly set cancel activity to false for error boundary events
     if (boundaryEvent.getEventDefinitions().size() == 1) {
@@ -63,7 +66,7 @@ public class BoundaryEventXMLConverter extends BaseBpmnXMLConverter {
   }
 
   @Override
-  protected void writeAdditionalAttributes(BaseElement element, BpmnModel model, XMLStreamWriter xtw) throws Exception {
+  protected void writeAdditionalAttributes(BaseElement element, XMLStreamWriter xtw) throws Exception {
     BoundaryEvent boundaryEvent = (BoundaryEvent) element;
     if (boundaryEvent.getAttachedToRef() != null) {
       writeDefaultAttribute(ATTRIBUTE_BOUNDARY_ATTACHEDTOREF, boundaryEvent.getAttachedToRef().getId(), xtw);
@@ -79,8 +82,12 @@ public class BoundaryEventXMLConverter extends BaseBpmnXMLConverter {
   }
   
   @Override
-  protected void writeAdditionalChildElements(BaseElement element, BpmnModel model, XMLStreamWriter xtw) throws Exception {
+  protected void writeExtensionChildElements(BaseElement element, XMLStreamWriter xtw) throws Exception {
+  }
+
+  @Override
+  protected void writeAdditionalChildElements(BaseElement element, XMLStreamWriter xtw) throws Exception {
     BoundaryEvent boundaryEvent = (BoundaryEvent) element;
-    writeEventDefinitions(boundaryEvent, boundaryEvent.getEventDefinitions(), model, xtw);
+    writeEventDefinitions(boundaryEvent.getEventDefinitions(), xtw);
   }
 }

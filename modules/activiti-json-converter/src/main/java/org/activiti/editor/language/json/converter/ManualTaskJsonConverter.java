@@ -17,9 +17,8 @@ import java.util.Map;
 import org.activiti.bpmn.model.BaseElement;
 import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.ManualTask;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * @author Tijs Rademakers
@@ -41,11 +40,11 @@ public class ManualTaskJsonConverter extends BaseBpmnJsonConverter {
     convertersToJsonMap.put(ManualTask.class, ManualTaskJsonConverter.class);
   }
   
-  protected String getStencilId(BaseElement baseElement) {
+  protected String getStencilId(FlowElement flowElement) {
     return STENCIL_TASK_MANUAL;
   }
   
-  protected void convertElementToJson(ObjectNode propertiesNode, BaseElement baseElement) {
+  protected void convertElementToJson(ObjectNode propertiesNode, FlowElement flowElement) {
   	
   }
   

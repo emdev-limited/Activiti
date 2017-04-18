@@ -19,16 +19,6 @@ public class CommandConfig {
     this.propagation = TransactionPropagation.REQUIRED;
   }
   
-  public CommandConfig(boolean contextReusePossible) {
-    this.contextReusePossible = contextReusePossible;
-    this.propagation = TransactionPropagation.REQUIRED;
-  }
-  
-  public CommandConfig(boolean contextReusePossible, TransactionPropagation transactionPropagation) {
-    this.contextReusePossible = contextReusePossible;
-    this.propagation = transactionPropagation;
-  }
-  
   protected CommandConfig(CommandConfig commandConfig) {
     this.contextReusePossible = commandConfig.contextReusePossible;
     this.propagation = commandConfig.propagation;
@@ -55,14 +45,14 @@ public class CommandConfig {
   }
 
   public CommandConfig transactionRequiresNew() {
-    CommandConfig config = new CommandConfig();
+    CommandConfig config = new CommandConfig(this);
     config.contextReusePossible = false;
     config.propagation = TransactionPropagation.REQUIRES_NEW;
     return config;
   }
 
   public CommandConfig transactionNotSupported() {
-    CommandConfig config = new CommandConfig();
+    CommandConfig config = new CommandConfig(this);
     config.contextReusePossible = false;
     config.propagation = TransactionPropagation.NOT_SUPPORTED;
     return config;

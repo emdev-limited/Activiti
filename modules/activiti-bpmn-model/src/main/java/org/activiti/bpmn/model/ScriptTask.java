@@ -12,7 +12,6 @@
  */
 package org.activiti.bpmn.model;
 
-
 /**
  * @author Tijs Rademakers
  * @author Joram Barrez
@@ -22,7 +21,7 @@ public class ScriptTask extends Task {
   protected String scriptFormat;
   protected String script;
   protected String resultVariable;
-  protected boolean autoStoreVariables = false; // see https://activiti.atlassian.net/browse/ACT-1626
+  protected boolean autoStoreVariables = false; // see http://jira.codehaus.org/browse/ACT-1626
 
   public String getScriptFormat() {
     return scriptFormat;
@@ -47,19 +46,5 @@ public class ScriptTask extends Task {
   }
   public void setAutoStoreVariables(boolean autoStoreVariables) {
     this.autoStoreVariables = autoStoreVariables;
-  }
-  
-  public ScriptTask clone() {
-    ScriptTask clone = new ScriptTask();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(ScriptTask otherElement) {
-    super.setValues(otherElement);
-    setScriptFormat(otherElement.getScriptFormat());
-    setScript(otherElement.getScript());
-    setResultVariable(otherElement.getResultVariable());
-    setAutoStoreVariables(otherElement.isAutoStoreVariables());
   }
 }

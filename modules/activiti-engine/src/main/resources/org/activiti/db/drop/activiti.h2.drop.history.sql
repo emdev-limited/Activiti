@@ -7,7 +7,6 @@ drop table if exists ACT_HI_COMMENT cascade constraints;
 drop table if exists ACT_HI_ATTACHMENT cascade constraints;
 drop table if exists ACT_HI_IDENTITYLINK cascade constraints;
 
-
 drop index if exists ACT_IDX_HI_PRO_INST_END;
 drop index if exists ACT_IDX_HI_PRO_I_BUSKEY;
 drop index if exists ACT_IDX_HI_ACT_INST_START;
@@ -23,4 +22,3 @@ drop index if exists ACT_IDX_HI_ACT_INST_PROCINST;
 drop index if exists ACT_IDX_HI_IDENT_LNK_USER;
 drop index if exists ACT_IDX_HI_IDENT_LNK_TASK;
 drop index if exists ACT_IDX_HI_IDENT_LNK_PROCINST;
-drop index if exists ACT_IDX_HI_TASK_INST_PROCINST;

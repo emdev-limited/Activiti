@@ -13,30 +13,14 @@
 
 package org.activiti.rest.service.api.runtime.process;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.activiti.engine.runtime.Execution;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
-
 
 /**
  * @author Frederik Heremans
  */
-@RestController
-public class ProcessInstanceVariableDataResource extends BaseExecutionVariableResource {
+public class ProcessInstanceVariableDataResource extends ExecutionVariableDataResource {
 
-  @RequestMapping(value="/runtime/process-instances/{processInstanceId}/variables/{variableName}/data", method = RequestMethod.GET)
-  public @ResponseBody byte[] getVariableData(@PathVariable("processInstanceId") String processInstanceId, 
-      @PathVariable("variableName") String variableName, @RequestParam(value="scope", required=false) String scope,
-      HttpServletRequest request, HttpServletResponse response) {
-    
-    Execution execution = getProcessInstanceFromRequest(processInstanceId);
-    return getVariableDataByteArray(execution, variableName, scope, response);
+ @Override
+  protected String getExecutionIdParameter() {
+    return "processInstanceId";
   }
 }

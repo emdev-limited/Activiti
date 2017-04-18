@@ -24,7 +24,6 @@ import org.activiti.bpmn.model.SequenceFlow;
 import org.activiti.workflow.simple.converter.ConversionConstants;
 import org.activiti.workflow.simple.converter.WorkflowDefinitionConversion;
 import org.activiti.workflow.simple.definition.StepDefinition;
-import org.activiti.workflow.simple.definition.form.BooleanPropertyDefinition;
 import org.activiti.workflow.simple.definition.form.DatePropertyDefinition;
 import org.activiti.workflow.simple.definition.form.FormDefinition;
 import org.activiti.workflow.simple.definition.form.FormPropertyDefinition;
@@ -148,14 +147,12 @@ public abstract class BaseStepDefinitionConverter<U extends StepDefinition, T> i
         type = "long";
       } else if (propertyDefinition instanceof DatePropertyDefinition) {
         type = "date";
-      } else if (propertyDefinition instanceof BooleanPropertyDefinition) {
-        type = "boolean";
       } else if (propertyDefinition instanceof ListPropertyDefinition) {
         
         type = "enum";
         ListPropertyDefinition listDefinition = (ListPropertyDefinition) propertyDefinition;
         
-        if (!listDefinition.getEntries().isEmpty()) {
+        if (listDefinition.getEntries().size() > 0) {
           List<FormValue> formValues = new ArrayList<FormValue>(listDefinition.getEntries().size());
           for (ListPropertyEntry entry : listDefinition.getEntries()) {
             FormValue formValue = new FormValue();
@@ -164,7 +161,6 @@ public abstract class BaseStepDefinitionConverter<U extends StepDefinition, T> i
             formValue.setName(entry.getName());
             formValues.add(formValue);
           }
-          formProperty.setFormValues(formValues);
         }
       } else {
       	// Fallback to simple text

@@ -13,7 +13,7 @@
 
 package org.activiti.rest.service.api.repository;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 
 /**
@@ -27,7 +27,6 @@ public class ModelRequest {
   protected Integer version;
   protected String metaInfo;
   protected String deploymentId;
-  protected String tenantId;
   
   protected boolean nameChanged;
   protected boolean keyChanged;
@@ -35,7 +34,6 @@ public class ModelRequest {
   protected boolean versionChanged;
   protected boolean metaInfoChanged;
   protected boolean deploymentChanged;
-  protected boolean tenantChanged;
   
   public String getName() {
     return name;
@@ -91,15 +89,6 @@ public class ModelRequest {
     this.deploymentChanged = true;
   }
   
-  public void setTenantId(String tenantId) {
-  	tenantChanged = true;
-	  this.tenantId = tenantId;
-  }
-  
-  public String getTenantId() {
-	  return tenantId;
-  }
-  
   @JsonIgnore
   public boolean isCategoryChanged() {
     return categoryChanged;
@@ -123,9 +112,5 @@ public class ModelRequest {
   @JsonIgnore
   public boolean isDeploymentChanged() {
     return deploymentChanged;
-  }
-  @JsonIgnore
-  public boolean isTenantIdChanged() {
-	  return tenantChanged;
   }
 }

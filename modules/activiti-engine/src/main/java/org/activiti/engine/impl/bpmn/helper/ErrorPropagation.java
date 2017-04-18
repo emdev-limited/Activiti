@@ -14,21 +14,14 @@
 package org.activiti.engine.impl.bpmn.helper;
 
 import java.util.List;
-import java.util.logging.Level;
 
-import org.activiti.bpmn.model.MapExceptionEntry;
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.delegate.BpmnError;
-import org.activiti.engine.delegate.event.ActivitiEventType;
-import org.activiti.engine.delegate.event.impl.ActivitiEventBuilder;
-import org.activiti.engine.impl.bpmn.behavior.CallActivityBehavior;
 import org.activiti.engine.impl.bpmn.behavior.EventSubProcessStartEventActivityBehavior;
 import org.activiti.engine.impl.bpmn.parser.BpmnParse;
 import org.activiti.engine.impl.bpmn.parser.ErrorEventDefinition;
-import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
 import org.activiti.engine.impl.pvm.PvmActivity;
-import org.activiti.engine.impl.pvm.PvmException;
 import org.activiti.engine.impl.pvm.PvmProcessDefinition;
 import org.activiti.engine.impl.pvm.PvmScope;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
@@ -37,8 +30,6 @@ import org.activiti.engine.impl.pvm.process.ProcessDefinitionImpl;
 import org.activiti.engine.impl.pvm.process.ScopeImpl;
 import org.activiti.engine.impl.pvm.runtime.AtomicOperation;
 import org.activiti.engine.impl.pvm.runtime.InterpretableExecution;
-import org.activiti.engine.impl.util.ReflectUtil;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +43,6 @@ import org.slf4j.LoggerFactory;
  * 
  * @author Falko Menge
  * @author Daniel Meyer
- * @author Saeid Mirzaei
  */
 public class ErrorPropagation {
 
@@ -63,29 +53,23 @@ public class ErrorPropagation {
   }
   
   public static void propagateError(String errorCode, ActivityExecution execution) throws Exception {
+    // find local error handler
+    String eventHandlerId = findLocalErrorEventHandler(execution, errorCode);  
 
-    while (execution != null) {
-      String eventHandlerId = findLocalErrorEventHandler(execution, errorCode);
-      if (eventHandlerId != null) {
-        executeCatch(eventHandlerId, execution, errorCode);
-        break;
+    // TODO: merge two approaches (super process / regular process approach)
+    if(eventHandlerId != null) {
+      executeCatch(eventHandlerId, execution);
+    }else {
+      ActivityExecution superExecution = getSuperExecution(execution);
+      if (superExecution != null) {
+        executeCatchInSuperProcess(errorCode, superExecution);
+      } else {
+        LOG.info("{} throws error event with errorCode '{}', but no catching boundary event was defined. Execution will simply be ended (none end event semantics).",
+                execution.getActivity().getId(), errorCode);
+        execution.end();
       }
-      
-      if (execution.isProcessInstanceType()) {
-        // dispatch process completed event
-        if (Context.getProcessEngineConfiguration() != null && Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
-          Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
-                  ActivitiEventBuilder.createEntityEvent(ActivitiEventType.PROCESS_COMPLETED_WITH_ERROR_END_EVENT, execution));
-        }
-      }
-      execution = getSuperExecution(execution);
-    }
-    if (execution == null) {
-      throw new BpmnError(errorCode, "No catching boundary event found for error with errorCode '"
-              + errorCode + "', neither in same process nor in parent process");
     }
   }
-
 
   private static String findLocalErrorEventHandler(ActivityExecution execution, String errorCode) {
     PvmScope scope = execution.getActivity();
@@ -112,6 +96,20 @@ public class ErrorPropagation {
     return null;
   }
 
+  private static void executeCatchInSuperProcess(String errorCode, ActivityExecution superExecution) {
+    String errorHandlerId = findLocalErrorEventHandler(superExecution, errorCode);
+    if (errorHandlerId != null) {
+      executeCatch(errorHandlerId, superExecution);
+    } else { // no matching catch found, going one level up in process hierarchy
+      ActivityExecution superSuperExecution = getSuperExecution(superExecution);
+      if (superSuperExecution != null) {
+        executeCatchInSuperProcess(errorCode, superSuperExecution);
+      } else {
+        throw new BpmnError(errorCode, "No catching boundary event found for error with errorCode '" 
+                + errorCode + "', neither in same process nor in parent process");
+      }
+    }
+  }
   
   private static ActivityExecution getSuperExecution(ActivityExecution execution) {
     ExecutionEntity executionEntity = (ExecutionEntity) execution;
@@ -122,7 +120,7 @@ public class ErrorPropagation {
     return superExecution;
   }
   
-  private static void executeCatch(String errorHandlerId, ActivityExecution execution, String errorCode) {
+  private static void executeCatch(String errorHandlerId, ActivityExecution execution) {
     ProcessDefinitionImpl processDefinition = ((ExecutionEntity) execution).getProcessDefinition();
     ActivityImpl errorHandler = processDefinition.findActivity(errorHandlerId);
     if (errorHandler == null) {
@@ -142,7 +140,7 @@ public class ErrorPropagation {
     }
     
     if(catchingScope instanceof PvmProcessDefinition) {
-      executeEventHandler(errorHandler, ((ExecutionEntity)execution).getProcessInstance(), errorCode);
+      executeEventHandler(errorHandler, ((ExecutionEntity)execution).getProcessInstance());
       
     } else {      
       if (currentActivity.getId().equals(catchingScope.getId())) {
@@ -173,7 +171,7 @@ public class ErrorPropagation {
       }
       
       if (matchingParentFound && leavingExecution != null) {
-        executeEventHandler(errorHandler, leavingExecution, errorCode);
+        executeEventHandler(errorHandler, leavingExecution);
       } else {
         throw new ActivitiException("No matching parent execution for activity " + errorHandlerId + " found");
       }
@@ -181,19 +179,7 @@ public class ErrorPropagation {
         
   }
 
-  private static void executeEventHandler(ActivityImpl borderEventActivity, ActivityExecution leavingExecution, String errorCode) {  
-  	if(Context.getProcessEngineConfiguration() != null && Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
-  		Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
-  				ActivitiEventBuilder.createErrorEvent(ActivitiEventType.ACTIVITY_ERROR_RECEIVED, borderEventActivity.getId(), errorCode, leavingExecution.getId(), leavingExecution.getProcessInstanceId(), leavingExecution.getProcessDefinitionId()));
-  	}
-  	
-  	// The current activity of the execution will be changed in the next lines.
-  	// So we must make sure the activity is ended correctly here
-  	// The other executions (for example when doing something parallel in a subprocess, will
-  	// be destroyed by the destroy scope operation (but this execution will be used to do it and 
-  	// will have list the original activity by then)
-  	Context.getCommandContext().getHistoryManager().recordActivityEnd((ExecutionEntity) leavingExecution);
-  	
+  private static void executeEventHandler(ActivityImpl borderEventActivity, ActivityExecution leavingExecution) {  
     if(borderEventActivity.getActivityBehavior() instanceof EventSubProcessStartEventActivityBehavior) {
       InterpretableExecution execution = (InterpretableExecution) leavingExecution;
       execution.setActivity(borderEventActivity.getParentActivity());
@@ -202,53 +188,5 @@ public class ErrorPropagation {
       leavingExecution.executeActivity(borderEventActivity);
     }
   }
-
-  public static boolean mapException(Exception e, ActivityExecution execution, List<MapExceptionEntry> exceptionMap) throws Exception {
-    return mapException(e, execution, exceptionMap, false); 
-  }
-
-  public static boolean mapException(Exception e, ActivityExecution execution, List<MapExceptionEntry> exceptionMap, boolean wrapped) throws Exception {
-    if (exceptionMap == null) {
-      return false;
-    }
-    
-    if (wrapped && e instanceof PvmException) {
-      e = (Exception) ((PvmException) e).getCause();
-    }
-    
-    String defaultMap = null;
-   
-    for (MapExceptionEntry me: exceptionMap) {
-      String exceptionClass = me.getClassName();
-      String errorCode = me.getErrorCode();
-       
-      // save the first mapping with no exception class as default map
-      if (StringUtils.isNotEmpty(errorCode) && StringUtils.isEmpty(exceptionClass) && defaultMap == null) {
-        defaultMap = errorCode;
-        continue;
-      }
-       
-      // ignore if error code or class are not defined
-      if (StringUtils.isEmpty(errorCode) || StringUtils.isEmpty(exceptionClass))
-        continue;
-       
-      if (e.getClass().getName().equals(exceptionClass)) {
-        propagateError(errorCode, execution);
-        return true;
-      }
-      if (me.isAndChildren()) {
-        Class<?> exceptionClassClass = ReflectUtil.loadClass(exceptionClass);
-        if (exceptionClassClass.isAssignableFrom(e.getClass())) {
-          propagateError(errorCode, execution);
-          return true;
-        }
-      }
-    }
-    if (defaultMap != null) {
-      propagateError(defaultMap, execution);
-      return true;
-    }
-     
-    return false;
-  }
+  
 }

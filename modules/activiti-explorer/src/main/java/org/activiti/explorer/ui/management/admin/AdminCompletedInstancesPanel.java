@@ -137,7 +137,7 @@ public class AdminCompletedInstancesPanel extends DetailPanel {
   }
   
   protected void initDefinitionsTable() {
-    if(instanceList == null || instanceList.isEmpty()) {
+    if(instanceList == null || instanceList.size() == 0) {
     	noMembersTable = new Label(i18nManager.getMessage(Messages.ADMIN_COMPLETED_NONE_FOUND));
       definitionsLayout.addComponent(noMembersTable);
     
@@ -364,7 +364,7 @@ public class AdminCompletedInstancesPanel extends DetailPanel {
       .orderByHistoricTaskInstanceStartTime().desc()
       .list();
     
-    if(!tasks.isEmpty()) {
+    if(tasks.size() > 0) {
       
       // Finished icon
       taskTable.addContainerProperty("finished", Component.class, null, i18nManager.getMessage(Messages.ADMIN_FINISHED), null, Table.ALIGN_CENTER);
@@ -461,7 +461,7 @@ public class AdminCompletedInstancesPanel extends DetailPanel {
     List<HistoricDetail> variables = historyService.createHistoricDetailQuery()
     		.processInstanceId(processInstance.getId()).orderByTime().desc().list(); 
     
-    if(!variables.isEmpty()) {
+    if(variables.size() > 0) {
       
       variablesTable = new Table();
       variablesTable.setWidth(60, UNITS_PERCENTAGE);
@@ -476,10 +476,10 @@ public class AdminCompletedInstancesPanel extends DetailPanel {
       for (HistoricDetail detail : variables) {
       	if(detail instanceof HistoricVariableUpdate) {
 	      	HistoricVariableUpdate variable = (HistoricVariableUpdate) detail;
-	      	if (variableNames.contains(variable.getVariableName()) == false) {
-	      		variableNames.add(variable.getVariableName());
-		        Item variableItem = variablesTable.addItem(variable.getVariableName());
-		        variableItem.getItemProperty("name").setValue(variable.getVariableName());
+	      	if(variableNames.contains(variable.getId()) == false) {
+	      		variableNames.add(variable.getId());
+		        Item variableItem = variablesTable.addItem(variable.getId());
+		        variableItem.getItemProperty("name").setValue(variable.getId());
 		        
 		        // Get string value to show
 		        String theValue = variableRendererManager.getStringRepresentation(variable.getValue());
@@ -488,7 +488,7 @@ public class AdminCompletedInstancesPanel extends DetailPanel {
 	      	}
       	} else {
       		HistoricFormProperty form = (HistoricFormProperty) detail;
-	      	if (variableNames.contains(form.getPropertyId()) == false) {
+	      	if(variableNames.contains(form.getPropertyId()) == false) {
 	      		variableNames.add(form.getPropertyId());
 		        Item variableItem = variablesTable.addItem(form.getPropertyId());
 		        variableItem.getItemProperty("name").setValue(form.getPropertyId());

@@ -15,6 +15,6 @@ package org.activiti.bpmn.model;
 /**
  * @author Tijs Rademakers
  */
-public abstract class Task extends Activity {
+public class Task extends Activity {
 
 }

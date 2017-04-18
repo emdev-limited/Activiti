@@ -18,7 +18,6 @@ import java.util.Collection;
 
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.variable.CacheableVariable;
-import org.activiti.engine.impl.variable.JPAEntityListVariableType;
 import org.activiti.engine.impl.variable.JPAEntityVariableType;
 
 
@@ -66,7 +65,7 @@ public class HistoricVariableInitializingList extends ArrayList<HistoricVariable
       e.getValue();
       
       // make sure JPA entities are cached for later retrieval
-      if (JPAEntityVariableType.TYPE_NAME.equals(e.getVariableType().getTypeName()) || JPAEntityListVariableType.TYPE_NAME.equals(e.getVariableType().getTypeName())) {
+      if (JPAEntityVariableType.TYPE_NAME.equals(e.getVariableType().getTypeName())) {
         ((CacheableVariable) e.getVariableType()).setForceCacheable(true);
       }
     }

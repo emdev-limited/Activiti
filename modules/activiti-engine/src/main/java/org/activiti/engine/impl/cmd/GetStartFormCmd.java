@@ -18,6 +18,7 @@ import java.io.Serializable;
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
 import org.activiti.engine.form.StartFormData;
+import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.form.StartFormHandler;
 import org.activiti.engine.impl.interceptor.Command;
 import org.activiti.engine.impl.interceptor.CommandContext;
@@ -38,7 +39,7 @@ public class GetStartFormCmd implements Command<StartFormData>, Serializable {
   }
 
   public StartFormData execute(CommandContext commandContext) {
-    ProcessDefinitionEntity processDefinition = commandContext
+    ProcessDefinitionEntity processDefinition = Context
       .getProcessEngineConfiguration()
       .getDeploymentManager()
       .findDeployedProcessDefinitionById(processDefinitionId);

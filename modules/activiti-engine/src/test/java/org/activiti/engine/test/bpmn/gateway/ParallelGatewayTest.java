@@ -13,7 +13,9 @@
 
 package org.activiti.engine.test.bpmn.gateway;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.activiti.engine.history.HistoricActivityInstance;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
@@ -107,7 +109,7 @@ public class ParallelGatewayTest extends PluggableActivitiTestCase {
   }
   
   /**
-   * https://activiti.atlassian.net/browse/ACT-1222
+   * http://jira.codehaus.org/browse/ACT-1222
    */
   @Deployment
   public void testReceyclingExecutionWithCallActivity() {
@@ -138,36 +140,18 @@ public class ParallelGatewayTest extends PluggableActivitiTestCase {
   @Deployment
   public void testHistoryTables() {
 	  
-    ProcessInstance pi = runtimeService.startProcessInstanceByKey("testHistoryRecords");
+	ProcessInstance pi = runtimeService.startProcessInstanceByKey("testHistoryRecords");
     
     List<HistoricActivityInstance> history = historyService
     		.createHistoricActivityInstanceQuery()
     		.processInstanceId(pi.getId()). list();
     
     for (HistoricActivityInstance h: history) {
-    	if (h.getActivityId().equals("parallelgateway2")) {
-    		  assertNotNull(h.getEndTime());
-    	}
-    }
+    	if (h.getActivityId().equals("parallelgateway2") || 
+    			h.getActivityId().equals("parallelgateway2"))
+    		assertNotNull(h.getEndTime());
+    	    }
     
   }
-  
-  @Deployment
-  public void testAsyncBehavior() {
-    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("async");
-    waitForJobExecutorToProcessAllJobs(5000, 500);
-    assertEquals(0, runtimeService.createProcessInstanceQuery().processInstanceId(processInstance.getId()).count());
-  }
-  
-  /*@Deployment
-  public void testAsyncBehavior() {
-    for (int i = 0; i < 100; i++) {
-      ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("async");
-    }
-    assertEquals(200, managementService.createJobQuery().count());
-    waitForJobExecutorToProcessAllJobs(120000, 5000);
-    assertEquals(0, managementService.createJobQuery().count());
-    assertEquals(0, runtimeService.createProcessInstanceQuery().count());
-  }*/
     
 }

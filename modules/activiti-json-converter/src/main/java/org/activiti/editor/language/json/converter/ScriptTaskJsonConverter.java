@@ -17,9 +17,8 @@ import java.util.Map;
 import org.activiti.bpmn.model.BaseElement;
 import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.ScriptTask;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * @author Tijs Rademakers
@@ -41,12 +40,12 @@ public class ScriptTaskJsonConverter extends BaseBpmnJsonConverter {
     convertersToJsonMap.put(ScriptTask.class, ScriptTaskJsonConverter.class);
   }
   
-  protected String getStencilId(BaseElement baseElement) {
+  protected String getStencilId(FlowElement flowElement) {
     return STENCIL_TASK_SCRIPT;
   }
   
-  protected void convertElementToJson(ObjectNode propertiesNode, BaseElement baseElement) {
-  	ScriptTask scriptTask = (ScriptTask) baseElement;
+  protected void convertElementToJson(ObjectNode propertiesNode, FlowElement flowElement) {
+  	ScriptTask scriptTask = (ScriptTask) flowElement;
   	propertiesNode.put(PROPERTY_SCRIPT_FORMAT, scriptTask.getScriptFormat());
   	propertiesNode.put(PROPERTY_SCRIPT_TEXT, scriptTask.getScript());
   }

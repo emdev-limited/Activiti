@@ -16,17 +16,15 @@ package org.activiti.rest.service.api.history;
 import java.util.Date;
 import java.util.List;
 
-import org.activiti.rest.common.api.PaginateRequest;
 import org.activiti.rest.service.api.engine.variable.QueryVariable;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.codehaus.jackson.annotate.JsonTypeInfo.Id;
 
 
 /**
  * @author Tijs Rademakers
  */
-public class HistoricTaskInstanceQueryRequest extends PaginateRequest {
+public class HistoricTaskInstanceQueryRequest {
 
   private String taskId;
   private String processInstanceId;
@@ -44,7 +42,6 @@ public class HistoricTaskInstanceQueryRequest extends PaginateRequest {
   private String taskDescriptionLike;
   private String taskDefinitionKey;
   private String taskDefinitionKeyLike;
-  private String taskCategory;
   private String taskDeleteReason;
   private String taskDeleteReasonLike;
   private String taskAssignee;
@@ -72,10 +69,6 @@ public class HistoricTaskInstanceQueryRequest extends PaginateRequest {
   private Boolean includeProcessVariables;
   private List<QueryVariable> taskVariables;
   private List<QueryVariable> processVariables;
-  private String tenantId;
-  private String tenantIdLike;
-  private Boolean withoutTenantId;
-  private String taskCandidateGroup;
 
   public String getTaskId() {
     return taskId;
@@ -205,14 +198,6 @@ public class HistoricTaskInstanceQueryRequest extends PaginateRequest {
 	  this.taskDefinitionKeyLike = taskDefinitionKeyLike;
   }
   
-  public String getTaskCategory() {
-    return taskCategory;
-  }
-
-  public void setTaskCategory(String taskCategory) {
-    this.taskCategory = taskCategory;
-  }
-
   public String getTaskDeleteReason() {
     return taskDeleteReason;
   }
@@ -430,37 +415,6 @@ public class HistoricTaskInstanceQueryRequest extends PaginateRequest {
   public void setProcessVariables(List<QueryVariable> processVariables) {
     this.processVariables = processVariables;
   }
-
-	public String getTenantId() {
-		return tenantId;
-	}
-
-	public void setTenantId(String tenantId) {
-		this.tenantId = tenantId;
-	}
-
-	public String getTenantIdLike() {
-		return tenantIdLike;
-	}
-
-	public void setTenantIdLike(String tenantIdLike) {
-		this.tenantIdLike = tenantIdLike;
-	}
-
-	public Boolean getWithoutTenantId() {
-		return withoutTenantId;
-	}
-
-	public void setWithoutTenantId(Boolean withoutTenantId) {
-		this.withoutTenantId = withoutTenantId;
-	}
-
-  public String getTaskCandidateGroup() {
-    return taskCandidateGroup;
-  }
-
-  public void setTaskCandidateGroup(String taskCandidateGroup) {
-    this.taskCandidateGroup = taskCandidateGroup;
-  }
-
+  
+  
 }

@@ -13,19 +13,9 @@
 
 package org.activiti.camel;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.activiti.engine.ActivitiException;
-import org.activiti.engine.IdentityService;
 import org.activiti.engine.RuntimeService;
-import org.apache.camel.CamelContext;
-import org.apache.camel.Consumer;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
-import org.apache.camel.Producer;
+import org.apache.camel.*;
 import org.apache.camel.impl.DefaultEndpoint;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * This class has been modified to be consistent with the changes to CamelBehavior and its implementations. The set of changes
@@ -33,81 +23,62 @@ import org.apache.commons.lang3.StringUtils;
  * or you can choose to create your own. Please reference the comments for the "CamelBehavior" class for more information on the 
  * out-of-the-box implementation class options.  
  * 
- * @author Ryan Johnston (@rjfsu), Tijs Rademakers, Arnold Schrijver
+ * @author Ryan Johnston (@rjfsu), Tijs Rademakers
  */
 public class ActivitiEndpoint extends DefaultEndpoint {
 
-  protected IdentityService identityService;
 
-  protected RuntimeService runtimeService;
+  private RuntimeService runtimeService;
 
-  protected ActivitiConsumer activitiConsumer;
+  private ActivitiConsumer activitiConsumer;
 
-  protected boolean copyVariablesToProperties;
+  private boolean copyVariablesToProperties;
 
-  protected boolean copyVariablesToBodyAsMap;
+  private boolean copyVariablesToBodyAsMap;
 
-  protected boolean copyCamelBodyToBody;
+  private boolean copyCamelBodyToBody;
   
-  protected String copyVariablesFromProperties;
+  private boolean copyVariablesFromProperties;
 
-  protected String copyVariablesFromHeader;
+  private boolean copyVariablesFromHeader;
   
-  protected boolean copyCamelBodyToBodyAsString;
+  private boolean copyCamelBodyToBodyAsString;
   
-  protected String processInitiatorHeaderName;
+  private long timeout = 5000;
   
-  protected Map<String, Object> returnVarMap = new HashMap<String, Object>();
-  
-  protected long timeout = 5000;
-  
-  protected int timeResolution = 100;
+  private int timeResolution = 100;
 
-  public ActivitiEndpoint(String uri, CamelContext camelContext) {
+  public ActivitiEndpoint(String uri, CamelContext camelContext, RuntimeService runtimeService) {
     super();
     setCamelContext(camelContext);
     setEndpointUri(uri);
+    this.runtimeService = runtimeService;
+  }
+
+  void addConsumer(ActivitiConsumer consumer) {
+    if (activitiConsumer != null) {
+      throw new RuntimeException("Activit consumer already defined for " + getEndpointUri() + "!");
+    }
+    activitiConsumer = consumer;
   }
 
   public void process(Exchange ex) throws Exception {
     if (activitiConsumer == null) {
-      throw new ActivitiException("Activiti consumer not defined for " + getEndpointUri());
+      throw new RuntimeException("Activiti consumer not defined for " + getEndpointUri());
     }
     activitiConsumer.getProcessor().process(ex);
   }
 
   public Producer createProducer() throws Exception {
-    ActivitiProducer producer = new ActivitiProducer(this, getTimeout(), getTimeResolution());
-    producer.setRuntimeService(runtimeService);
-    producer.setIdentityService(identityService);
-    return producer;
+    return new ActivitiProducer(this, runtimeService, getTimeout(), getTimeResolution());
   }
 
   public Consumer createConsumer(Processor processor) throws Exception {
     return new ActivitiConsumer(this, processor);
   }
-  
-  protected void addConsumer(ActivitiConsumer consumer) {
-    if (activitiConsumer != null) {
-      throw new ActivitiException("Activiti consumer already defined for " + getEndpointUri() + "!");
-    }
-    activitiConsumer = consumer;
-  }
-  
-  protected void removeConsumer() {
-    activitiConsumer = null;
-  }
 
   public boolean isSingleton() {
     return true;
-  }
-  
-  public void setIdentityService(IdentityService identityService) {
-    this.identityService = identityService;
-  }
-
-  public void setRuntimeService(RuntimeService runtimeService) {
-    this.runtimeService = runtimeService;
   }
 
   public boolean isCopyVariablesToProperties() {
@@ -133,24 +104,20 @@ public class ActivitiEndpoint extends DefaultEndpoint {
   public void setCopyVariablesToBodyAsMap(boolean copyVariablesToBodyAsMap) {
     this.copyVariablesToBodyAsMap = copyVariablesToBodyAsMap;
   }
-
-
-  public String getCopyVariablesFromProperties() {
-    return copyVariablesFromProperties ;
+  
+  public boolean isCopyVariablesFromProperties() {
+    return copyVariablesFromProperties;
   }
 
-  
-  public void setCopyVariablesFromProperties(String copyVariablesFromProperties) {
+  public void setCopyVariablesFromProperties(boolean copyVariablesFromProperties) {
     this.copyVariablesFromProperties = copyVariablesFromProperties;
   }
 
-  
-  public String getCopyVariablesFromHeader() {
-    return copyVariablesFromHeader;
-    
+  public boolean isCopyVariablesFromHeader() {
+    return this.copyVariablesFromHeader;
   }
-  
-   public void setCopyVariablesFromHeader(String copyVariablesFromHeader) {
+
+  public void setCopyVariablesFromHeader(boolean copyVariablesFromHeader) {
     this.copyVariablesFromHeader = copyVariablesFromHeader;
   }
   
@@ -160,26 +127,6 @@ public class ActivitiEndpoint extends DefaultEndpoint {
   
   public void setCopyCamelBodyToBodyAsString(boolean copyCamelBodyToBodyAsString) {
     this.copyCamelBodyToBodyAsString = copyCamelBodyToBodyAsString;
-  }
-  
-  public boolean isSetProcessInitiator() {
-      return StringUtils.isNotEmpty(getProcessInitiatorHeaderName());
-  }
-  
-  public Map<String, Object> getReturnVarMap() {
-    return returnVarMap;
-  }
-
-  public void setReturnVarMap(Map<String, Object> returnVarMap) {
-    this.returnVarMap = returnVarMap;
-  }
-  
-  public String getProcessInitiatorHeaderName() {
-      return processInitiatorHeaderName;
-  }
-  
-  public void setProcessInitiatorHeaderName(String processInitiatorHeaderName) {
-      this.processInitiatorHeaderName = processInitiatorHeaderName;
   }
   
   @Override

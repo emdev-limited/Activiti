@@ -12,7 +12,6 @@ import org.activiti.bpmn.model.MessageEventDefinition;
 import org.activiti.bpmn.model.Process;
 import org.activiti.bpmn.model.Signal;
 import org.activiti.bpmn.model.SignalEventDefinition;
-import org.apache.commons.lang3.StringUtils;
 
 public class SignalAndMessageDefinitionExport implements BpmnXMLConstants {
 
@@ -21,24 +20,20 @@ public class SignalAndMessageDefinitionExport implements BpmnXMLConstants {
     for (Process process : model.getProcesses()) {
       for (FlowElement flowElement : process.findFlowElementsOfType(Event.class)) {
         Event event = (Event) flowElement;
-        if (!event.getEventDefinitions().isEmpty()) {
+        if (event.getEventDefinitions().size() > 0) {
           EventDefinition eventDefinition = event.getEventDefinitions().get(0);
           if (eventDefinition instanceof SignalEventDefinition) {
             SignalEventDefinition signalEvent = (SignalEventDefinition) eventDefinition;
-            if (StringUtils.isNotEmpty(signalEvent.getSignalRef())) {
-              if (model.containsSignalId(signalEvent.getSignalRef()) == false) {
-                Signal signal = new Signal(signalEvent.getSignalRef(), signalEvent.getSignalRef());
-                model.addSignal(signal);
-              }
+            if (model.containsSignalId(signalEvent.getSignalRef()) == false) {
+              Signal signal = new Signal(signalEvent.getSignalRef(), signalEvent.getSignalRef());
+              model.addSignal(signal);
             }
 
           } else if (eventDefinition instanceof MessageEventDefinition) {
             MessageEventDefinition messageEvent = (MessageEventDefinition) eventDefinition;
-            if (StringUtils.isNotEmpty(messageEvent.getMessageRef())) {
-              if (model.containsMessageId(messageEvent.getMessageRef()) == false) {
-                Message message = new Message(messageEvent.getMessageRef(), messageEvent.getMessageRef(), null);
-                model.addMessage(message);
-              }
+            if (model.containsMessageId(messageEvent.getMessageRef()) == false) {
+              Message message = new Message(messageEvent.getMessageRef(), messageEvent.getMessageRef(), null);
+              model.addMessage(message);
             }
           }
         }
@@ -72,25 +67,7 @@ public class SignalAndMessageDefinitionExport implements BpmnXMLConstants {
         }
       }
       xtw.writeAttribute(ATTRIBUTE_ID, messageId);
-      if (StringUtils.isNotEmpty(message.getName())) {
-        xtw.writeAttribute(ATTRIBUTE_NAME, message.getName());
-      }
-      if (StringUtils.isNotEmpty(message.getItemRef())) {
-        // replace the namespace by the right prefix
-        String itemRef = message.getItemRef();
-        for (String prefix : model.getNamespaces().keySet()) {
-            String namespace = model.getNamespace(prefix);
-            if (itemRef.startsWith(namespace)) {
-                if (prefix.isEmpty()) {
-                    itemRef = itemRef.replace(namespace + ":", "");
-                } else {
-                    itemRef = itemRef.replace(namespace, prefix);
-                }
-                break;
-            }
-        }
-        xtw.writeAttribute(ATTRIBUTE_ITEM_REF, itemRef);
-      }
+      xtw.writeAttribute(ATTRIBUTE_NAME, message.getName());
       xtw.writeEndElement();
     }
   }

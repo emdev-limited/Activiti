@@ -24,11 +24,11 @@ public class WebServiceTest extends AbstractWebServiceTaskTest {
 
   @Deployment
   public void testAsyncInvocationWithoutDataFlow() throws Exception {
-    assertEquals(-1, webServiceMock.getCount());
+    assertEquals(-1, counter.getCount());
     
     processEngine.getRuntimeService().startProcessInstanceByKey("asyncWebServiceInvocationWithoutDataFlow");
     waitForJobExecutorToProcessAllJobs(10000L, 250L);
     
-    assertEquals(0, webServiceMock.getCount());
+    assertEquals(0, counter.getCount());
   }
 }

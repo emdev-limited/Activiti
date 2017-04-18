@@ -10,6 +10,10 @@ public class CustomFlowBean implements Serializable {
 
   public boolean executeLogic(String flowId, DelegateExecution execution) {
     Object conditionsObject = execution.getVariable(flowId + "_activiti_conditions");
-    return conditionsObject != null;
+    if (conditionsObject != null) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }

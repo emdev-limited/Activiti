@@ -22,26 +22,25 @@ import java.util.Map;
 
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseSpringRestTestCase;
-import org.activiti.rest.service.HttpMultipartHelper;
+import org.activiti.rest.service.BaseRestTestCase;
+import org.activiti.rest.service.HttpMultipartRepresentation;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
+import org.restlet.data.Form;
+import org.restlet.data.MediaType;
+import org.restlet.data.Status;
+import org.restlet.engine.http.header.HeaderConstants;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
+import org.restlet.resource.ResourceException;
 
 /**
  * Test for all REST-operations related to a single task variable.
  * 
  * @author Frederik Heremans
  */
-public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase {
+public class ProcessInstanceVariableResourceTest extends BaseRestTestCase {
 
   /**
    * Test getting a process instance variable. GET
@@ -53,27 +52,45 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
     runtimeService.setVariable(processInstance.getId(), "variable", "processValue");
     
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "variable")), HttpStatus.SC_OK);
-    
-    JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "variable"));
+    Representation response = client.get();
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
+    JsonNode responseNode = objectMapper.readTree(response.getStream());
     assertNotNull(responseNode);
     assertEquals("processValue", responseNode.get("value").asText());
     assertEquals("variable", responseNode.get("name").asText());
     assertEquals("string", responseNode.get("type").asText());
     
     // Illegal scope
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "variable") + "?scope=illegal"), HttpStatus.SC_BAD_REQUEST));
+    client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "variable") + "?scope=illegal");
+    try {
+      response = client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_BAD_REQUEST, expected.getStatus());
+      assertEquals("Invalid variable scope: 'illegal'", expected.getStatus().getDescription());
+    }
     
     // Unexisting process
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, "unexisting", "variable")), HttpStatus.SC_NOT_FOUND));
+    client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, "unexisting", "variable"));
+    try {
+      response = client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("execution unexisting doesn't exist", expected.getStatus().getDescription());
+    }
     
     // Unexisting variable
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "unexistingVariable")), HttpStatus.SC_NOT_FOUND));
+    client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "unexistingVariable"));
+    try {
+      response = client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Execution '" + processInstance.getId() + "' doesn't have a variable with name: 'unexistingVariable'.", expected.getStatus().getDescription());
+    }
   }
   
   /**
@@ -82,16 +99,17 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
    */
   @Deployment(resources = {"org/activiti/rest/service/api/runtime/ProcessInstanceVariableResourceTest.testProcess.bpmn20.xml"})
   public void testGetProcessInstanceVariableData() throws Exception {
-    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
-    runtimeService.setVariableLocal(processInstance.getId(), "var", "This is a binary piece of text".getBytes());
+      ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
+      runtimeService.setVariableLocal(processInstance.getId(), "var", "This is a binary piece of text".getBytes());
 
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "var")), HttpStatus.SC_OK);
-    
-    String actualResponseBytesAsText = IOUtils.toString(response.getEntity().getContent());
-    closeResponse(response);
-    assertEquals("This is a binary piece of text", actualResponseBytesAsText);
-    assertEquals("application/octet-stream", response.getEntity().getContentType().getValue());
+      // Force content-type to TEXT_PLAIN to make sure this is ignored and application-octect-stream is always returned
+      ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "var"));
+      client.get(MediaType.TEXT_PLAIN);
+      
+      assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+      String actualResponseBytesAsText = client.getResponse().getEntityAsText();
+      assertEquals("This is a binary piece of text", actualResponseBytesAsText);
+      assertEquals(MediaType.APPLICATION_OCTET_STREAM.getName(), getMediaType(client));
   }
   
   /**
@@ -107,17 +125,18 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
     runtimeService.setVariableLocal(processInstance.getId(), "var", originalSerializable);
 
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "var")), HttpStatus.SC_OK);
+    // Force content-type to TEXT_PLAIN to make sure this is ignored and application-octect-stream is always returned
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "var"));
+    client.get(MediaType.TEXT_PLAIN);
     
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
     // Read the serializable from the stream
-    ObjectInputStream stream = new ObjectInputStream(response.getEntity().getContent());
+    ObjectInputStream stream = new ObjectInputStream(client.getResponse().getEntity().getStream());
     Object readSerializable = stream.readObject();
     assertNotNull(readSerializable);
     assertTrue(readSerializable instanceof TestSerializableVariable);
     assertEquals("This is some field", ((TestSerializableVariable) readSerializable).getSomeField());
-    assertEquals("application/x-java-serialized-object", response.getEntity().getContentType().getValue());
-    closeResponse(response);
+    assertEquals(MediaType.APPLICATION_JAVA_OBJECT.getName(), getMediaType(client));
   }
   
   /**
@@ -131,12 +150,25 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
     runtimeService.setVariableLocal(processInstance.getId(), "localTaskVariable", "this is a plain string variable");
 
     // Try getting data for non-binary variable
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "localTaskVariable")), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "localTaskVariable"));
+    try {
+      client.get();
+      fail("Exception expected");
+    } catch (ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("The variable does not have a binary data stream.", expected.getStatus().getDescription());
+    }
 
     // Try getting data for unexisting property
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "unexistingVariable")), HttpStatus.SC_NOT_FOUND));
+    client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE_DATA, processInstance.getId(), "unexistingVariable"));
+    try {
+      client.get();
+      fail("Exception expected");
+    } catch (ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Execution '" + processInstance.getId() + "' doesn't have a variable with name: 'unexistingVariable'.", expected.getStatus().getDescription());
+    }
+
   }
   
   /**
@@ -150,14 +182,21 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
             Collections.singletonMap("myVariable", (Object) "processValue"));
     
     // Delete variable
-    closeResponse(executeRequest(new HttpDelete(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "myVariable")), HttpStatus.SC_NO_CONTENT));
-    
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "myVariable"));
+    Representation response = client.delete();
+    assertEquals(Status.SUCCESS_NO_CONTENT, client.getResponse().getStatus());
+    assertEquals(0L, response.getSize());
     assertFalse(runtimeService.hasVariable(processInstance.getId(), "myVariable"));
     
     // Run the same delete again, variable is not there so 404 should be returned
-    closeResponse(executeRequest(new HttpDelete(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "myVariable")), HttpStatus.SC_NOT_FOUND));
+    client.release();
+    try {
+      client.delete();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Execution '" + processInstance.getId() + "' doesn't have a variable 'myVariable' in scope local", expected.getStatus().getDescription());
+    }
   }
   
   /**
@@ -177,27 +216,36 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
     requestNode.put("value", "updatedValue");
     requestNode.put("type", "string");
     
-    HttpPut httpPut = new HttpPut(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "myVar"));
-    httpPut.setEntity(new StringEntity(requestNode.toString()));
-    CloseableHttpResponse response = executeRequest(httpPut, HttpStatus.SC_OK);
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "myVar"));
+    Representation response = client.put(requestNode);
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
     
-    JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    JsonNode responseNode = objectMapper.readTree(response.getStream());
     assertNotNull(responseNode);
     assertEquals("updatedValue", responseNode.get("value").asText());
+    
            
     // Try updating with mismatch between URL and body variableName
-    requestNode.put("name", "unexistingVariable");
-    httpPut.setEntity(new StringEntity(requestNode.toString()));
-    closeResponse(executeRequest(httpPut, HttpStatus.SC_BAD_REQUEST));
+    try {
+      requestNode.put("name", "unexistingVariable");
+      client.put(requestNode);
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_BAD_REQUEST, expected.getStatus());
+      assertEquals("Variable name in the body should be equal to the name used in the requested URL.", expected.getStatus().getDescription());
+    }
     
     // Try updating unexisting property
-    requestNode.put("name", "unexistingVariable");
-    httpPut = new HttpPut(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "unexistingVariable"));
-    httpPut.setEntity(new StringEntity(requestNode.toString()));
-    closeResponse(executeRequest(httpPut, HttpStatus.SC_NOT_FOUND));
+    try {
+      client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "unexistingVariable"));
+      requestNode.put("name", "unexistingVariable");
+      client.put(requestNode);
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Execution '" + processInstance.getId() + "' doesn't have a variable with name: 'unexistingVariable'.", expected.getStatus().getDescription());
+    }
+    
   }
   
   /**
@@ -218,12 +266,14 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
     additionalFields.put("name", "binaryVariable");
     additionalFields.put("type", "binary");
 
-    HttpPut httpPut = new HttpPut(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "binaryVariable"));
-    httpPut.setEntity(HttpMultipartHelper.getMultiPartEntity("value", "application/octet-stream", binaryContent, additionalFields));
-    CloseableHttpResponse response = executeBinaryRequest(httpPut, HttpStatus.SC_OK);
-    JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    // Upload a valid BPMN-file using multipart-data
+    Representation uploadRepresentation = new HttpMultipartRepresentation("value", binaryContent, additionalFields);
+
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_VARIABLE, processInstance.getId(), "binaryVariable"));
+    Representation response = client.put(uploadRepresentation);
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
+    JsonNode responseNode = objectMapper.readTree(response.getStream());
     assertNotNull(responseNode);
     assertEquals("binaryVariable", responseNode.get("name").asText());
     assertTrue(responseNode.get("value").isNull());
@@ -237,5 +287,10 @@ public class ProcessInstanceVariableResourceTest extends BaseSpringRestTestCase 
     assertNotNull(variableValue);
     assertTrue(variableValue instanceof byte[]);
     assertEquals("This is binary content", new String((byte[]) variableValue));
+  }
+  
+  protected String getMediaType(ClientResource client) {
+    Form headers = (Form) client.getResponseAttributes().get(HeaderConstants.ATTRIBUTE_HEADERS);
+    return headers.getFirstValue(HeaderConstants.HEADER_CONTENT_TYPE);
   }
 }

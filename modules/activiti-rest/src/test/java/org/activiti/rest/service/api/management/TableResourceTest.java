@@ -2,14 +2,14 @@ package org.activiti.rest.service.api.management;
 
 import java.util.Map;
 
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
+import org.restlet.resource.ResourceException;
 
 /**
  * Test for all REST-operations related to the Table collection and a single
@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * 
  * @author Frederik Heremans
  */
-public class TableResourceTest extends BaseSpringRestTestCase {
+public class TableResourceTest extends BaseRestTestCase {
 
   /**
    * Test getting tables. GET management/tables
@@ -25,23 +25,23 @@ public class TableResourceTest extends BaseSpringRestTestCase {
   public void testGetTables() throws Exception {
     Map<String, Long> tableCounts = managementService.getTableCount();
 
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLES_COLLECTION)), HttpStatus.SC_OK);
-    
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLES_COLLECTION));
+    Representation response = client.get();
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
     // Check table array
-    JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    JsonNode responseNode = objectMapper.readTree(response.getStream());
     assertNotNull(responseNode);
     assertTrue(responseNode.isArray());
     assertEquals(tableCounts.size(), responseNode.size());
 
     for (int i = 0; i < responseNode.size(); i++) {
       ObjectNode table = (ObjectNode) responseNode.get(i);
-      assertNotNull(table.get("name").textValue());
-      assertNotNull(table.get("count").longValue());
-      assertTrue(table.get("url").textValue().endsWith(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, table.get("name").textValue())));
+      assertNotNull(table.get("name").getTextValue());
+      assertNotNull(table.get("count").getLongValue());
+      assertTrue(table.get("url").getTextValue().endsWith(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, table.get("name").getTextValue())));
 
-      assertEquals(((Long) tableCounts.get(table.get("name").textValue())).longValue(), table.get("count").longValue());
+      assertEquals(((Long) tableCounts.get(table.get("name").getTextValue())).longValue(), table.get("count").getLongValue());
     }
   }
 
@@ -53,20 +53,26 @@ public class TableResourceTest extends BaseSpringRestTestCase {
 
     String tableNameToGet = tableCounts.keySet().iterator().next();
 
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, tableNameToGet)), HttpStatus.SC_OK);
-    
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, tableNameToGet));
+    Representation response = client.get();
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+
     // Check table
-    JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    JsonNode responseNode = objectMapper.readTree(response.getStream());
     assertNotNull(responseNode);
-    assertEquals(tableNameToGet, responseNode.get("name").textValue());
-    assertEquals(((Long) tableCounts.get(responseNode.get("name").textValue())).longValue(), responseNode.get("count").longValue());
-    assertTrue(responseNode.get("url").textValue().endsWith(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, tableNameToGet)));
+    assertEquals(tableNameToGet, responseNode.get("name").getTextValue());
+    assertEquals(((Long) tableCounts.get(responseNode.get("name").getTextValue())).longValue(), responseNode.get("count").getLongValue());
+    assertTrue(responseNode.get("url").getTextValue().endsWith(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, tableNameToGet)));
   }
   
   public void testGetUnexistingTable() throws Exception {
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, "unexisting")), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_TABLE, "unexisting"));
+    try {
+      client.get();
+      fail("404 expected, but was: " + client.getResponse().getStatus());
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, client.getResponse().getStatus());
+      assertEquals("Could not find a table with name 'unexisting'.", client.getResponse().getStatus().getDescription());
+    }
   }
 }

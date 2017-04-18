@@ -15,56 +15,56 @@ package org.activiti.rest.service.api.repository;
 
 import java.util.Date;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.repository.ProcessDefinition;
-import org.activiti.rest.exception.ActivitiConflictException;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Status;
+import org.restlet.resource.Get;
+import org.restlet.resource.Put;
+import org.restlet.resource.ResourceException;
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class ProcessDefinitionResource extends BaseProcessDefinitionResource {
   
-  @RequestMapping(value="/repository/process-definitions/{processDefinitionId}", method = RequestMethod.GET, produces = "application/json")
-  public ProcessDefinitionResponse getProcessDefinition(@PathVariable String processDefinitionId, HttpServletRequest request) {
-    ProcessDefinition processDefinition = getProcessDefinitionFromRequest(processDefinitionId);
+  @Get
+  public ProcessDefinitionResponse getProcessDefinition() {
+    if(authenticate() == false) return null;
+    
+    ProcessDefinition processDefinition = getProcessDefinitionFromRequest();
    
-    return restResponseFactory.createProcessDefinitionResponse(processDefinition);
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+     .createProcessDefinitionResponse(this, processDefinition);
   }
   
-  @RequestMapping(value="/repository/process-definitions/{processDefinitionId}", method = RequestMethod.PUT, produces = "application/json")
-  public ProcessDefinitionResponse executeProcessDefinitionAction(@PathVariable String processDefinitionId, 
-      @RequestBody ProcessDefinitionActionRequest actionRequest, HttpServletRequest request) {
+  @Put
+  public ProcessDefinitionResponse executeProcessDefinitionAction(ProcessDefinitionActionRequest actionRequest) {
+    if(authenticate() == false) return null;
     
-    if (actionRequest == null) {
+    if(actionRequest == null) {
       throw new ActivitiIllegalArgumentException("No action found in request body.");
     }
     
-    ProcessDefinition processDefinition = getProcessDefinitionFromRequest(processDefinitionId);
+    ProcessDefinition processDefinition = getProcessDefinitionFromRequest();
     
-    if (actionRequest.getCategory() != null) {
+    if(actionRequest.getCategory() != null) {
       // Update of category required
-      repositoryService.setProcessDefinitionCategory(processDefinition.getId(), actionRequest.getCategory());
+      ActivitiUtil.getRepositoryService().setProcessDefinitionCategory(processDefinition.getId(), actionRequest.getCategory());
       
       // No need to re-fetch the ProcessDefinition entity, just update category in response
-      ProcessDefinitionResponse response = restResponseFactory.createProcessDefinitionResponse(processDefinition);
+      ProcessDefinitionResponse response =  getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+              .createProcessDefinitionResponse(this, processDefinition);
       response.setCategory(actionRequest.getCategory());
       return response;
       
     } else {
       // Actual action
-      if (actionRequest.getAction() != null) {
-        if (ProcessDefinitionActionRequest.ACTION_SUSPEND.equals(actionRequest.getAction())) {
+      if(actionRequest.getAction() != null) {
+        if(ProcessDefinitionActionRequest.ACTION_SUSPEND.equals(actionRequest.getAction())) {
           return suspendProcessDefinition(processDefinition, actionRequest.isIncludeProcessInstances(), actionRequest.getDate());
-          
-        } else if (ProcessDefinitionActionRequest.ACTION_ACTIVATE.equals(actionRequest.getAction())) {
+        } else if(ProcessDefinitionActionRequest.ACTION_ACTIVATE.equals(actionRequest.getAction())) {
           return activateProcessDefinition(processDefinition, actionRequest.isIncludeProcessInstances(), actionRequest.getDate());
         }
       }
@@ -74,13 +74,13 @@ public class ProcessDefinitionResource extends BaseProcessDefinitionResource {
   }
   
   protected ProcessDefinitionResponse activateProcessDefinition(ProcessDefinition processDefinition, boolean suspendInstances, Date date) {
-    
-    if (!repositoryService.isProcessDefinitionSuspended(processDefinition.getId())) {
-      throw new ActivitiConflictException("Process definition with id '" + processDefinition.getId() + " ' is already active");
+    if(!processDefinition.isSuspended()) {
+      throw new ResourceException(Status.CLIENT_ERROR_CONFLICT.getCode(), "Process definition with id '" + processDefinition.getId() + " ' is already active", null, null);
     }
-    repositoryService.activateProcessDefinitionById(processDefinition.getId(), suspendInstances, date);
+    ActivitiUtil.getRepositoryService().activateProcessDefinitionById(processDefinition.getId(), suspendInstances, date);
    
-    ProcessDefinitionResponse response = restResponseFactory.createProcessDefinitionResponse(processDefinition);
+    ProcessDefinitionResponse response =  getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createProcessDefinitionResponse(this, processDefinition);
     
     // No need to re-fetch the ProcessDefinition, just alter the suspended state of the result-object
     response.setSuspended(false);
@@ -88,13 +88,13 @@ public class ProcessDefinitionResource extends BaseProcessDefinitionResource {
   }
 
   protected ProcessDefinitionResponse suspendProcessDefinition(ProcessDefinition processDefinition, boolean suspendInstances, Date date) {
-    
-    if (repositoryService.isProcessDefinitionSuspended(processDefinition.getId())) {
-      throw new ActivitiConflictException("Process definition with id '" + processDefinition.getId() + " ' is already suspended");
+    if(processDefinition.isSuspended()) {
+      throw new ResourceException(Status.CLIENT_ERROR_CONFLICT.getCode(), "Process definition with id '" + processDefinition.getId() + " ' is already suspended", null, null);
     }
-    repositoryService.suspendProcessDefinitionById(processDefinition.getId(), suspendInstances, date);
+    ActivitiUtil.getRepositoryService().suspendProcessDefinitionById(processDefinition.getId(), suspendInstances, date);
     
-    ProcessDefinitionResponse response = restResponseFactory.createProcessDefinitionResponse(processDefinition);
+    ProcessDefinitionResponse response =  getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createProcessDefinitionResponse(this, processDefinition);
     
     // No need to re-fetch the ProcessDefinition, just alter the suspended state of the result-object
     response.setSuspended(true);

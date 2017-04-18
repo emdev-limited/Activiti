@@ -1,6 +1,5 @@
 package org.activiti.bpmn.model;
 
-
 public class DataSpec extends BaseElement {
   
   protected String name;
@@ -24,17 +23,5 @@ public class DataSpec extends BaseElement {
   }
   public void setCollection(boolean isCollection) {
     this.isCollection = isCollection;
-  }
-  
-  public DataSpec clone() {
-    DataSpec clone = new DataSpec();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(DataSpec otherDataSpec) {
-    setName(otherDataSpec.getName());
-    setItemSubjectRef(otherDataSpec.getItemSubjectRef());
-    setCollection(otherDataSpec.isCollection());
   }
 }

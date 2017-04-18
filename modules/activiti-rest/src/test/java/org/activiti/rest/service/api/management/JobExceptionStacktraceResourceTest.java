@@ -4,15 +4,17 @@ import java.util.Calendar;
 import java.util.Collections;
 
 import org.activiti.engine.ActivitiException;
+import org.activiti.engine.impl.util.ClockUtil;
 import org.activiti.engine.runtime.Job;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.restlet.data.MediaType;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
+import org.restlet.resource.ResourceException;
 
 /**
  * Test for all REST-operations related to the Job collection and a single
@@ -20,8 +22,9 @@ import org.apache.http.client.methods.HttpGet;
  * 
  * @author Frederik Heremans
  */
-public class JobExceptionStacktraceResourceTest extends BaseSpringRestTestCase {
+public class JobExceptionStacktraceResourceTest extends BaseRestTestCase {
 
+  
   /**
    * Test getting the stacktrace for a failed job
    */
@@ -44,26 +47,35 @@ public class JobExceptionStacktraceResourceTest extends BaseSpringRestTestCase {
     
     Calendar now = Calendar.getInstance();
     now.set(Calendar.MILLISECOND, 0);
-    processEngineConfiguration.getClock().setCurrentTime(now.getTime());
+    ClockUtil.setCurrentTime(now.getTime());
     
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_EXCEPTION_STRACKTRACE, timerJob.getId())), HttpStatus.SC_OK);
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_EXCEPTION_STRACKTRACE, timerJob.getId()));
+    Representation response = client.get();
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
     
-    String stack = IOUtils.toString(response.getEntity().getContent());
+    String stack = response.getText();
     assertNotNull(stack);
     assertEquals(managementService.getJobExceptionStacktrace(timerJob.getId()), stack);
     
     // Also check content-type
-    assertEquals("text/plain", response.getEntity().getContentType().getValue());
-    closeResponse(response);
+    assertEquals(MediaType.TEXT_PLAIN.getName(), getMediaType(client));
+   
   }
   
   /**
    * Test getting the stacktrace for an unexisting job.
    */
   public void testGetStrackForUnexistingJob() throws Exception {
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_EXCEPTION_STRACKTRACE, "unexistingjob")), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(
+            RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_EXCEPTION_STRACKTRACE, "unexistingjob"));
+    
+    try {
+      client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Could not find a job with id 'unexistingjob'.", expected.getStatus().getDescription());
+    }
   }
   
   /**
@@ -76,7 +88,17 @@ public class JobExceptionStacktraceResourceTest extends BaseSpringRestTestCase {
     Job timerJob = managementService.createJobQuery().processInstanceId(processInstance.getId()).singleResult();
     assertNotNull(timerJob);
     
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_EXCEPTION_STRACKTRACE, timerJob.getId())), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(
+            RestUrls.createRelativeResourceUrl(RestUrls.URL_JOB_EXCEPTION_STRACKTRACE, timerJob.getId()));
+    
+    try {
+      client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Job with id '" + timerJob.getId() + "' doesn't have an exception stacktrace.", expected.getStatus().getDescription());
+    }
   }
+  
+
 }

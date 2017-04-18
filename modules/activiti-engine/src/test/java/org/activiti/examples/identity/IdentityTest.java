@@ -12,7 +12,6 @@
  */
 package org.activiti.examples.identity;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -169,7 +168,9 @@ public class IdentityTest extends PluggableActivitiTestCase {
 
   private Object createStringSet(String... strings) {
     Set<String> stringSet = new HashSet<String>();
-    Collections.addAll(stringSet, strings);
+    for (String string : strings) {
+      stringSet.add(string);
+    }
     return stringSet;
   }
 

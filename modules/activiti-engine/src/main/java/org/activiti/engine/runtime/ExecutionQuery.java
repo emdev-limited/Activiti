@@ -13,7 +13,6 @@
 package org.activiti.engine.runtime;
 
 import java.io.Serializable;
-import java.util.Set;
 
 import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.query.Query;
@@ -30,23 +29,11 @@ public interface ExecutionQuery extends Query<ExecutionQuery, Execution>{
   /** Only select executions which have the given process definition key. **/
   ExecutionQuery processDefinitionKey(String processDefinitionKey);
   
-  /** Only select executions which have process definitions with the given keys. **/
-  ExecutionQuery processDefinitionKeys(Set<String> processDefinitionKeys);
-  
   /** Only select executions which have the given process definition id. **/
   ExecutionQuery processDefinitionId(String processDefinitionId);
 
-  /** Only select executions which have the given process definition category. */
-  ExecutionQuery processDefinitionCategory(String processDefinitionCategory);
-
   /** Only select executions which have the given process definition name. */
   ExecutionQuery processDefinitionName(String processDefinitionName);
-
-  /**
-   * Only select executions which have the given process definition version.
-   * Particulary useful when used in combination with {@link #processDefinitionKey(String)}
-  */
-  ExecutionQuery processDefinitionVersion(Integer processDefinitionVersion);
 
   /** Only select executions which have the given process instance id. **/
   ExecutionQuery processInstanceId(String processInstanceId);
@@ -76,21 +63,6 @@ public interface ExecutionQuery extends Query<ExecutionQuery, Execution>{
   
   /** Only select executions which are a direct child-execution of the execution with the given id. **/
   ExecutionQuery parentId(String parentId);
-  
-	/**
-	 * Only select process instances that have the given tenant id.
-	 */
-  ExecutionQuery executionTenantId(String tenantId);
-
-	/**
-	 * Only select process instances with a tenant id like the given one.
-	 */
-  ExecutionQuery executionTenantIdLike(String tenantIdLike);
-	
-	/**
-	 * Only select process instances that do not have a tenant id.
-	 */
-  ExecutionQuery executionWithoutTenantId();
   
   /** 
    * Only select executions which have a local variable with the given value. The type
@@ -195,16 +167,6 @@ public interface ExecutionQuery extends Query<ExecutionQuery, Execution>{
    */
   ExecutionQuery variableValueLike(String name, String value);
   
-  /** 
-   * Only select executions which have a local variable value like the given value (case insensitive).
-   * This be used on string variables only.
-   * @param name variable name, cannot be null.
-   * @param value variable value, cannot be null. The string can include the
-   * wildcard character '%' to express like-strategy: 
-   * starts with (string%), ends with (%string) or contains (%string%).
-   */
-  ExecutionQuery variableValueLikeIgnoreCase(String name, String value);
-  
   /**
    * Only select executions which are part of a process that have a variable
    * with the given name set to the given value.
@@ -257,18 +219,6 @@ public interface ExecutionQuery extends Query<ExecutionQuery, Execution>{
    */
   ExecutionQuery processVariableValueNotEqualsIgnoreCase(String name, String value);
   
-  /**
-   * Only select executions which are part of a process that have at least one variable like the given value.
-   * Byte-arrays and {@link Serializable} objects (which are not primitive type wrappers) are not supported.
-   */
-  ExecutionQuery processVariableValueLike(String name, String value);
-  
-  /**
-   * Only select executions which are part of a process that have at least one variable like the given value (case insensitive).
-   * Byte-arrays and {@link Serializable} objects (which are not primitive type wrappers) are not supported.
-   */
-  ExecutionQuery processVariableValueLikeIgnoreCase(String name, String value);
-  
   // event subscriptions //////////////////////////////////////////////////
   
   /** 
@@ -299,16 +249,6 @@ public interface ExecutionQuery extends Query<ExecutionQuery, Execution>{
    */
   ExecutionQuery messageEventSubscriptionName(String messageName);
   
-  /**
-   * Localize execution name and description to specified locale.
-   */
-  ExecutionQuery locale(String locale);
-  
-  /**
-   * Instruct localization to fallback to more general locales including the default locale of the JVM if the specified locale is not found. 
-   */
-  ExecutionQuery withLocalizationFallback();
-  
   //ordering //////////////////////////////////////////////////////////////
   
   /** Order by id (needs to be followed by {@link #asc()} or {@link #desc()}). */
@@ -319,8 +259,5 @@ public interface ExecutionQuery extends Query<ExecutionQuery, Execution>{
   
   /** Order by process definition id (needs to be followed by {@link #asc()} or {@link #desc()}). */
   ExecutionQuery orderByProcessDefinitionId();
-  
-	/** Order by tenant id (needs to be followed by {@link #asc()} or {@link #desc()}). */
-  ExecutionQuery orderByTenantId();
   
 }

@@ -30,7 +30,6 @@ import org.activiti.explorer.ui.AbstractPage;
 import org.activiti.explorer.ui.MainWindow;
 import org.activiti.explorer.ui.management.ManagementMenuBar;
 import org.activiti.explorer.ui.management.admin.AdministrationPage;
-import org.activiti.explorer.ui.management.crystalball.CrystalBallPage;
 import org.activiti.explorer.ui.management.db.DatabasePage;
 import org.activiti.explorer.ui.management.deployment.DeploymentPage;
 import org.activiti.explorer.ui.management.identity.GroupPage;
@@ -327,10 +326,6 @@ public class DefaultViewManager implements ViewManager, Serializable {
   
   public void showAdministrationPage(String managementId) {
     switchView(new AdministrationPage(managementId), ViewManager.MAIN_NAVIGATION_MANAGE, ManagementMenuBar.ENTRY_ADMIN);
-  }
-  
-  public void showCrystalBallPage() {
-    switchView(new CrystalBallPage(), ViewManager.MAIN_NAVIGATION_MANAGE, ManagementMenuBar.ENTRY_CRYSTALBALL);
   }
   
   // Profile

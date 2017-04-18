@@ -186,7 +186,7 @@ public class TaskRelatedContentComponent extends VerticalLayout implements Relat
       attachments = taskService.getTaskAttachments(task.getId());
     }
     
-    if(!attachments.isEmpty()) {
+    if(attachments.size() > 0) {
       addAttachmentsToTable(attachments);
     } else {
       table.setVisible(false);
@@ -209,7 +209,7 @@ public class TaskRelatedContentComponent extends VerticalLayout implements Relat
       attachmentItem.getItemProperty("delete").setValue(deleteButton);
     }
     
-    if(!table.getItemIds().isEmpty()) {
+    if(table.getItemIds().size() > 0) {
       table.setVisible(true);
     }
     table.setPageLength(table.size());

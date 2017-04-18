@@ -84,7 +84,6 @@ public abstract class CdiActivitiTestCase {
     beanManager = ProgrammaticBeanLookup.lookup(BeanManager.class);
     processEngine = ProgrammaticBeanLookup.lookup(ProcessEngine.class);
     processEngineConfiguration = ((ProcessEngineImpl)ProcessEngineLookupForTestsuite.processEngine).getProcessEngineConfiguration();
-    activitiRule.setProcessEngineConfiguration(processEngineConfiguration);
     formService = processEngine.getFormService();
     historyService = processEngine.getHistoryService();
     identityService = processEngine.getIdentityService();

@@ -13,48 +13,28 @@
 package org.activiti.engine.impl.calendar;
 
 import org.activiti.engine.ActivitiException;
-import org.activiti.engine.runtime.ClockReader;
+import org.activiti.engine.impl.util.ClockUtil;
 
+import javax.xml.datatype.Duration;
+import java.text.ParseException;
 import java.util.Date;
 
-public class CycleBusinessCalendar extends BusinessCalendarImpl {
+public class CycleBusinessCalendar implements BusinessCalendar {
 
   public static String NAME = "cycle";
 
-  public CycleBusinessCalendar(ClockReader clockReader) {
-    super(clockReader);
-  }
 
-  public Date resolveDuedate(String duedateDescription, int maxIterations) {
+  public Date resolveDuedate(String duedateDescription) {
     try {
-      if (duedateDescription != null && duedateDescription.startsWith("R")) {
-        return new DurationHelper(duedateDescription, maxIterations, clockReader).getDateAfter();
+      if (duedateDescription.startsWith("R")) {
+        return new DurationHelper(duedateDescription).getDateAfter();
       } else {
-        CronExpression ce = new CronExpression(duedateDescription, clockReader);
-        return ce.getTimeAfter(clockReader.getCurrentTime());
+        CronExpression ce = new CronExpression(duedateDescription);
+        return ce.getTimeAfter(ClockUtil.getCurrentTime());
       }
 
     } catch (Exception e) {
-      throw new ActivitiException("Failed to parse cron expression: " + duedateDescription, e);
-    }
-
-  }
-
-
-  public Boolean validateDuedate(String duedateDescription, int maxIterations, Date endDate, Date newTimer) {
-    if (endDate != null) {
-      return super.validateDuedate(duedateDescription, maxIterations, endDate, newTimer);
-    }
-    //end date could be part of the chron expression
-    try {
-      if (duedateDescription != null && duedateDescription.startsWith("R")) {
-        return new DurationHelper(duedateDescription, maxIterations, clockReader).isValidDate(newTimer);
-      } else {
-        return true;
-      }
-
-    } catch (Exception e) {
-      throw new ActivitiException("Failed to parse cron expression: " + duedateDescription, e);
+      throw new ActivitiException("Failed to parse cron expression: "+duedateDescription, e);
     }
 
   }

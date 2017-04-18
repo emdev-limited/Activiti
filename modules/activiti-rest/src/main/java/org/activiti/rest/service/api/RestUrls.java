@@ -75,8 +75,6 @@ public final class RestUrls {
   public static final String SEGMENT_SOURCE = "source";
   public static final String SEGMENT_SOURCE_EXTRA = "source-extra";
   public static final String SEGMENT_DIAGRAM = "diagram";
-  public static final String SEGMENT_SIGNALS = "signals";
-  public static final String SEGMENT_IMAGE = "image";
   
   /**
    * URL template for the deployment collection: <i>repository/deployments</i>
@@ -89,7 +87,7 @@ public final class RestUrls {
   public static final String[] URL_DEPLOYMENT = {SEGMENT_REPOSITORY_RESOURCES, SEGMENT_DEPLOYMENT_RESOURCE, "{0}"};
   
   /**
-   * URL template listing deployment resources: <i>repository/deployments/{0:deploymentId}/resources</i>
+   * URL template listing deployment resources: <i>repository/deployments/{0:deploymentId}/resources/{1}:resourceId</i>
    */
   public static final String[] URL_DEPLOYMENT_RESOURCES = {SEGMENT_REPOSITORY_RESOURCES, SEGMENT_DEPLOYMENT_RESOURCE, 
     "{0}", SEGMENT_DEPLOYMENT_ARTIFACT_RESOURCE};
@@ -135,11 +133,6 @@ public final class RestUrls {
    * URL template for the model of a process definition: <i>repository/process-definitions/{0:processDefinitionId}/model</i>
    */
   public static final String[] URL_PROCESS_DEFINITION_MODEL = {SEGMENT_REPOSITORY_RESOURCES, SEGMENT_PROCESS_DEFINITION_RESOURCE, "{0}", SEGMENT_MODEL};
-  
-  /**
-   * URL template for the image of a process definition: <i>repository/process-definitions/{0:processDefinitionId}/image</i>
-   */
-  public static final String[] URL_PROCESS_DEFINITION_IMAGE = {SEGMENT_REPOSITORY_RESOURCES, SEGMENT_PROCESS_DEFINITION_RESOURCE, "{0}", SEGMENT_IMAGE};
   
   /**
    * URL template for the model collection: <i>repository/models</i>
@@ -312,14 +305,9 @@ public final class RestUrls {
   public static final String[] URL_PROCESS_INSTANCE_VARIABLE_DATA= {SEGMENT_RUNTIME_RESOURCES, SEGMENT_PROCESS_INSTANCE_RESOURCE, "{0}", SEGMENT_VARIABLES, "{1}", SEGMENT_VARIABLE_DATA};
   
   /**
-   * URL template for a comment on a process instance: <i>history/historic-process-instances/{0:processInstanceId}/comments/{1:commentId}</i>
+   * URL template for a comment on a process instance: <i>runtime/process-instances/{0:processInstanceId}/comments/{1:commentId}</i>
    */
-  public static final String[] URL_HISTORIC_PROCESS_INSTANCE_COMMENT = {SEGMENT_HISTORY_RESOURCES, SEGMENT_HISTORIC_PROCESS_INSTANCE_RESOURCE, "{0}", SEGMENT_COMMENTS, "{1}"};
-  
-  /**
-   * URL template for comments on a process instance: <i>history/historic-process-instances/{0:processInstanceId}/comments</i>
-   */
-  public static final String[] URL_HISTORIC_PROCESS_INSTANCE_COMMENT_COLLECTION = {SEGMENT_HISTORY_RESOURCES, SEGMENT_HISTORIC_PROCESS_INSTANCE_RESOURCE, "{0}", SEGMENT_COMMENTS};
+  public static final String[] URL_PROCESS_INSTANCE_COMMENT = {SEGMENT_RUNTIME_RESOURCES, SEGMENT_PROCESS_INSTANCE_RESOURCE, "{0}", SEGMENT_COMMENTS, "{1}"};
   
   /**
    * URL template for a process instance's identity links: <i>runtime/process-instances/{0:processInstanceId}/identitylinks</i>
@@ -516,11 +504,6 @@ public final class RestUrls {
    */
   public static final String[] URL_GROUP_MEMBERSHIP = {SEGMENT_IDENTITY_RESOURCES, SEGMENT_GROUPS, "{0}", SEGMENT_MEMBERS, "{1}"};
   
-  
-  /**
-   * URL template for a signals <i>runtime/signals</i>
-   */
-  public static final String[] URL_SIGNALS = {SEGMENT_RUNTIME_RESOURCES, SEGMENT_SIGNALS};
   /**
    * Creates an url based on the passed fragments and replaces any placeholders with the given arguments. The
    * placeholders are folowing the {@link MessageFormat} convention 

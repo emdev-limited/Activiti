@@ -12,8 +12,6 @@
  */
 package org.activiti.engine.impl.bpmn.data;
 
-import java.io.Serializable;
-
 import org.activiti.engine.delegate.Expression;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 
@@ -22,10 +20,8 @@ import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
  * 
  * @author Esteban Robles Luna
  */
-public abstract class AbstractDataAssociation implements Serializable {
+public abstract class AbstractDataAssociation {
 
-  private static final long serialVersionUID = 1L;
-  
   protected String source;
 
   protected Expression sourceExpression;

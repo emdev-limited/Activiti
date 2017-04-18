@@ -25,6 +25,7 @@ public class DummyServiceTask implements JavaDelegate {
   public void execute(DelegateExecution execution) throws Exception {
     Integer count = (Integer) execution.getVariable("count");
     count = count+1;
+    System.out.println("Count = " + count);
     execution.setVariable("count", count);
   }
 

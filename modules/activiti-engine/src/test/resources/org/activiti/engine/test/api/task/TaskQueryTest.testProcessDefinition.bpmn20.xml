@@ -8,15 +8,7 @@
   
     <startEvent id="theStart" />
     <sequenceFlow id="flow1" sourceRef="theStart" targetRef="theTask" />
-    <userTask id="theTask" name="my task">
-      <documentation>My Task Description</documentation>
-    
-      <extensionElements>
-        <activiti:localization locale="es" name="Mi Tarea">
-        <activiti:documentation>Mi Tarea Descripción</activiti:documentation>
-        </activiti:localization>
-      </extensionElements>
-    </userTask>    
+    <userTask id="theTask" name="my task" />    
     <sequenceFlow id="flow2" sourceRef="theTask" targetRef="theEnd" />
     <endEvent id="theEnd" />
     

@@ -17,7 +17,6 @@ import java.util.List;
 import javax.xml.stream.XMLStreamReader;
 
 import org.activiti.bpmn.constants.BpmnXMLConstants;
-import org.activiti.bpmn.converter.child.ActivitiEventListenerParser;
 import org.activiti.bpmn.converter.child.ExecutionListenerParser;
 import org.activiti.bpmn.converter.util.BpmnXMLUtil;
 import org.activiti.bpmn.model.BaseElement;
@@ -33,7 +32,7 @@ public class ExtensionElementsParser implements BpmnXMLConstants {
   
   public void parse(XMLStreamReader xtr, List<SubProcess> activeSubProcessList, Process activeProcess, BpmnModel model) throws Exception {
     BaseElement parentElement = null;
-    if (!activeSubProcessList.isEmpty()) {
+    if (activeSubProcessList.size() > 0) {
       parentElement = activeSubProcessList.get(activeSubProcessList.size() - 1);
       
     } else {
@@ -45,11 +44,7 @@ public class ExtensionElementsParser implements BpmnXMLConstants {
       xtr.next();
       if (xtr.isStartElement()) {
         if (ELEMENT_EXECUTION_LISTENER.equals(xtr.getLocalName())) {
-          new ExecutionListenerParser().parseChildElement(xtr, parentElement, model);
-        } else if (ELEMENT_EVENT_LISTENER.equals(xtr.getLocalName())){
-        	new ActivitiEventListenerParser().parseChildElement(xtr, parentElement, model);
-        } else if (ELEMENT_POTENTIAL_STARTER.equals(xtr.getLocalName())){
-          new PotentialStarterParser().parse(xtr, activeProcess);
+          new ExecutionListenerParser().parseChildElement(xtr, activeProcess, model);
         } else {
           ExtensionElement extensionElement = BpmnXMLUtil.parseExtensionElement(xtr);
           parentElement.addExtensionElement(extensionElement);

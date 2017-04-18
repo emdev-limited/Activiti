@@ -16,6 +16,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.activiti.engine.ActivitiObjectNotFoundException;
+import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.interceptor.Command;
 import org.activiti.engine.impl.interceptor.CommandContext;
 import org.activiti.engine.impl.persistence.entity.ProcessDefinitionEntity;
@@ -37,7 +38,8 @@ public class GetIdentityLinksForProcessDefinitionCmd implements Command<List<Ide
   
   @SuppressWarnings({"unchecked", "rawtypes"})
   public List<IdentityLink> execute(CommandContext commandContext) {
-    ProcessDefinitionEntity processDefinition = commandContext
+    ProcessDefinitionEntity processDefinition = Context
+        .getCommandContext()
         .getProcessDefinitionEntityManager()
         .findProcessDefinitionById(processDefinitionId);
       

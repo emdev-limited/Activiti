@@ -14,76 +14,62 @@
 package org.activiti.rest.service.api.history;
 
 
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-
 import org.activiti.rest.common.api.DataResponse;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.restlet.data.Form;
+import org.restlet.resource.Get;
 
 
 /**
  * @author Tijs Rademakers
  */
-@RestController
 public class HistoricActivityInstanceCollectionResource extends HistoricActivityInstanceBaseResource {
 
-  @RequestMapping(value="/history/historic-activity-instances", method = RequestMethod.GET, produces = "application/json")
-  public DataResponse getHistoricActivityInstances(@RequestParam Map<String,String> allRequestParams, HttpServletRequest request) {
+  @Get
+  public DataResponse getHistoricActivityInstances() {
+    if(!authenticate()) {
+      return null;
+    }
+    Form urlQuery = getQuery();
+    
     HistoricActivityInstanceQueryRequest query = new HistoricActivityInstanceQueryRequest();
 
     // Populate query based on request
-    if (allRequestParams.get("activityId") != null) {
-      query.setActivityId(allRequestParams.get("activityId"));
+    if (getQueryParameter("activityId", urlQuery) != null) {
+      query.setActivityId(getQueryParameter("activityId", urlQuery));
     }
     
-    if (allRequestParams.get("activityInstanceId") != null) {
-      query.setActivityInstanceId(allRequestParams.get("activityInstanceId"));
+    if (getQueryParameter("activityInstanceId", urlQuery) != null) {
+      query.setActivityInstanceId(getQueryParameter("activityInstanceId", urlQuery));
     }
     
-    if (allRequestParams.get("activityName") != null) {
-      query.setActivityName(allRequestParams.get("activityName"));
+    if (getQueryParameter("activityName", urlQuery) != null) {
+      query.setActivityName(getQueryParameter("activityName", urlQuery));
     }
     
-    if (allRequestParams.get("activityType") != null) {
-      query.setActivityType(allRequestParams.get("activityType"));
+    if (getQueryParameter("activityType", urlQuery) != null) {
+      query.setActivityType(getQueryParameter("activityType", urlQuery));
     }
     
-    if (allRequestParams.get("executionId") != null) {
-      query.setExecutionId(allRequestParams.get("executionId"));
+    if (getQueryParameter("executionId", urlQuery) != null) {
+      query.setExecutionId(getQueryParameter("executionId", urlQuery));
     }
     
-    if (allRequestParams.get("finished") != null) {
-      query.setFinished(Boolean.valueOf(allRequestParams.get("finished")));
+    if (getQueryParameter("finished", urlQuery) != null) {
+      query.setFinished(getQueryParameterAsBoolean("finished", urlQuery));
     }
     
-    if (allRequestParams.get("taskAssignee") != null) {
-      query.setTaskAssignee(allRequestParams.get("taskAssignee"));
+    if (getQueryParameter("taskAssignee", urlQuery) != null) {
+      query.setTaskAssignee(getQueryParameter("taskAssignee", urlQuery));
     }
     
-    if (allRequestParams.get("processInstanceId") != null) {
-      query.setProcessInstanceId(allRequestParams.get("processInstanceId"));
+    if (getQueryParameter("processInstanceId", urlQuery) != null) {
+      query.setProcessInstanceId(getQueryParameter("processInstanceId", urlQuery));
     }
     
-    if (allRequestParams.get("processDefinitionId") != null) {
-      query.setProcessDefinitionId(allRequestParams.get("processDefinitionId"));
-    }
-    
-    if (allRequestParams.get("tenantId") != null) {
-    	query.setTenantId(allRequestParams.get("tenantId"));
-    }
-    
-    if (allRequestParams.get("tenantIdLike") != null) {
-    	query.setTenantIdLike(allRequestParams.get("tenantIdLike"));
-    }
-    
-    if(allRequestParams.get("withoutTenantId") != null) {
-    	query.setWithoutTenantId(Boolean.valueOf(allRequestParams.get("withoutTenantId")));
+    if (getQueryParameter("processDefinitionId", urlQuery) != null) {
+      query.setProcessDefinitionId(getQueryParameter("processDefinitionId", urlQuery));
     }
 
-    return getQueryResponse(query, allRequestParams);
+    return getQueryResponse(query, urlQuery);
   }
 }

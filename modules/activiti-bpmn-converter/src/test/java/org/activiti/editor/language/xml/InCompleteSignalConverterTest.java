@@ -9,9 +9,7 @@ import java.util.List;
 import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.UserTask;
-import org.activiti.validation.ProcessValidator;
-import org.activiti.validation.ProcessValidatorFactory;
-import org.activiti.validation.ValidationError;
+import org.activiti.bpmn.model.parse.Problem;
 import org.junit.Test;
 
 public class InCompleteSignalConverterTest extends AbstractConverterTest {
@@ -31,10 +29,9 @@ public class InCompleteSignalConverterTest extends AbstractConverterTest {
     assertNotNull(flowElement);
     assertTrue(flowElement instanceof UserTask);
     assertEquals("task", flowElement.getId());
-
-    ProcessValidator processValidator = new ProcessValidatorFactory().createDefaultProcessValidator();
-    List<ValidationError> errors = processValidator.validate(model);
-    assertNotNull(errors);
-    assertEquals(2, errors.size());
+    
+    List<Problem> problems = model.getProblems();
+    assertNotNull(problems);
+    assertEquals(1, problems.size());
   }
 }

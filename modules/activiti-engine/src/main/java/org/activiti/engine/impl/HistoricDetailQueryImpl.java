@@ -20,15 +20,12 @@ import org.activiti.engine.history.HistoricDetailQuery;
 import org.activiti.engine.impl.interceptor.CommandContext;
 import org.activiti.engine.impl.interceptor.CommandExecutor;
 import org.activiti.engine.impl.persistence.entity.HistoricDetailVariableInstanceUpdateEntity;
-import org.activiti.engine.impl.variable.HistoricJPAEntityListVariableType;
 import org.activiti.engine.impl.variable.HistoricJPAEntityVariableType;
-import org.activiti.engine.impl.variable.JPAEntityListVariableType;
 import org.activiti.engine.impl.variable.JPAEntityVariableType;
 
 
 /**
  * @author Tom Baeyens
- * @author Joram Barrez
  */
 public class HistoricDetailQueryImpl extends AbstractQuery<HistoricDetailQuery, HistoricDetail> implements HistoricDetailQuery {
 
@@ -53,47 +50,47 @@ public class HistoricDetailQueryImpl extends AbstractQuery<HistoricDetailQuery, 
     super(commandExecutor);
   }
 
-  public HistoricDetailQueryImpl id(String id) {
+  public HistoricDetailQuery id(String id) {
     this.id = id;
     return this;
   }
   
-  public HistoricDetailQueryImpl processInstanceId(String processInstanceId) {
+  public HistoricDetailQuery processInstanceId(String processInstanceId) {
     this.processInstanceId = processInstanceId;
     return this;
   }
   
-  public HistoricDetailQueryImpl executionId(String executionId) {
+  public HistoricDetailQuery executionId(String executionId) {
     this.executionId = executionId;
     return this;
   }
 
-  public HistoricDetailQueryImpl activityId(String activityId) {
+  public HistoricDetailQuery activityId(String activityId) {
     this.activityId = activityId;
     return this;
   }
 
-  public HistoricDetailQueryImpl activityInstanceId(String activityInstanceId) {
+  public HistoricDetailQuery activityInstanceId(String activityInstanceId) {
     this.activityInstanceId = activityInstanceId;
     return this;
   }
 
-  public HistoricDetailQueryImpl taskId(String taskId) {
+  public HistoricDetailQuery taskId(String taskId) {
     this.taskId = taskId;
     return this;
   }
 
-  public HistoricDetailQueryImpl formProperties() {
+  public HistoricDetailQuery formProperties() {
     this.type = "FormProperty";
     return this;
   }
 
-  public HistoricDetailQueryImpl variableUpdates() {
+  public HistoricDetailQuery variableUpdates() {
     this.type = "VariableUpdate";
     return this;
   }
   
-  public HistoricDetailQueryImpl excludeTaskDetails() {
+  public HistoricDetailQuery excludeTaskDetails() {
     this.excludeTaskRelated = true;
     return this;
   }
@@ -127,10 +124,6 @@ public class HistoricDetailQueryImpl extends AbstractQuery<HistoricDetailQuery, 
             // Use HistoricJPAEntityVariableType to force caching of value to return from query
             varUpdate.setVariableType(HistoricJPAEntityVariableType.getSharedInstance());
             varUpdate.getValue();
-          } else if (varUpdate.getVariableType() instanceof JPAEntityListVariableType) {
-            // Use HistoricJPAEntityListVariableType to force caching of list to return from query
-            varUpdate.setVariableType(HistoricJPAEntityListVariableType.getSharedInstance());
-            varUpdate.getValue();
           }
         }
       }
@@ -140,32 +133,32 @@ public class HistoricDetailQueryImpl extends AbstractQuery<HistoricDetailQuery, 
   
   // order by /////////////////////////////////////////////////////////////////
   
-  public HistoricDetailQueryImpl orderByProcessInstanceId() {
+  public HistoricDetailQuery orderByProcessInstanceId() {
     orderBy(HistoricDetailQueryProperty.PROCESS_INSTANCE_ID);
     return this;
   }
 
-  public HistoricDetailQueryImpl orderByTime() {
+  public HistoricDetailQuery orderByTime() {
     orderBy(HistoricDetailQueryProperty.TIME);
     return this;
   }
 
-  public HistoricDetailQueryImpl orderByVariableName() {
+  public HistoricDetailQuery orderByVariableName() {
     orderBy(HistoricDetailQueryProperty.VARIABLE_NAME);
     return this;
   }
   
-  public HistoricDetailQueryImpl orderByFormPropertyId() {
+  public HistoricDetailQuery orderByFormPropertyId() {
     orderBy(HistoricDetailQueryProperty.VARIABLE_NAME);
     return this;
   }
 
-  public HistoricDetailQueryImpl orderByVariableRevision() {
+  public HistoricDetailQuery orderByVariableRevision() {
     orderBy(HistoricDetailQueryProperty.VARIABLE_REVISION);
     return this;
   }
 
-  public HistoricDetailQueryImpl orderByVariableType() {
+  public HistoricDetailQuery orderByVariableType() {
     orderBy(HistoricDetailQueryProperty.VARIABLE_TYPE);
     return this;
   }

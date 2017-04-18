@@ -13,8 +13,6 @@
 
 package org.activiti.engine.impl.bpmn.parser;
 
-import java.io.Serializable;
-
 
 
 /**
@@ -25,9 +23,7 @@ import java.io.Serializable;
  * @author Joram Barrez
  * @author Frederik Heremans
  */
-public class FieldDeclaration implements Serializable{
-  
-  private static final long serialVersionUID = 1L;
+public class FieldDeclaration {
   
   protected String name;
   protected String type;

@@ -1,9 +1,8 @@
 package org.activiti.engine.test.api.repository;
 
-import org.activiti.bpmn.exceptions.XMLException;
+import org.activiti.engine.ActivitiException;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
-import org.activiti.engine.repository.ProcessDefinition;
 
 /* Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,8 +42,9 @@ public class DeployInvalidXmlTest extends PluggableActivitiTestCase {
         .deploy()
         .getId();
       fail();
-    } catch (XMLException e) {
-      // expected exception
+    } catch (ActivitiException e) {
+      e.printStackTrace();
+      assertTextPresent("Could not validate XML with BPMN 2.0 XSD", e.getCause().getMessage());
     }
     
   }
@@ -56,8 +56,9 @@ public class DeployInvalidXmlTest extends PluggableActivitiTestCase {
             .deploy()
             .getId();
       fail();
-    } catch (XMLException e) {
-      // expected exception
+    } catch (ActivitiException e) {
+      e.printStackTrace();
+      assertTextPresent("Could not validate XML with BPMN 2.0 XSD", e.getCause().getMessage());
     }
   }
   
@@ -79,7 +80,7 @@ public class DeployInvalidXmlTest extends PluggableActivitiTestCase {
     "<!ENTITY lol9 '&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;'>" +
   "]>" +
   "<lolz>&lol9;</lolz>" +
-  "<definitions " +
+  "<definitions" +
     "xmlns='http://www.omg.org/spec/BPMN/20100524/MODEL'" +
     "xmlns:activiti='http://activiti.org/bpmn'" +
     "targetNamespace='Examples'>" +
@@ -94,11 +95,9 @@ public class DeployInvalidXmlTest extends PluggableActivitiTestCase {
   "</definitions>";
   
   
-  // See https://activiti.atlassian.net/browse/ACT-1579?focusedCommentId=319886#comment-319886
+  // See http://jira.codehaus.org/browse/ACT-1579?focusedCommentId=319886#comment-319886
   public void testProcessEngineDenialOfServiceAttackUsingUnsafeXmlTest() throws InterruptedException {
 
-  	// Putting this in a Runnable so we can time it out
-  	// Without safe xml, this would run forever
     MyRunnable runnable = new MyRunnable(repositoryService);
     Thread thread = new Thread(runnable);
     thread.start();
@@ -123,7 +122,6 @@ public class DeployInvalidXmlTest extends PluggableActivitiTestCase {
     public void run() {
       try {
         String deploymentId = repositoryService.createDeployment().addString("test.bpmn20.xml", UNSAFE_XML).deploy().getId();
-        assertEquals(1, repositoryService.createProcessDefinitionQuery().singleResult());
         repositoryService.deleteDeployment(deploymentId, true);
       } catch (Exception e) {
         // Exception is expected
@@ -133,16 +131,6 @@ public class DeployInvalidXmlTest extends PluggableActivitiTestCase {
       }
     }
     
-  }
-  
-  public void testExternalEntityResolvingTest() {
-  	String deploymentId = repositoryService.createDeployment().addClasspathResource("org/activiti/engine/test/api/repository/DeployInvalidXmlTest.testExternalEntityResolvingTest.bpmn20.xml").deploy().getId();
-  	try {
-  		ProcessDefinition processDefinition = repositoryService.createProcessDefinitionQuery().singleResult();
-  		assertEquals("Test 1 2 3 null", processDefinition.getDescription());
-  	} finally {
-  		repositoryService.deleteDeployment(deploymentId, true);
-  	}
   }
 
 }

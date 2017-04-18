@@ -26,13 +26,13 @@ import org.activiti.engine.runtime.ProcessInstance;
 public class SuspendProcessDefinitionCmd extends AbstractSetProcessDefinitionStateCmd {
   
   public SuspendProcessDefinitionCmd(ProcessDefinitionEntity processDefinitionEntity, 
-          boolean includeProcessInstances, Date executionDate, String tenantId) {
-    super(processDefinitionEntity, includeProcessInstances, executionDate, tenantId);
+          boolean includeProcessInstances, Date executionDate) {
+    super(processDefinitionEntity, includeProcessInstances, executionDate);
   }
 
   public SuspendProcessDefinitionCmd(String processDefinitionId, String processDefinitionKey,
-          boolean suspendProcessInstances, Date suspensionDate, String tenantId) {
-    super(processDefinitionId, processDefinitionKey, suspendProcessInstances, suspensionDate, tenantId);
+          boolean suspendProcessInstances, Date suspensionDate) {
+    super(processDefinitionId, processDefinitionKey, suspendProcessInstances, suspensionDate);
   }
   
   protected SuspensionState getProcessDefinitionSuspensionState() {

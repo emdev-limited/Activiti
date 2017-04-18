@@ -60,7 +60,7 @@ public class EventNotificationTest extends CdiActivitiTestCase {
     listenerBean.reset();
     
     assertEquals(0, listenerBean.getEndActivityService1());
-    assertEquals(0, listenerBean.getStartActivityService1WithoutLoopCounter());
+    assertEquals(0, listenerBean.getStartActivityService1());
     assertEquals(0, listenerBean.getTakeTransitiont1());
 
     // start the process
@@ -68,7 +68,7 @@ public class EventNotificationTest extends CdiActivitiTestCase {
 
     // assert
     assertEquals(1, listenerBean.getEndActivityService1());
-    assertEquals(1, listenerBean.getStartActivityService1WithoutLoopCounter());
+    assertEquals(1, listenerBean.getStartActivityService1());
     assertEquals(1, listenerBean.getTakeTransitiont1());
   }
   
@@ -81,10 +81,9 @@ public class EventNotificationTest extends CdiActivitiTestCase {
     assertEquals(0, listenerBean.getCreateTask1());
     assertEquals(0, listenerBean.getAssignTask1());
     assertEquals(0, listenerBean.getCompleteTask1());
-    assertEquals(0, listenerBean.getDeleteTask3());
     
     // start the process
-    ProcessInstance pi = runtimeService.startProcessInstanceByKey("process3");
+    runtimeService.startProcessInstanceByKey("process3");
     
     Task task = taskService.createTaskQuery().singleResult();
     
@@ -94,19 +93,12 @@ public class EventNotificationTest extends CdiActivitiTestCase {
     task = taskService.createTaskQuery().singleResult();
     taskService.complete(task.getId());
     
-    do {
-      task = taskService.createTaskQuery().singleResult();
-    } while (task == null);
-    
-    runtimeService.deleteProcessInstance(pi.getId(), "DELETED");
-    
     // assert
     assertEquals(1, listenerBean.getCreateTask1());
     assertEquals(1, listenerBean.getCreateTask2());
     assertEquals(1, listenerBean.getAssignTask1());
     assertEquals(1, listenerBean.getCompleteTask1());
     assertEquals(1, listenerBean.getCompleteTask2());
-    assertEquals(1, listenerBean.getDeleteTask3());
   }
 
 

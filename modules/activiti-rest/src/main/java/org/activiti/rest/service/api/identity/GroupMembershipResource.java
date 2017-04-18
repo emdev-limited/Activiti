@@ -13,39 +13,37 @@
 
 package org.activiti.rest.service.api.identity;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.activiti.engine.ActivitiObjectNotFoundException;
+import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.identity.Group;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.restlet.data.Status;
+import org.restlet.resource.Delete;
+import org.restlet.resource.ResourceException;
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class GroupMembershipResource extends BaseGroupResource {
 
-  @RequestMapping(value="/identity/groups/{groupId}/members/{userId}", method = RequestMethod.DELETE)
-  public void deleteMembership(@PathVariable("groupId") String groupId, @PathVariable("userId") String userId,
-      HttpServletRequest request, HttpServletResponse response) {
-    
-    Group group = getGroupFromRequest(groupId);
+ @Delete
+ public void deleteMembership() {
+   Group group = getGroupFromRequest();
    
-    // Check if user is not a member of group since API doesn't return typed exception
-    if (identityService.createUserQuery()
-        .memberOfGroup(group.getId())
-        .userId(userId)
-        .count() != 1) {
-      
-      throw new ActivitiObjectNotFoundException("User '" + userId + "' is not part of group '" + group.getId() + "'.", null);
-    }
+   String userId = getAttribute("userId");
+   if(userId == null) {
+     throw new ActivitiIllegalArgumentException("UserId cannot be null.");
+   }
    
-    identityService.deleteMembership(userId, group.getId());
-    response.setStatus(HttpStatus.NO_CONTENT.value());
-  }
+   // Check if user is not a member of group since API doesn't return typed exception
+   if(ActivitiUtil.getIdentityService().createUserQuery()
+     .memberOfGroup(group.getId())
+     .userId(userId)
+     .count() != 1) {
+     throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND.getCode(), "User '" + userId + 
+             "' is not part of group '" + group.getId() + "'.", null, null);
+   }
+   
+   ActivitiUtil.getIdentityService().deleteMembership(userId, group.getId());
+   setStatus(Status.SUCCESS_NO_CONTENT);
+ }
 }

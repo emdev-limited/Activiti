@@ -12,7 +12,6 @@
  */
 package org.activiti.bpmn.model;
 
-
 /**
  * @author Tijs Rademakers
  */
@@ -39,20 +38,5 @@ public class CustomProperty extends BaseElement {
   }
   public void setComplexValue(ComplexDataType complexValue) {
     this.complexValue = complexValue;
-  }
-  
-  public CustomProperty clone() {
-    CustomProperty clone = new CustomProperty();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(CustomProperty otherProperty) {
-    setName(otherProperty.getName());
-    setSimpleValue(otherProperty.getSimpleValue());
-    
-    if (otherProperty.getComplexValue() != null && otherProperty.getComplexValue() instanceof DataGrid) {
-      setComplexValue(((DataGrid) otherProperty.getComplexValue()).clone());
-    }
   }
 }

@@ -17,8 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.activiti.engine.delegate.event.ActivitiEventType;
-import org.activiti.engine.delegate.event.impl.ActivitiEventBuilder;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.persistence.AbstractManager;
 
@@ -33,11 +31,6 @@ public class IdentityLinkEntityManager extends AbstractManager {
     getDbSqlSession().delete(identityLink);
     if(cascadeHistory) {
       getHistoryManager().deleteHistoricIdentityLink(identityLink.getId());
-    }
-    
-    if(Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
-    	Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
-    			ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_DELETED, identityLink));
     }
   }
   
@@ -72,16 +65,6 @@ public class IdentityLinkEntityManager extends AbstractManager {
   }
   
   @SuppressWarnings("unchecked")
-  public List<IdentityLinkEntity> findIdentityLinkByProcessInstanceUserGroupAndType(String processInstanceId, String userId, String groupId, String type) {
-    Map<String, String> parameters = new HashMap<String, String>();
-    parameters.put("processInstanceId", processInstanceId);
-    parameters.put("userId", userId);
-    parameters.put("groupId", groupId);
-    parameters.put("type", type);
-    return getDbSqlSession().selectList("selectIdentityLinkByProcessInstanceUserGroupAndType", parameters);
-  }
-  
-  @SuppressWarnings("unchecked")
   public List<IdentityLinkEntity> findIdentityLinkByProcessDefinitionUserAndGroup(String processDefinitionId, String userId, String groupId) {
     Map<String, String> parameters = new HashMap<String, String>();
     parameters.put("processDefinitionId", processDefinitionId);
@@ -106,22 +89,11 @@ public class IdentityLinkEntityManager extends AbstractManager {
       deleteIdentityLink(identityLink, false);
     }
     
-    // Identity links from cache, if not already deleted
+    // Identity links from cache
     List<IdentityLinkEntity> identityLinksFromCache = Context.getCommandContext().getDbSqlSession().findInCache(IdentityLinkEntity.class);
-    boolean alreadyDeleted = false;
     for (IdentityLinkEntity identityLinkEntity : identityLinksFromCache) {
       if (processInstanceId.equals(identityLinkEntity.getProcessInstanceId())) {
-      	alreadyDeleted = false;
-      	for(IdentityLinkEntity deleted : identityLinks) {
-      		if(deleted.getId() != null && deleted.getId().equals(identityLinkEntity.getId())) {
-      			alreadyDeleted = true;
-      			break;
-      		}
-      	}
-      	
-      	if(!alreadyDeleted) {
-      		deleteIdentityLink(identityLinkEntity, false);
-      	}
+        deleteIdentityLink(identityLinkEntity, false);
       }
     }
   }

@@ -74,7 +74,7 @@ public class XML {
      * @return The escaped string.
      */
     public static String escape(String string) {
-        StringBuilder sb = new StringBuilder();
+        StringBuffer sb = new StringBuffer();
         for (int i = 0, len = string.length(); i < len; i++) {
             char c = string.charAt(i);
             switch (c) {
@@ -325,7 +325,7 @@ public class XML {
      */
     public static String toString(Object o, String tagName)
             throws JSONException {
-        StringBuilder b = new StringBuilder();
+        StringBuffer b = new StringBuffer();
         int          i;
         JSONArray    ja;
         JSONObject   jo;

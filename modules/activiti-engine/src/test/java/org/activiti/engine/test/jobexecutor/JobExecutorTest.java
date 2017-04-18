@@ -12,9 +12,7 @@
  */
 package org.activiti.engine.test.jobexecutor;
 
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
@@ -45,10 +43,6 @@ public class JobExecutorTest extends JobExecutorTestCase {
         return null;
       }
     });
-    
-    GregorianCalendar currentCal = new GregorianCalendar();
-    currentCal.add(Calendar.MINUTE, 1);
-    processEngineConfiguration.getClock().setCurrentTime(currentCal.getTime());
     
     waitForJobExecutorToProcessAllJobs(8000L, 200L);
     

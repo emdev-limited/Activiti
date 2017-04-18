@@ -23,5 +23,5 @@ import org.activiti.engine.delegate.DelegateExecution;
  */
 public interface Condition extends Serializable {
 
-  boolean evaluate(String sequenceFlowId, DelegateExecution execution);
+  boolean evaluate(DelegateExecution execution);
 }

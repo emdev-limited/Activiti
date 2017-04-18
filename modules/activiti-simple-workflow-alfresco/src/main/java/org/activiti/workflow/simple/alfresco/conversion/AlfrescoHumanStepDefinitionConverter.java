@@ -12,15 +12,11 @@
  */
 package org.activiti.workflow.simple.alfresco.conversion;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map.Entry;
 
-import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.UserTask;
 import org.activiti.workflow.simple.alfresco.conversion.exception.AlfrescoSimpleWorkflowException;
 import org.activiti.workflow.simple.alfresco.conversion.form.AlfrescoFormCreator;
-import org.activiti.workflow.simple.alfresco.conversion.script.PropertyReference;
 import org.activiti.workflow.simple.alfresco.conversion.script.ScriptTaskListenerBuilder;
 import org.activiti.workflow.simple.alfresco.model.M2Model;
 import org.activiti.workflow.simple.alfresco.model.M2Namespace;
@@ -31,10 +27,8 @@ import org.activiti.workflow.simple.alfresco.model.config.Module;
 import org.activiti.workflow.simple.converter.WorkflowDefinitionConversion;
 import org.activiti.workflow.simple.converter.step.HumanStepDefinitionConverter;
 import org.activiti.workflow.simple.converter.step.StepDefinitionConverter;
-import org.activiti.workflow.simple.definition.HumanStepAssignment.HumanStepAssignmentType;
 import org.activiti.workflow.simple.definition.HumanStepDefinition;
 import org.activiti.workflow.simple.definition.StepDefinition;
-import org.activiti.workflow.simple.exception.SimpleWorkflowException;
 
 /**
  * A {@link StepDefinitionConverter} which adds a content-model and a form-config to the conversion
@@ -58,24 +52,25 @@ public class AlfrescoHumanStepDefinitionConverter extends HumanStepDefinitionCon
 	}
 
 	@Override
-	public UserTask convertStepDefinition(StepDefinition stepDefinition, WorkflowDefinitionConversion conversion) {
-		HumanStepDefinition humanStep = (HumanStepDefinition) stepDefinition;
-		validate(humanStep);
-		
-		M2Model model = AlfrescoConversionUtil.getContentModel(conversion);
-		M2Namespace modelNamespace = model.getNamespaces().get(0);
-		
+	public void convertStepDefinition(StepDefinition stepDefinition, WorkflowDefinitionConversion conversion) {
 		// Let superclass handle BPMN-specific conversion
-		UserTask userTask = super.convertStepDefinition(stepDefinition, conversion);
+		super.convertStepDefinition(stepDefinition, conversion);
 		
 		// Clear form-properties in the BPMN file, as we use custom form-mapping in Alfresco
+		String userTaskId = conversion.getLastActivityId();
+		UserTask userTask = (UserTask) conversion.getProcess().getFlowElement(userTaskId);
 		userTask.getFormProperties().clear();
+		
+		HumanStepDefinition humanStep = (HumanStepDefinition) stepDefinition;
+		validate(humanStep);
 		
 		userTask.setName(humanStep.getName() != null ? humanStep.getName() : humanStep.getId());
 		
 		// Create the content model for the task
 		M2Type type = new M2Type();
+		M2Model model = AlfrescoConversionUtil.getContentModel(conversion);
 		model.getTypes().add(type);
+		M2Namespace modelNamespace = model.getNamespaces().get(0);
 		type.setName(AlfrescoConversionUtil.getQualifiedName(modelNamespace.getPrefix(),
 				humanStep.getId()));
 		type.setParentName(AlfrescoConversionConstants.DEFAULT_BASE_FORM_TYPE);
@@ -84,7 +79,7 @@ public class AlfrescoHumanStepDefinitionConverter extends HumanStepDefinitionCon
 		userTask.setFormKey(type.getName());
 		
 		// Create a form-config for the task
-		Module shareModule = AlfrescoConversionUtil.getExtension(conversion).getModules().get(0);
+		Module shareModule = AlfrescoConversionUtil.getModule(conversion);
 		Configuration configuration = shareModule.addConfiguration(AlfrescoConversionConstants.EVALUATOR_TASK_TYPE
 				, type.getName());
 		Form formConfig = configuration.createForm();
@@ -95,38 +90,27 @@ public class AlfrescoHumanStepDefinitionConverter extends HumanStepDefinitionCon
 		// Set up property sharing using task-listeners
 		addPropertySharing(humanStep, conversion, userTask);
 		
-		// Special handling for assignee that reference form-properties, before BPMN
-		// is created
-		if (humanStep.getAssignmentType() == HumanStepAssignmentType.USER) {
-			String assignee = humanStep.getAssignment().getAssignee();
-
-			if (assignee != null && PropertyReference.isPropertyReference(assignee)) {
-				PropertyReference reference = PropertyReference.createReference(assignee);
-				AlfrescoConversionUtil.getPropertyReferences(conversion).add(reference);
-				userTask.setAssignee(reference.getUsernameReferenceExpression(modelNamespace.getPrefix()));
-			}
-		} else if (humanStep.getAssignmentType() == HumanStepAssignmentType.USERS) {
-			if(humanStep.getAssignment().getCandidateUsers() != null) {
-				userTask.setCandidateUsers(resolveUserPropertyReferences(humanStep.getAssignment().getCandidateUsers(), modelNamespace.getPrefix(), conversion));
-			}
-		} else if (humanStep.getAssignmentType() == HumanStepAssignmentType.GROUPS) {
-			if(humanStep.getAssignment().getCandidateGroups() != null) {
-				userTask.setCandidateGroups(resolveGroupPropertyReferences(humanStep.getAssignment().getCandidateGroups(), modelNamespace.getPrefix(), conversion));
-			}
-		}
+		// Add Script listeners
+		addScriptListeners(humanStep, conversion, userTask);
 		
-		return userTask;
 	}
 	
-	protected UserTask locateUserTask(WorkflowDefinitionConversion conversion) {
-		List<FlowElement> elements = (List<FlowElement>) conversion.getProcess().getFlowElements();
-		
-		for(int i=elements.size() -1; i >= 0; i--) {
-			if(elements.get(i) instanceof UserTask) {
-				return (UserTask) elements.get(i);
-			}
+	protected void addScriptListeners(HumanStepDefinition humanStep, WorkflowDefinitionConversion conversion,
+      UserTask userTask) {
+	  
+		// Add create-script-listener if it has been used in this conversion
+		if(AlfrescoConversionUtil.hasTaskScriptTaskListenerBuilder(conversion, userTask.getId(), 
+				AlfrescoConversionConstants.TASK_LISTENER_EVENT_CREATE)) {
+			userTask.getTaskListeners().add(AlfrescoConversionUtil.getScriptTaskListenerBuilder(conversion, userTask.getId(), 
+					AlfrescoConversionConstants.TASK_LISTENER_EVENT_CREATE).build());
 		}
-		throw new SimpleWorkflowException("No usertask found in conversion");
+		
+		// Add complete-script-listener if it has been used in this conversion
+		if(AlfrescoConversionUtil.hasTaskScriptTaskListenerBuilder(conversion, userTask.getId(), 
+				AlfrescoConversionConstants.TASK_LISTENER_EVENT_COMPLETE)) {
+			userTask.getTaskListeners().add(AlfrescoConversionUtil.getScriptTaskListenerBuilder(conversion, userTask.getId(), 
+					AlfrescoConversionConstants.TASK_LISTENER_EVENT_COMPLETE).build());
+		}
   }
 
 	protected void addPropertySharing(HumanStepDefinition humanStep, WorkflowDefinitionConversion conversion, UserTask userTask) {
@@ -159,46 +143,6 @@ public class AlfrescoHumanStepDefinitionConverter extends HumanStepDefinitionCon
 		}
   }
 
-	protected List<String> resolveUserPropertyReferences(List<String> list, String namespacePrefix, WorkflowDefinitionConversion conversion) {
-		if(list != null) {
-			List<String> result = new ArrayList<String>();
-			PropertyReference propertyReference = null;
-			for(String string : list) {
-				if(PropertyReference.isPropertyReference(string)) {
-					propertyReference = PropertyReference.createReference(string);
-					result.add(propertyReference.getUsernameReferenceExpression(namespacePrefix));
-					
-					// Add reference to be validated 
-					AlfrescoConversionUtil.getPropertyReferences(conversion).add(propertyReference);
-				} else {
-					result.add(string);
-				}
-			}
-			return result;
-		}
-		return null;
-	}
-	
-	protected List<String> resolveGroupPropertyReferences(List<String> list, String namespacePrefix, WorkflowDefinitionConversion conversion) {
-		if(list != null) {
-			List<String> result = new ArrayList<String>();
-			PropertyReference propertyReference = null;
-			for(String string : list) {
-				if(PropertyReference.isPropertyReference(string)) {
-					propertyReference = PropertyReference.createReference(string);
-					result.add(propertyReference.getGroupReferenceExpression(namespacePrefix));
-					
-					// Add reference to be validated 
-					AlfrescoConversionUtil.getPropertyReferences(conversion).add(propertyReference);
-				} else {
-					result.add(string);
-				}
-			}
-			return result;
-		}
-		return null;
-	}
-	
 	@Override
 	protected String getInitiatorExpression() {
 		// Use the correct assignee expression if the initiator is used for assignment
@@ -214,10 +158,7 @@ public class AlfrescoHumanStepDefinitionConverter extends HumanStepDefinitionCon
 
 	protected void validate(HumanStepDefinition stepDefinition) {
 		if(stepDefinition.getId() == null) {
-			if(stepDefinition.getName() == null && !stepDefinition.getName().isEmpty()) {
-				throw new AlfrescoSimpleWorkflowException("Name or id of a human step is required.");
-			}
-			stepDefinition.setId(AlfrescoConversionUtil.getValidIdString(stepDefinition.getName()));
+			throw new AlfrescoSimpleWorkflowException("Id of a human step is required.");
 		}
   }
 

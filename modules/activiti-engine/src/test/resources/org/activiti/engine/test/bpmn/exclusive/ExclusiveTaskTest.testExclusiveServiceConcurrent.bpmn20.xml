@@ -33,14 +33,14 @@
     <sequenceFlow sourceRef="service11" targetRef="join2" />
     <sequenceFlow sourceRef="service12" targetRef="join2" />
     
-    <parallelGateway id="join2" activiti:async="true" />
+    <parallelGateway id="join2" />
     
     <sequenceFlow sourceRef="service" targetRef="fork2" />
     <sequenceFlow sourceRef="join2" targetRef="join" />
     <sequenceFlow sourceRef="service2" targetRef="join" />
     <sequenceFlow sourceRef="service3" targetRef="join" />
     
-    <parallelGateway id="join" activiti:async="true" />
+    <parallelGateway id="join" />
     
     <sequenceFlow sourceRef="join" targetRef="theEnd" />
         

@@ -72,18 +72,7 @@ public class AstMethod extends AstNode {
 
 	@Override
 	public Object eval(Bindings bindings, ELContext context) {
-	  Class<?>[] paramTypes = null;
-	  if (params.getCardinality() == 1) {
-	    AstNode astNode = params.getChild(0);
-      if (astNode instanceof AstString) {
-        paramTypes = new Class<?>[params.getCardinality()];
-        paramTypes[0] = String.class;
-      } else if (astNode instanceof AstBoolean) {
-        paramTypes = new Class<?>[params.getCardinality()];
-        paramTypes[0] = Boolean.class;
-      }
-	  }
-		return invoke(bindings, context, null, paramTypes, null);
+		return invoke(bindings, context, null, null, null);
 	}
 
 	public Object invoke(Bindings bindings, ELContext context, Class<?> returnType, Class<?>[] paramTypes, Object[] paramValues) {

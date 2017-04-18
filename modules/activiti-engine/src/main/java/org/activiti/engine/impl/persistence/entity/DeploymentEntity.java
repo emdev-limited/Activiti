@@ -20,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.db.PersistentObject;
 import org.activiti.engine.repository.Deployment;
@@ -36,7 +35,6 @@ public class DeploymentEntity implements Serializable, Deployment, PersistentObj
   protected String id;
   protected String name;
   protected String category;
-  protected String tenantId = ProcessEngineConfiguration.NO_TENANT_ID;
   protected Map<String, ResourceEntity> resources;
   protected Date deploymentTime;
   protected boolean isNew;
@@ -76,7 +74,6 @@ public class DeploymentEntity implements Serializable, Deployment, PersistentObj
   public Object getPersistentState() {
     Map<String, Object> persistentState = new HashMap<String, Object>();
     persistentState.put("category", this.category);
-    persistentState.put("tenantId", tenantId);
     return persistentState;
   }
   
@@ -125,14 +122,6 @@ public class DeploymentEntity implements Serializable, Deployment, PersistentObj
 
   public void setCategory(String category) {
     this.category = category;
-  }
-  
-  public String getTenantId() {
-  	return tenantId;
-  }
-
-  public void setTenantId(String tenantId) {
-  	this.tenantId = tenantId;
   }
 
   public void setResources(Map<String, ResourceEntity> resources) {

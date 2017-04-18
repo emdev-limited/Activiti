@@ -16,50 +16,42 @@ package org.activiti.rest.service.api.runtime.process;
 import java.util.List;
 import java.util.Map;
 
-import org.activiti.engine.FormService;
 import org.activiti.engine.form.FormProperty;
 import org.activiti.engine.form.StartFormData;
 import org.activiti.engine.impl.form.EnumFormType;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.common.api.SecuredResource;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
+import org.restlet.resource.Get;
 
 /**
  * @author Tijs Rademakers
  */
-@RestController
-public class ProcessDefinitionPropertiesResource {
+public class ProcessDefinitionPropertiesResource extends SecuredResource {
   
-  @Autowired
-  protected FormService formService;
-  
-  @Autowired
-  protected ObjectMapper objectMapper;
-  
-  @RequestMapping(value="/process-definition/{processDefinitionId}/properties", method = RequestMethod.GET, produces="application/json")
-  public ObjectNode getStartFormProperties(@PathVariable String processDefinitionId) {
-    StartFormData startFormData = formService.getStartFormData(processDefinitionId);
+  @Get
+  public ObjectNode getStartFormProperties() {
+    if(authenticate() == false) return null;
     
-    ObjectNode responseJSON = objectMapper.createObjectNode();
+    String processDefinitionId = (String) getRequest().getAttributes().get("processDefinitionId");
+    StartFormData startFormData = ActivitiUtil.getFormService().getStartFormData(processDefinitionId);
     
-    ArrayNode propertiesJSON = objectMapper.createArrayNode();
+    ObjectNode responseJSON = new ObjectMapper().createObjectNode();
+    
+    ArrayNode propertiesJSON = new ObjectMapper().createArrayNode();
     
     if(startFormData != null) {
     
       List<FormProperty> properties = startFormData.getFormProperties();
       
       for (FormProperty property : properties) {
-        ObjectNode propertyJSON = objectMapper.createObjectNode();
+        ObjectNode propertyJSON = new ObjectMapper().createObjectNode();
         propertyJSON.put("id", property.getId());
         propertyJSON.put("name", property.getName());
         
-        if (property.getValue() != null) {
+        if(property.getValue() != null) {
           propertyJSON.put("value", property.getValue());
         } else {
           propertyJSON.putNull("value");
@@ -68,15 +60,15 @@ public class ProcessDefinitionPropertiesResource {
         if(property.getType() != null) {
           propertyJSON.put("type", property.getType().getName());
           
-          if (property.getType() instanceof EnumFormType) {
+          if(property.getType() instanceof EnumFormType) {
             @SuppressWarnings("unchecked")
             Map<String, String> valuesMap = (Map<String, String>) property.getType().getInformation("values");
-            if (valuesMap != null) {
-              ArrayNode valuesArray = objectMapper.createArrayNode();
+            if(valuesMap != null) {
+              ArrayNode valuesArray = new ObjectMapper().createArrayNode();
               propertyJSON.put("enumValues", valuesArray);
               
               for (String key : valuesMap.keySet()) {
-                ObjectNode valueJSON = objectMapper.createObjectNode();
+                ObjectNode valueJSON = new ObjectMapper().createObjectNode();
                 valueJSON.put("id", key);
                 valueJSON.put("name", valuesMap.get(key));
                 valuesArray.add(valueJSON);

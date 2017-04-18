@@ -27,7 +27,6 @@ import org.activiti.engine.test.Deployment;
 
 /**
  * @author Daniel Meyer
- * @author Joram Barrez
  */
 public class MessageStartEventTest extends PluggableActivitiTestCase {
   
@@ -73,9 +72,9 @@ public class MessageStartEventTest extends PluggableActivitiTestCase {
         .createDeployment()
         .addClasspathResource("org/activiti/engine/test/bpmn/event/message/testSameMessageNameInSameProcessFails.bpmn20.xml")
         .deploy();
-      fail("exception expected: Cannot have more than one message event subscription with name 'newInvoiceMessage' for scope");
+      fail("exception expected");
     }catch (ActivitiException e) {
-      e.printStackTrace();
+      assertTrue(e.getMessage().contains("Cannot have more than one message event subscription with name 'newInvoiceMessage' for scope"));
     }        
   }
   
@@ -102,27 +101,18 @@ public class MessageStartEventTest extends PluggableActivitiTestCase {
     List<ProcessDefinition> newProcessDefinitions = repositoryService.createProcessDefinitionQuery().list();
         
     assertEquals(1, newEventSubscriptions.size());
-    
     assertEquals(2, newProcessDefinitions.size());
-    int version1Count = 0;
-    int version2Count = 0;
     for (ProcessDefinition processDefinition : newProcessDefinitions) {
       if(processDefinition.getVersion() == 1) {
         for (EventSubscriptionEntity subscription : newEventSubscriptions) {
-          if (subscription.getConfiguration().equals(processDefinition.getId())) {
-            version1Count++;
-          }
+          assertFalse(subscription.getConfiguration().equals(processDefinition.getId()));         
         }
       } else {
         for (EventSubscriptionEntity subscription : newEventSubscriptions) {
-          if (subscription.getConfiguration().equals(processDefinition.getId())) {
-            version2Count++;
-          }
+          assertTrue(subscription.getConfiguration().equals(processDefinition.getId()));         
         }
       }
     }
-    assertEquals(0, version1Count);
-    assertEquals(1, version2Count);
     assertFalse(eventSubscriptions.equals(newEventSubscriptions));
     
     repositoryService.deleteDeployment(deploymentId);   

@@ -110,7 +110,7 @@ public class ByteArrayEntity implements Serializable, PersistentObject, HasRevis
   }
 
   // Wrapper for a byte array, needed to do byte array comparisons
-  // See https://activiti.atlassian.net/browse/ACT-1524
+  // See http://jira.codehaus.org/browse/ACT-1524
   private static class PersistentState {
     
     private final String name;

@@ -23,16 +23,15 @@ import java.util.List;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.node.ObjectNode;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
 
 
 /**
@@ -40,7 +39,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * 
  * @author Tijs Rademakers
  */
-public class HistoricActivityInstanceQueryResourceTest extends BaseSpringRestTestCase {
+public class HistoricActivityInstanceQueryResourceTest extends BaseRestTestCase {
   
   /**
    * Test querying historic activity instance. 
@@ -135,13 +134,12 @@ public class HistoricActivityInstanceQueryResourceTest extends BaseSpringRestTes
   protected void assertResultsPresentInDataResponse(String url, ObjectNode body, int numberOfResultsExpected, String... expectedActivityIds) throws JsonProcessingException, IOException {
     
     // Do the actual call
-    HttpPost post = new HttpPost(SERVER_URL_PREFIX + url);
-    post.setEntity(new StringEntity(body.toString()));
-    CloseableHttpResponse response = executeRequest(post, 200);
+    ClientResource client = getAuthenticatedClient(url);
+    Representation response = client.post(body);
     
     // Check status and size
-    JsonNode dataNode = objectMapper.readTree(response.getEntity().getContent()).get("data");
-    closeResponse(response);
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    JsonNode dataNode = objectMapper.readTree(response.getStream()).get("data");
     assertEquals(numberOfResultsExpected, dataNode.size());
 
     // Check presence of ID's
@@ -149,10 +147,12 @@ public class HistoricActivityInstanceQueryResourceTest extends BaseSpringRestTes
       List<String> toBeFound = new ArrayList<String>(Arrays.asList(expectedActivityIds));
       Iterator<JsonNode> it = dataNode.iterator();
       while(it.hasNext()) {
-        String activityId = it.next().get("activityId").textValue();
+        String activityId = it.next().get("activityId").getTextValue();
         toBeFound.remove(activityId);
       }
       assertTrue("Not all entries have been found in result, missing: " + StringUtils.join(toBeFound, ", "), toBeFound.isEmpty());
     }
+    
+    client.release();
   }
 }

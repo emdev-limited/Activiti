@@ -36,7 +36,6 @@ public class ManagementMenuBar extends ToolBar {
   public static final String ENTRY_USERS = "users";
   public static final String ENTRY_GROUPS = "groups";
   public static final String ENTRY_ADMIN = "administration";
-  public static final String ENTRY_CRYSTALBALL = "crystalball";
   
   protected I18nManager i18nManager;
   protected ViewManager viewManager;
@@ -58,7 +57,6 @@ public class ManagementMenuBar extends ToolBar {
     addUsersToolbarEntry();
     addGroupToolbarEntry();
     addAdministrationToolbarEntry();
-    addCrystalBallToolbarEntry();
   }
 
   protected void addDatabaseToolbarEntry() {
@@ -125,14 +123,6 @@ public class ManagementMenuBar extends ToolBar {
     addToolbarEntry(ENTRY_ADMIN, i18nManager.getMessage(Messages.MGMT_MENU_ADMINISTRATION), new ToolbarCommand() {
       public void toolBarItemSelected() {
         viewManager.showAdministrationPage();
-      }
-    });
-  }
-  
-  protected void addCrystalBallToolbarEntry() {
-    addToolbarEntry(ENTRY_CRYSTALBALL, i18nManager.getMessage(Messages.MGMT_MENU_CRYSTALBALL), new ToolbarCommand() {
-      public void toolBarItemSelected() {
-        viewManager.showCrystalBallPage();
       }
     });
   }

@@ -27,7 +27,6 @@ import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.GraphicInfo;
 import org.activiti.engine.HistoryService;
 import org.activiti.engine.IdentityService;
-import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.ProcessEngines;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
@@ -49,8 +48,6 @@ import org.activiti.explorer.ui.custom.UserProfileLink;
 import org.activiti.explorer.ui.mainlayout.ExplorerLayout;
 import org.activiti.explorer.ui.process.ProcessDefinitionImageStreamResourceBuilder;
 import org.activiti.explorer.ui.variable.VariableRendererManager;
-import org.activiti.explorer.util.XmlUtil;
-import org.activiti.image.ProcessDiagramGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -172,11 +169,11 @@ public class ProcessInstanceDetailPanel extends DetailPanel {
           
           final InputStream definitionStream = repositoryService.getResourceAsStream(
               processDefinition.getDeploymentId(), processDefinition.getResourceName());
-          XMLInputFactory xif = XmlUtil.createSafeXmlInputFactory();
+          XMLInputFactory xif = XMLInputFactory.newInstance();
           XMLStreamReader xtr = xif.createXMLStreamReader(definitionStream);
           BpmnModel bpmnModel = new BpmnXMLConverter().convertToBpmnModel(xtr);
           
-          if (!bpmnModel.getFlowLocationMap().isEmpty()) {
+          if (bpmnModel.getFlowLocationMap().size() > 0) {
             
             int maxX = 0;
             int maxY = 0;
@@ -219,11 +216,10 @@ public class ProcessInstanceDetailPanel extends DetailPanel {
         }
       }
       
-      if(!didDrawImage && processDefinitionEntity.isGraphicalNotationDefined()) {
-        ProcessEngineConfiguration processEngineConfiguration = ProcessEngines.getDefaultProcessEngine().getProcessEngineConfiguration();
-        ProcessDiagramGenerator diagramGenerator = processEngineConfiguration.getProcessDiagramGenerator();
+      if(didDrawImage == false && processDefinitionEntity.isGraphicalNotationDefined()) {
+      
         StreamResource diagram = new ProcessDefinitionImageStreamResourceBuilder()
-          .buildStreamResource(processInstance, repositoryService, runtimeService, diagramGenerator, processEngineConfiguration);
+          .buildStreamResource(processInstance, repositoryService, runtimeService);
   
         if(diagram != null) {
           Label header = new Label(i18nManager.getMessage(Messages.PROCESS_HEADER_DIAGRAM));
@@ -281,7 +277,7 @@ public class ProcessInstanceDetailPanel extends DetailPanel {
       .orderByHistoricTaskInstanceStartTime().desc()
       .list();
     
-    if(!tasks.isEmpty()) {
+    if(tasks.size() > 0) {
       
       // Finished icon
       taskTable.addContainerProperty("finished", Component.class, null, "", null, Table.ALIGN_CENTER);
@@ -359,7 +355,7 @@ public class ProcessInstanceDetailPanel extends DetailPanel {
     // variable sorting is done in-memory (which is ok, since normally there aren't that many vars)
     Map<String, Object> variables = new TreeMap<String, Object>(runtimeService.getVariables(processInstance.getId())); 
     
-    if(!variables.isEmpty()) {
+    if(variables.size() > 0) {
       
       Table variablesTable = new Table();
       variablesTable.setWidth(60, UNITS_PERCENTAGE);

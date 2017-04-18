@@ -15,16 +15,13 @@ package org.activiti.workflow.simple.definition;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
-
 /**
  * Superclass for all {@link StepDefinition} classes that have a name or description.
  * 
  * @author Joram Barrez
  * @author Tijs Rademakers
  */
-public abstract class AbstractNamedStepDefinition implements StepDefinition, NamedStepDefinition {
+public abstract class AbstractNamedStepDefinition implements StepDefinition {
 
   private static final long serialVersionUID = 1L;
   
@@ -67,7 +64,6 @@ public abstract class AbstractNamedStepDefinition implements StepDefinition, Nam
   }
   
   @Override
-  @JsonSerialize(include=Inclusion.NON_EMPTY)
   public Map<String, Object> getParameters() {
   	return parameters;
   }

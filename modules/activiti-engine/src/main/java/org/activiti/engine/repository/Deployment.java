@@ -40,6 +40,4 @@ public interface Deployment {
   
   String getCategory();
   
-  String getTenantId();
-  
 }

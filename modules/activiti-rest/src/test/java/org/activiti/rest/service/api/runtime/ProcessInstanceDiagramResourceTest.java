@@ -15,41 +15,56 @@ package org.activiti.rest.service.api.runtime;
 
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
+import org.restlet.resource.ResourceException;
 
 
 /**
  * @author Frederik Heremans
  */
-public class ProcessInstanceDiagramResourceTest extends BaseSpringRestTestCase {
+public class ProcessInstanceDiagramResourceTest extends BaseRestTestCase {
 
   @Deployment
   public void testGetProcessDiagram() throws Exception {
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("simpleProcess");
     
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_DIAGRAM, processInstance.getId())), HttpStatus.SC_OK);
-    assertNotNull(response.getEntity().getContent());
-    assertEquals("image/png", response.getEntity().getContentType().getValue());
-    closeResponse(response);
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_DIAGRAM, processInstance.getId()));
+    
+    Representation response = client.get();
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    assertTrue(response.isAvailable());
   }
   
   @Deployment
   public void testGetProcessDiagramWithoutDiagram() throws Exception {
+    
     ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_DIAGRAM, processInstance.getId())), HttpStatus.SC_BAD_REQUEST));
+    
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_DIAGRAM, processInstance.getId()));
+    try {
+      client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_BAD_REQUEST, expected.getStatus());
+      assertEquals("Process instance with id '" + processInstance.getId() + "' has no graphical notation defined.", expected.getStatus().getDescription());
+    }
   }
   
   /**
    * Test getting an unexisting process instance.
    */
   public void testGetUnexistingProcessInstance() {
-    closeResponse(executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_DIAGRAM, "unexistingpi")), HttpStatus.SC_NOT_FOUND));
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROCESS_INSTANCE_DIAGRAM, "unexistingpi"));
+    try {
+      client.get();
+      fail("Exception expected");
+    } catch(ResourceException expected) {
+      assertEquals(Status.CLIENT_ERROR_NOT_FOUND, expected.getStatus());
+      assertEquals("Could not find a process instance with id 'unexistingpi'.", expected.getStatus().getDescription());
+    }
   }
 }

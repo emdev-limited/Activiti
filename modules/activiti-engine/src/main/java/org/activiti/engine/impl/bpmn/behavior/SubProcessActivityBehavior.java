@@ -13,12 +13,9 @@
 
 package org.activiti.engine.impl.bpmn.behavior;
 
-import java.util.Map;
-
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.impl.bpmn.helper.ScopeUtil;
 import org.activiti.engine.impl.bpmn.parser.BpmnParse;
-import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
 import org.activiti.engine.impl.pvm.PvmActivity;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
@@ -42,35 +39,13 @@ public class SubProcessActivityBehavior extends AbstractBpmnActivityBehavior imp
       throw new ActivitiException("No initial activity found for subprocess " 
               + execution.getActivity().getId());
     }
-
-    // initialize the template-defined data objects as variables
-    initializeDataObjects(execution, activity);
     
-    if (initialActivity.getActivityBehavior() != null 
-    		&& initialActivity.getActivityBehavior() instanceof NoneStartEventActivityBehavior) { // embedded subprocess: only none start allowed
-    	((ExecutionEntity) execution).setActivity(initialActivity);
-    	Context.getCommandContext().getHistoryManager().recordActivityStart((ExecutionEntity) execution);
-    }
-
     execution.executeActivity(initialActivity);
   }
   
   public void lastExecutionEnded(ActivityExecution execution) {
     ScopeUtil.createEventScopeExecution((ExecutionEntity) execution);
-    
-    // remove the template-defined data object variables
-    Map<String, Object> dataObjectVars = ((ActivityImpl) execution.getActivity()).getVariables();
-    if (dataObjectVars != null) {
-      execution.removeVariablesLocal(dataObjectVars.keySet());
-    }
-
     bpmnActivityBehavior.performDefaultOutgoingBehavior(execution);
   }
 
-  protected void initializeDataObjects(ActivityExecution execution, PvmActivity activity) {
-    Map<String, Object> dataObjectVars = ((ActivityImpl) activity).getVariables();
-    if (dataObjectVars != null) {
-      execution.setVariablesLocal(dataObjectVars);
-    }
-  }
 }

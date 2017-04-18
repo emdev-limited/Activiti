@@ -13,8 +13,6 @@
 
 package org.activiti.engine.test.bpmn.event.compensate;
 
-import org.activiti.engine.history.HistoricActivityInstance;
-import org.activiti.engine.history.HistoricActivityInstanceQuery;
 import org.activiti.engine.impl.history.HistoryLevel;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
 import org.activiti.engine.runtime.ProcessInstance;
@@ -107,13 +105,29 @@ public class CompensateEventTest extends PluggableActivitiTestCase {
     
   }
   
-  public void testMultipleCompensationCatchEventsFails() {
+  public void testMultipleCompensationCatchEventsFails() {    
     try {
       repositoryService.createDeployment()
         .addClasspathResource("org/activiti/engine/test/bpmn/event/compensate/CompensateEventTest.testMultipleCompensationCatchEventsFails.bpmn20.xml")
         .deploy();
       fail("exception expected");
     } catch (Exception e) {
+      if(!e.getMessage().contains("multiple boundary events with compensateEventDefinition not supported on same activity")) {
+        fail("different exception expected");
+      }
+    }    
+  }
+  
+  public void testMultipleCompensationCatchEventsCompensationAttributeMissingFails() {    
+    try {
+      repositoryService.createDeployment()
+        .addClasspathResource("org/activiti/engine/test/bpmn/event/compensate/CompensateEventTest.testMultipleCompensationCatchEventsCompensationAttributeMissingFails.bpmn20.xml")
+        .deploy();
+      fail("exception expected");
+    } catch (Exception e) {
+      if(!e.getMessage().contains("compensation boundary catch must be connected to element with isForCompensation=true")) {
+        fail("different exception expected");
+      }
     }    
   }
   
@@ -130,20 +144,4 @@ public class CompensateEventTest extends PluggableActivitiTestCase {
     }    
   }
 
-  @Deployment(resources = {"org/activiti/engine/test/bpmn/event/compensate/CompensateEventTest.testCompensationStepEndRecorded.bpmn20.xml"})
-  public void testCompensationStepEndTimeRecorded() {
-    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("compensationStepEndRecordedProcess");
-    assertProcessEnded(processInstance.getId());
-    assertEquals(0, runtimeService.createProcessInstanceQuery().count());
-
-    if (!processEngineConfiguration.getHistoryLevel().isAtLeast(HistoryLevel.ACTIVITY)) {
-      return;
-    }
-    final HistoricActivityInstanceQuery query = historyService.createHistoricActivityInstanceQuery().activityId("compensationScriptTask");
-    assertEquals(1, query.count());
-    final HistoricActivityInstance compensationScriptTask = query.singleResult();
-    assertNotNull(compensationScriptTask);
-    assertNotNull(compensationScriptTask.getEndTime());
-    assertNotNull(compensationScriptTask.getDurationInMillis());
-  }
 }

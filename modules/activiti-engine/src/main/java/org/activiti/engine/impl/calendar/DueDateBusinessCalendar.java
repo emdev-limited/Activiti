@@ -15,27 +15,22 @@ package org.activiti.engine.impl.calendar;
 import java.util.Date;
 
 import org.activiti.engine.ActivitiException;
-import org.activiti.engine.runtime.ClockReader;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
 
-public class DueDateBusinessCalendar extends BusinessCalendarImpl {
+public class DueDateBusinessCalendar implements BusinessCalendar {
 
   public static final String NAME = "dueDate";
-
-  public DueDateBusinessCalendar(ClockReader clockReader) {
-    super(clockReader);
-  }
-
-  @Override
-  public Date resolveDuedate(String duedate, int maxIterations) {
+  
+  public Date resolveDuedate(String duedate) {
     try {
-      // check if due period was specified
-      if(duedate.startsWith("P")){
-        return new DateTime(clockReader.getCurrentTime()).plus(Period.parse(duedate)).toDate();
-      }
-
+    	
+    	// check if due period was specified
+    	if(duedate.startsWith("P")){
+    		return DateTime.now().plus(Period.parse(duedate)).toDate();
+    	}
+    	
       return DateTime.parse(duedate).toDate();
 
     } catch (Exception e) {

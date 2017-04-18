@@ -19,13 +19,10 @@ import java.util.Map;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.spi.InitialContextFactory;
 
-import org.activiti.engine.cfg.AbstractProcessEngineConfigurator;
-import org.activiti.engine.cfg.ProcessEngineConfigurator;
 import org.activiti.engine.identity.Group;
 import org.activiti.engine.identity.User;
 import org.activiti.engine.impl.cfg.ProcessEngineConfigurationImpl;
-import org.activiti.engine.runtime.Clock;
-import org.activiti.engine.runtime.ClockReader;
+import org.activiti.engine.impl.cfg.ProcessEngineConfigurator;
 
 
 /**
@@ -40,7 +37,7 @@ import org.activiti.engine.runtime.ClockReader;
  * 
  * @author Joram Barrez
  */
-public class LDAPConfigurator extends AbstractProcessEngineConfigurator {
+public class LDAPConfigurator implements ProcessEngineConfigurator {
   
   /* Server connection params */
   
@@ -85,20 +82,12 @@ public class LDAPConfigurator extends AbstractProcessEngineConfigurator {
   // Group caching
   protected int groupCacheSize = -1;
   protected long groupCacheExpirationTime = 3600000L; // default: one hour
-
-  // Cache clock
-  private Clock clock;
-
-  public void beforeInit(ProcessEngineConfigurationImpl processEngineConfiguration) {
-  	// Nothing to do
-  }
   
   public void configure(ProcessEngineConfigurationImpl processEngineConfiguration) {
-    clock = processEngineConfiguration.getClock();
     LDAPUserManagerFactory ldapUserManagerFactory = getLdapUserManagerFactory();
     processEngineConfiguration.getSessionFactories().put(ldapUserManagerFactory.getSessionType(), ldapUserManagerFactory);
     
-    LDAPGroupManagerFactory ldapGroupManagerFactory = getLdapGroupManagerFactory(clock);
+    LDAPGroupManagerFactory ldapGroupManagerFactory = getLdapGroupManagerFactory();
     processEngineConfiguration.getSessionFactories().put(ldapGroupManagerFactory.getSessionType(), ldapGroupManagerFactory);
     
   }
@@ -113,12 +102,12 @@ public class LDAPConfigurator extends AbstractProcessEngineConfigurator {
     return new LDAPUserManagerFactory(this);
   }
   
-  protected LDAPGroupManagerFactory getLdapGroupManagerFactory(ClockReader clockReader) {
+  protected LDAPGroupManagerFactory getLdapGroupManagerFactory() {
     if (this.ldapGroupManagerFactory != null) {
       this.ldapGroupManagerFactory.setLdapConfigurator(this);
       return this.ldapGroupManagerFactory;
     }
-    return new LDAPGroupManagerFactory(this, clockReader);
+    return new LDAPGroupManagerFactory(this);
   }
   
   protected LDAPMembershipManagerFactory getLdapMembershipManagerFactory() {

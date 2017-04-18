@@ -13,26 +13,25 @@
 
 package org.activiti.rest.service.api.identity;
 
+import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
-import org.activiti.engine.IdentityService;
 import org.activiti.engine.identity.Group;
 import org.activiti.engine.identity.User;
-import org.activiti.rest.service.api.RestResponseFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.common.api.SecuredResource;
 
 /**
  * @author Frederik Heremans
  */
-public class BaseGroupResource {
-  
-  @Autowired
-  protected RestResponseFactory restResponseFactory;
-  
-  @Autowired
-  protected IdentityService identityService;
+public class BaseGroupResource extends SecuredResource {
 
-  protected Group getGroupFromRequest(String groupId) {
-    Group group = identityService.createGroupQuery().groupId(groupId).singleResult();
+  protected Group getGroupFromRequest() {
+    String groupId = getAttribute("groupId");
+    if (groupId == null) {
+      throw new ActivitiIllegalArgumentException("The groupId cannot be null");
+    }
+
+    Group group = ActivitiUtil.getIdentityService().createGroupQuery().groupId(groupId).singleResult();
 
     if (group == null) {
       throw new ActivitiObjectNotFoundException("Could not find a group with id '" + groupId + "'.", User.class);

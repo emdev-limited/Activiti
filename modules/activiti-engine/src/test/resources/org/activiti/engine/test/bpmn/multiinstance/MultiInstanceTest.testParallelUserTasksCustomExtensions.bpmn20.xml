@@ -5,13 +5,13 @@
   xmlns:activiti="http://activiti.org/bpmn"
   targetNamespace="Examples">
   
-  <process id="miParallelUserTasks">
+  <process id="miSequentialUserTasks">
   
     <startEvent id="theStart" />
     <sequenceFlow id="flow1" sourceRef="theStart" targetRef="miTasks" />
     
     <userTask id="miTasks" name="My Task ${loopCounter}" activiti:assignee="${assignee}">
-      <multiInstanceLoopCharacteristics isSequential="false"
+      <multiInstanceLoopCharacteristics isSequential="true" 
           activiti:collection="assigneeList" activiti:elementVariable="assignee">
       </multiInstanceLoopCharacteristics>
     </userTask>

@@ -17,19 +17,20 @@ package org.activiti.rest.service.api.history;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.activiti.engine.HistoryService;
 import org.activiti.engine.history.HistoricActivityInstanceQuery;
 import org.activiti.engine.impl.HistoricActivityInstanceQueryProperty;
 import org.activiti.engine.query.QueryProperty;
+import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.common.api.DataResponse;
-import org.activiti.rest.service.api.RestResponseFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.activiti.rest.common.api.SecuredResource;
+import org.restlet.data.Form;
+import org.restlet.resource.Get;
 
 
 /**
  * @author Tijs Rademakers
  */
-public class HistoricActivityInstanceBaseResource {
+public class HistoricActivityInstanceBaseResource extends SecuredResource {
 
   private static Map<String, QueryProperty> allowedSortProperties = new HashMap<String, QueryProperty>();
 
@@ -44,17 +45,15 @@ public class HistoricActivityInstanceBaseResource {
     allowedSortProperties.put("processDefinitionId", HistoricActivityInstanceQueryProperty.PROCESS_DEFINITION_ID);
     allowedSortProperties.put("processInstanceId", HistoricActivityInstanceQueryProperty.PROCESS_INSTANCE_ID);
     allowedSortProperties.put("startTime", HistoricActivityInstanceQueryProperty.START);
-    allowedSortProperties.put("tenantId", HistoricActivityInstanceQueryProperty.TENANT_ID);
   }
   
-  @Autowired
-  protected RestResponseFactory restResponseFactory;
-  
-  @Autowired
-  protected HistoryService historyService;
-  
-  protected DataResponse getQueryResponse(HistoricActivityInstanceQueryRequest queryRequest, Map<String,String> allRequestParams) {
-    HistoricActivityInstanceQuery query = historyService.createHistoricActivityInstanceQuery();
+  @Get
+  protected DataResponse getQueryResponse(HistoricActivityInstanceQueryRequest queryRequest, Form urlQuery) {
+    if(!authenticate()) {
+      return null;
+    }
+    
+    HistoricActivityInstanceQuery query = ActivitiUtil.getHistoryService().createHistoricActivityInstanceQuery();
 
     // Populate query based on request
     if (queryRequest.getActivityId() != null) {
@@ -97,20 +96,7 @@ public class HistoricActivityInstanceBaseResource {
     if (queryRequest.getProcessDefinitionId() != null) {
       query.processDefinitionId(queryRequest.getProcessDefinitionId());
     }
-    
-    if(queryRequest.getTenantId() != null) {
-    	query.activityTenantId(queryRequest.getTenantId());
-    }
-    
-    if(queryRequest.getTenantIdLike() != null) {
-    	query.activityTenantIdLike(queryRequest.getTenantIdLike());
-    }
-    
-    if(Boolean.TRUE.equals(queryRequest.getWithoutTenantId())) {
-    	query.activityWithoutTenantId();
-    }
 
-    return new HistoricActivityInstancePaginateList(restResponseFactory).paginateList(
-        allRequestParams, queryRequest, query, "startTime", allowedSortProperties);
+    return new HistoricActivityInstancePaginateList(this).paginateList(urlQuery, query, "startTime", allowedSortProperties);
   }
 }

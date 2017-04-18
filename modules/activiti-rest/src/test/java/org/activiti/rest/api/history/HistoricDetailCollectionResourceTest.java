@@ -20,15 +20,15 @@ import java.util.Iterator;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonProcessingException;
+import org.restlet.data.ChallengeScheme;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
 
 
 /**
@@ -36,7 +36,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  * 
  * @author Tijs Rademakers
  */
-public class HistoricDetailCollectionResourceTest extends BaseSpringRestTestCase {
+public class HistoricDetailCollectionResourceTest extends BaseRestTestCase {
   
   /**
    * Test querying historic detail. 
@@ -65,25 +65,27 @@ public class HistoricDetailCollectionResourceTest extends BaseSpringRestTestCase
     assertResultsPresentInDataResponse(url + "?processInstanceId=" + processInstance2.getId(), 4, "intVar", 67890);
     assertResultsPresentInDataResponse(url + "?processInstanceId=" + processInstance2.getId() + "&selectOnlyVariableUpdates=true", 4, "booleanVar", false);
     
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        url + "?processInstanceId=" + processInstance2.getId()), HttpStatus.SC_OK);
+    ClientResource client = getAuthenticatedClient(url + "?processInstanceId=" + processInstance2.getId());
+    Representation response = client.get();
     
     // Check status and size
-    JsonNode dataNode = objectMapper.readTree(response.getEntity().getContent()).get("data");
-    closeResponse(response);
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    JsonNode dataNode = objectMapper.readTree(response.getStream()).get("data");
     
     boolean byteVarFound = false;
     Iterator<JsonNode> it = dataNode.iterator();
     while(it.hasNext()) {
       JsonNode variableNode = it.next().get("variable");
-      String name = variableNode.get("name").textValue();
+      String name = variableNode.get("name").getTextValue();
       if ("byteVar".equals(name)) {
         byteVarFound = true;
-        String valueUrl = variableNode.get("valueUrl").textValue();
-        
-        response = executeRequest(new HttpGet(valueUrl), HttpStatus.SC_OK);
-        byte[] varInput = IOUtils.toByteArray(response.getEntity().getContent());
-        closeResponse(response);
+        String valueUrl = variableNode.get("valueUrl").getTextValue();
+        client.release();
+        client = new ClientResource(valueUrl);
+        client.setChallengeResponse(ChallengeScheme.HTTP_BASIC, "kermit", "kermit");
+        response = client.get();
+        assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+        byte[] varInput = IOUtils.toByteArray(response.getStream());
         assertEquals("test", new String(varInput));
         break;
       }
@@ -94,11 +96,12 @@ public class HistoricDetailCollectionResourceTest extends BaseSpringRestTestCase
   protected void assertResultsPresentInDataResponse(String url, int numberOfResultsExpected, String variableName, Object variableValue) throws JsonProcessingException, IOException {
     
     // Do the actual call
-  	CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + url), HttpStatus.SC_OK);
+    ClientResource client = getAuthenticatedClient(url);
+    Representation response = client.get();
     
-    JsonNode dataNode = objectMapper.readTree(response.getEntity().getContent()).get("data");
-    closeResponse(response);
-    
+    // Check status and size
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    JsonNode dataNode = objectMapper.readTree(response.getStream()).get("data");
     assertEquals(numberOfResultsExpected, dataNode.size());
 
     // Check presence of ID's
@@ -107,7 +110,7 @@ public class HistoricDetailCollectionResourceTest extends BaseSpringRestTestCase
       Iterator<JsonNode> it = dataNode.iterator();
       while(it.hasNext()) {
         JsonNode variableNode = it.next().get("variable");
-        String name = variableNode.get("name").textValue();
+        String name = variableNode.get("name").getTextValue();
         if (variableName.equals(name)) {
           variableFound = true;
           if (variableValue instanceof Boolean) {
@@ -121,5 +124,7 @@ public class HistoricDetailCollectionResourceTest extends BaseSpringRestTestCase
       }
       assertTrue("Variable " + variableName + " is missing", variableFound);
     }
+    
+    client.release();
   }
 }

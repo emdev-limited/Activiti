@@ -34,7 +34,6 @@ import org.activiti.engine.impl.pvm.runtime.InterpretableExecution;
 /**
  * @author Daniel Meyer
  * @author Nico Rehwaldt
- * @author Joram Barrez
  */
 public class ScopeUtil {
  
@@ -48,11 +47,11 @@ public class ScopeUtil {
    */
   public static ActivityExecution findScopeExecution(ActivityExecution execution) {
     
-    while(execution.getParentId() != null && !execution.isScope()) {
+    while(!execution.isScope()) {
       execution = execution.getParent();
     }
     
-    if(execution != null && execution.isConcurrent()) {
+    if(execution.isConcurrent()) {
       execution = execution.getParent();
     }
     
@@ -168,7 +167,7 @@ public class ScopeUtil {
     
     List<CompensateEventSubscriptionEntity> eventSubscriptions = execution.getCompensateEventSubscriptions();
     
-    if(!eventSubscriptions.isEmpty()) {
+    if(eventSubscriptions.size() > 0) {
       
       ExecutionEntity eventScopeExecution = eventScope.createExecution();
       eventScopeExecution.setActive(false);      

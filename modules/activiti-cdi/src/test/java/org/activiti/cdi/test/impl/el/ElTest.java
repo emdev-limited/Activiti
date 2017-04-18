@@ -16,6 +16,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.activiti.cdi.test.CdiActivitiTestCase;
 import org.activiti.cdi.test.impl.beans.MessageBean;
+import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.test.Deployment;
 import org.junit.Test;
 

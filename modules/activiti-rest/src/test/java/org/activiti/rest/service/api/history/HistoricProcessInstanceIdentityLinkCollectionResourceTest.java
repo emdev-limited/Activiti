@@ -19,14 +19,13 @@ import java.util.Map;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.Deployment;
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.map.util.ISO8601DateFormat;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
 
 
 /**
@@ -34,7 +33,7 @@ import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
  * 
  * @author Tijs Rademakers
  */
-public class HistoricProcessInstanceIdentityLinkCollectionResourceTest extends BaseSpringRestTestCase {
+public class HistoricProcessInstanceIdentityLinkCollectionResourceTest extends BaseRestTestCase {
   
   protected ISO8601DateFormat dateFormat = new ISO8601DateFormat();
   
@@ -57,10 +56,12 @@ public class HistoricProcessInstanceIdentityLinkCollectionResourceTest extends B
     String url = RestUrls.createRelativeResourceUrl(RestUrls.URL_HISTORIC_PROCESS_INSTANCE_IDENTITY_LINKS, processInstance.getId());
     
     // Do the actual call
-    CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + url), HttpStatus.SC_OK);
+    ClientResource client = getAuthenticatedClient(url);
+    Representation response = client.get();
     
-    JsonNode linksArray = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    // Check status and size
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
+    JsonNode linksArray = objectMapper.readTree(response.getStream());
     assertEquals(3, linksArray.size());
     Map<String, JsonNode> linksMap = new HashMap<String, JsonNode>();
     for (JsonNode linkNode : linksArray) {

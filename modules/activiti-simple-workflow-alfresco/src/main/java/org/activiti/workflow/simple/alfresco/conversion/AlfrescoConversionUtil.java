@@ -18,11 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.activiti.workflow.simple.alfresco.conversion.script.PropertyReference;
 import org.activiti.workflow.simple.alfresco.conversion.script.ScriptTaskListenerBuilder;
 import org.activiti.workflow.simple.alfresco.model.M2Model;
 import org.activiti.workflow.simple.alfresco.model.M2Namespace;
-import org.activiti.workflow.simple.alfresco.model.config.Extension;
+import org.activiti.workflow.simple.alfresco.model.config.Module;
 import org.activiti.workflow.simple.converter.WorkflowDefinitionConversion;
 
 /**
@@ -39,7 +38,7 @@ public class AlfrescoConversionUtil implements AlfrescoConversionConstants {
 	 */
 	public static String getValidIdString(String s) {
 		if(s != null) {
-			return s.toLowerCase().replace(" ", "").replace("_", "").replace("-", "_");
+			return s.toLowerCase().replace(" ", "").replace("_", "");
 		}
 		return null;
 	}
@@ -59,10 +58,6 @@ public class AlfrescoConversionUtil implements AlfrescoConversionConstants {
 		return new M2Namespace(uri, prefix);
 	}
 	
-	public static String getUrlQualifiedPropertyName(String prefixedProperty, M2Namespace nameSpace) {
-		return "{" + nameSpace.getUri() + "}" + prefixedProperty.replace(nameSpace.getPrefix() +":", "");
-	}
-	
 	// Artifact related methods
 	public static void storeContentModel(M2Model model, WorkflowDefinitionConversion conversion) {
 		conversion.setArtifact(ARTIFACT_CONTENT_MODEL_KEY, model);
@@ -72,12 +67,12 @@ public class AlfrescoConversionUtil implements AlfrescoConversionConstants {
 		return (M2Model) conversion.getArtifact(ARTIFACT_CONTENT_MODEL_KEY);
 	}
 
-	public static void storeExtension(Extension module, WorkflowDefinitionConversion conversion) {
-		conversion.setArtifact(ARTIFACT_SHARE_CONFIG_EXTENSION, module);
+	public static void storeModule(Module module, WorkflowDefinitionConversion conversion) {
+		conversion.setArtifact(ARTIFACT_SHARE_CONFIG_MODULE, module);
   }
 	
-	public static Extension getExtension(WorkflowDefinitionConversion conversion) {
-		return (Extension) conversion.getArtifact(ARTIFACT_SHARE_CONFIG_EXTENSION);
+	public static Module getModule(WorkflowDefinitionConversion conversion) {
+		return (Module) conversion.getArtifact(ARTIFACT_SHARE_CONFIG_MODULE);
 	}
 	
 	public static void storeModelNamespacePrefix(String prefix, WorkflowDefinitionConversion conversion) {
@@ -86,11 +81,6 @@ public class AlfrescoConversionUtil implements AlfrescoConversionConstants {
 	
 	public static String getModelNamespacePrefix(WorkflowDefinitionConversion conversion) {
 		return (String) conversion.getArtifact(ARTIFACT_MODEL_NAMESPACE_PREFIX);
-	}
-	
-	@SuppressWarnings("unchecked")
-  public static List<PropertyReference> getPropertyReferences(WorkflowDefinitionConversion conversion) {
-		return (List<PropertyReference>) conversion.getArtifact(ARTIFACT_PROPERTY_REFERENCES);
 	}
 	
 	/**

@@ -39,9 +39,7 @@
         TASK_DEF_KEY_,
         FORM_KEY_,
         PRIORITY_,
-        DUE_DATE_,
-        CATEGORY_,
-        TENANT_ID_
+        DUE_DATE_
       ) values (
         #{id ,jdbcType=VARCHAR},
         #{processDefinitionId, jdbcType=VARCHAR},
@@ -60,113 +58,14 @@
         #{taskDefinitionKey ,jdbcType=VARCHAR},
         #{formKey ,jdbcType=VARCHAR},
         #{priority, jdbcType=INTEGER},
-        #{dueDate, jdbcType=TIMESTAMP},
-        #{category, jdbcType=VARCHAR},
-        #{tenantId, jdbcType=VARCHAR}
+        #{dueDate, jdbcType=TIMESTAMP}
       )
-  </insert>
-
-  <insert id="bulkInsertHistoricTaskInstance" parameterType="java.util.List">
-      insert into ${prefix}ACT_HI_TASKINST (
-        ID_,
-        PROC_DEF_ID_,
-        PROC_INST_ID_,
-        EXECUTION_ID_,
-        NAME_,
-        PARENT_TASK_ID_,
-        DESCRIPTION_,
-        OWNER_,
-        ASSIGNEE_,
-        START_TIME_,
-        CLAIM_TIME_,
-        END_TIME_,
-        DURATION_,
-        DELETE_REASON_,
-        TASK_DEF_KEY_,
-        FORM_KEY_,
-        PRIORITY_,
-        DUE_DATE_,
-        CATEGORY_,
-        TENANT_ID_
-      ) values 
-        <foreach collection="list" item="historicTask" index="index" separator=",">
-          (#{historicTask.id ,jdbcType=VARCHAR},
-           #{historicTask.processDefinitionId, jdbcType=VARCHAR},
-           #{historicTask.processInstanceId, jdbcType=VARCHAR},
-           #{historicTask.executionId, jdbcType=VARCHAR},
-           #{historicTask.name ,jdbcType=VARCHAR},
-           #{historicTask.parentTaskId ,jdbcType=VARCHAR},
-           #{historicTask.description ,jdbcType=VARCHAR},
-           #{historicTask.owner ,jdbcType=VARCHAR},
-           #{historicTask.assignee ,jdbcType=VARCHAR},
-           #{historicTask.startTime, jdbcType=TIMESTAMP},
-           #{historicTask.claimTime, jdbcType=TIMESTAMP},
-           #{historicTask.endTime, jdbcType=TIMESTAMP},
-           #{historicTask.durationInMillis ,jdbcType=BIGINT},
-           #{historicTask.deleteReason ,jdbcType=VARCHAR},
-           #{historicTask.taskDefinitionKey ,jdbcType=VARCHAR},
-           #{historicTask.formKey ,jdbcType=VARCHAR},
-           #{historicTask.priority, jdbcType=INTEGER},
-           #{historicTask.dueDate, jdbcType=TIMESTAMP},
-           #{historicTask.category, jdbcType=VARCHAR},
-           #{historicTask.tenantId, jdbcType=VARCHAR})
-        </foreach>
-  </insert>
-
-  <insert id="bulkInsertHistoricTaskInstance_oracle" parameterType="java.util.List">
-      INSERT ALL 
-        <foreach collection="list" item="historicTask" index="index">
-          INTO ${prefix}ACT_HI_TASKINST (
-            ID_,
-            PROC_DEF_ID_,
-            PROC_INST_ID_,
-            EXECUTION_ID_,
-            NAME_,
-            PARENT_TASK_ID_,
-            DESCRIPTION_,
-            OWNER_,
-            ASSIGNEE_,
-            START_TIME_,
-            CLAIM_TIME_,
-            END_TIME_,
-            DURATION_,
-            DELETE_REASON_,
-            TASK_DEF_KEY_,
-            FORM_KEY_,
-            PRIORITY_,
-            DUE_DATE_,
-            CATEGORY_,
-            TENANT_ID_
-          ) VALUES 
-            (#{historicTask.id ,jdbcType=VARCHAR},
-             #{historicTask.processDefinitionId, jdbcType=VARCHAR},
-             #{historicTask.processInstanceId, jdbcType=VARCHAR},
-             #{historicTask.executionId, jdbcType=VARCHAR},
-             #{historicTask.name ,jdbcType=VARCHAR},
-             #{historicTask.parentTaskId ,jdbcType=VARCHAR},
-             #{historicTask.description ,jdbcType=VARCHAR},
-             #{historicTask.owner ,jdbcType=VARCHAR},
-             #{historicTask.assignee ,jdbcType=VARCHAR},
-             #{historicTask.startTime, jdbcType=TIMESTAMP},
-             #{historicTask.claimTime, jdbcType=TIMESTAMP},
-             #{historicTask.endTime, jdbcType=TIMESTAMP},
-             #{historicTask.durationInMillis ,jdbcType=BIGINT},
-             #{historicTask.deleteReason ,jdbcType=VARCHAR},
-             #{historicTask.taskDefinitionKey ,jdbcType=VARCHAR},
-             #{historicTask.formKey ,jdbcType=VARCHAR},
-             #{historicTask.priority, jdbcType=INTEGER},
-             #{historicTask.dueDate, jdbcType=TIMESTAMP},
-             #{historicTask.category, jdbcType=VARCHAR},
-             #{historicTask.tenantId, jdbcType=VARCHAR})
-        </foreach>
-    SELECT * FROM dual
   </insert>
 
   <!-- HISTORIC TASK INSTANCE UPDATE -->
   
   <update id="updateHistoricTaskInstance" parameterType="org.activiti.engine.impl.persistence.entity.HistoricTaskInstanceEntity">
     update ${prefix}ACT_HI_TASKINST set
-      PROC_DEF_ID_ = #{processDefinitionId, jdbcType=VARCHAR},
       EXECUTION_ID_ = #{executionId, jdbcType=VARCHAR},
       NAME_ = #{name, jdbcType=VARCHAR},
       PARENT_TASK_ID_ = #{parentTaskId, jdbcType=VARCHAR},
@@ -180,8 +79,7 @@
       TASK_DEF_KEY_ = #{taskDefinitionKey ,jdbcType=VARCHAR},
       FORM_KEY_ = #{formKey ,jdbcType=VARCHAR},
       PRIORITY_ = #{priority, jdbcType=INTEGER},
-      DUE_DATE_ = #{dueDate, jdbcType=TIMESTAMP},
-      CATEGORY_ = #{category, jdbcType=VARCHAR}
+      DUE_DATE_ = #{dueDate, jdbcType=TIMESTAMP}
     where ID_ = #{id}
   </update>
 
@@ -190,14 +88,7 @@
   <delete id="deleteHistoricTaskInstance" parameterType="org.activiti.engine.impl.persistence.entity.HistoricTaskInstanceEntity">
     delete from ${prefix}ACT_HI_TASKINST where ID_ = #{id}
   </delete>
-  
-  <delete id="bulkDeleteHistoricTaskInstance" parameterType="java.util.Collection">
-    delete from ${prefix}ACT_HI_TASKINST where
-    <foreach item="task" collection="list" index="index" separator=" or ">
-        ID_ = #{task.id, jdbcType=VARCHAR}
-    </foreach>
-  </delete>
-  
+
   <!-- HISTORIC TASK INSTANCE RESULT MAP -->
 
   <resultMap id="historicTaskInstanceResultMap" type="org.activiti.engine.impl.persistence.entity.HistoricTaskInstanceEntity">
@@ -219,8 +110,6 @@
     <result property="formKey" column="FORM_KEY_" jdbcType="VARCHAR" />
     <result property="priority" column="PRIORITY_" jdbcType="INTEGER" />
     <result property="dueDate" column="DUE_DATE_" jdbcType="TIMESTAMP" />
-    <result property="category" column="CATEGORY_" jdbcType="VARCHAR" />
-    <result property="tenantId" column="TENANT_ID_" jdbcType="VARCHAR" />
   </resultMap>
   
   <resultMap id="historicTaskInstanceAndVariablesResultMap" type="org.activiti.engine.impl.persistence.entity.HistoricTaskInstanceEntity">
@@ -242,8 +131,6 @@
     <result property="formKey" column="FORM_KEY_" jdbcType="VARCHAR" />
     <result property="priority" column="PRIORITY_" jdbcType="INTEGER" />
     <result property="dueDate" column="DUE_DATE_" jdbcType="TIMESTAMP" />
-    <result property="category" column="CATEGORY_" jdbcType="VARCHAR" />
-    <result property="tenantId" column="TENANT_ID_" jdbcType="VARCHAR" />
     <collection property="queryVariables" column="TASK_ID_" javaType="ArrayList" ofType="org.activiti.engine.impl.persistence.entity.HistoricVariableInstanceEntity">
       <id property="id" column="VAR_ID_"/>
       <result property="name" column="VAR_NAME_" javaType="String" jdbcType="VARCHAR" />
@@ -263,11 +150,7 @@
   <!-- HISTORIC TASK INSTANCE SELECT -->
   
   <select id="selectHistoricTaskInstance" resultMap="historicTaskInstanceResultMap">
-    select * from ${prefix}ACT_HI_TASKINST where ID_ = #{historicTaskInstanceId, jdbcType=VARCHAR}
-  </select>
-  
-  <select id="selectHistoricTasksByParentTaskId" parameterType="org.activiti.engine.impl.db.ListQueryParameterObject" resultMap="historicTaskInstanceResultMap">
-    select * from ${prefix}ACT_HI_TASKINST where PARENT_TASK_ID_ = #{parameter}
+    select * from ${prefix}ACT_HI_TASKINST where ID_ = #{historicTaskInstanceId}
   </select>
   
   <select id="selectHistoricTaskInstanceIdsByProcessInstanceId" resultType="string" parameterType="org.activiti.engine.impl.db.ListQueryParameterObject" >
@@ -300,7 +183,7 @@
     VAR.ID_ as VAR_ID_, VAR.NAME_ as VAR_NAME_, VAR.VAR_TYPE_ as VAR_TYPE_, VAR.REV_ as VAR_REV_,
     VAR.PROC_INST_ID_ as VAR_PROC_INST_ID_, VAR.EXECUTION_ID_ as VAR_EXECUTION_ID_, VAR.TASK_ID_ as VAR_TASK_ID_,
     VAR.BYTEARRAY_ID_ as VAR_BYTEARRAY_ID_, VAR.DOUBLE_ as VAR_DOUBLE_, 
-    VAR.TEXT_ as VAR_TEXT_, VAR.TEXT2_ as VAR_TEXT2_, VAR.LAST_UPDATED_TIME_ as VAR_LAST_UPDATED_TIME_, VAR.LONG_ as VAR_LONG_
+    VAR.TEXT_ as VAR_TEXT_, VAR.TEXT2_ as VAR_TEXT2_, VAR.LONG_ as VAR_LONG_
     ${limitBetween}
     <include refid="selectHistoricTaskInstancesWithVariablesByQueryCriteriaSql"/> 
     ${orderBy}
@@ -315,12 +198,12 @@
     TEMPRES_DESCRIPTION_ as DESCRIPTION_, TEMPRES_OWNER_ as OWNER_, TEMPRES_ASSIGNEE_ as ASSIGNEE_,
     TEMPRES_START_TIME_ as START_TIME_, TEMPRES_CLAIM_TIME_ as CLAIM_TIME_, TEMPRES_END_TIME_ as END_TIME_,
     TEMPRES_DURATION_ as DURATION_, TEMPRES_TASK_DEF_KEY_ as TASK_DEF_KEY_, TEMPRES_FORM_KEY_ as FORM_KEY_,
-    TEMPRES_PRIORITY_ as PRIORITY_, TEMPRES_DUE_DATE_ as DUE_DATE_, TEMPRES_CATEGORY_ as CATEGORY_,
+    TEMPRES_PRIORITY_ as PRIORITY_, TEMPRES_DUE_DATE_ as DUE_DATE_,
     TEMPRES_DELETE_REASON_ as DELETE_REASON_,
     TEMPVAR_ID_ as VAR_ID_, TEMPVAR_NAME_ as VAR_NAME_, TEMPVAR_TYPE_ as VAR_TYPE_, TEMPVAR_REV_ as VAR_REV_,
     TEMPVAR_PROC_INST_ID_ as VAR_PROC_INST_ID_, TEMPVAR_EXECUTION_ID_ as VAR_EXECUTION_ID_, TEMPVAR_TASK_ID_ as VAR_TASK_ID_,
     TEMPVAR_BYTEARRAY_ID_ as VAR_BYTEARRAY_ID_, TEMPVAR_DOUBLE_ as VAR_DOUBLE_, 
-    TEMPVAR_TEXT_ as VAR_TEXT_, TEMPVAR_LAST_UPDATED_TIME_ as VAR_LAST_UPDATED_TIME_, TEMPVAR_TEXT2_ as VAR_TEXT2_, TEMPVAR_LONG_ as VAR_LONG_
+    TEMPVAR_TEXT_ as VAR_TEXT_, TEMPVAR_TEXT2_ as VAR_TEXT2_, TEMPVAR_LONG_ as VAR_LONG_
     ${limitOuterJoinBetween}
     RES.ID_ as TEMPRES_ID_, RES.PROC_DEF_ID_ as TEMPRES_PROC_DEF_ID_, RES.PROC_INST_ID_ as TEMPRES_PROC_INST_ID_, 
     RES.EXECUTION_ID_ as TEMPRES_EXECUTION_ID_, RES.NAME_ as TEMPRES_NAME_ , RES.PARENT_TASK_ID_ as TEMPRES_PARENT_TASK_ID_,
@@ -328,11 +211,11 @@
     RES.START_TIME_ as TEMPRES_START_TIME_, RES.END_TIME_ as TEMPRES_END_TIME_, RES.CLAIM_TIME_ as TEMPRES_CLAIM_TIME_,
     RES.DURATION_ as TEMPRES_DURATION_, RES.TASK_DEF_KEY_ as TEMPRES_TASK_DEF_KEY_,
     RES.FORM_KEY_ as TEMPRES_FORM_KEY_, RES.PRIORITY_ as TEMPRES_PRIORITY_,
-    RES.DUE_DATE_ as TEMPRES_DUE_DATE_, RES.CATEGORY_ as TEMPRES_CATEGORY_, RES.DELETE_REASON_ as TEMPRES_DELETE_REASON_,
+    RES.DUE_DATE_ as TEMPRES_DUE_DATE_, RES.DELETE_REASON_ as TEMPRES_DELETE_REASON_,
     VAR.ID_ as TEMPVAR_ID_, VAR.NAME_ as TEMPVAR_NAME_, VAR.VAR_TYPE_ as TEMPVAR_TYPE_, VAR.REV_ as TEMPVAR_REV_,
     VAR.PROC_INST_ID_ as TEMPVAR_PROC_INST_ID_, VAR.EXECUTION_ID_ as TEMPVAR_EXECUTION_ID_, VAR.TASK_ID_ as TEMPVAR_TASK_ID_,
     VAR.BYTEARRAY_ID_ as TEMPVAR_BYTEARRAY_ID_, VAR.DOUBLE_ as TEMPVAR_DOUBLE_, 
-    VAR.TEXT_ as TEMPVAR_TEXT_, VAR.TEXT2_ as TEMPVAR_TEXT2_, VAR.LAST_UPDATED_TIME_ as TEMPVAR_LAST_UPDATED_TIME_, VAR.LONG_ as TEMPVAR_LONG_
+    VAR.TEXT_ as TEMPVAR_TEXT_, VAR.TEXT2_ as TEMPVAR_TEXT2_, VAR.LONG_ as TEMPVAR_LONG_
     <include refid="selectHistoricTaskInstancesWithVariablesByQueryCriteriaSql"/> 
     ${orderBy}
     ${limitAfter}
@@ -342,7 +225,7 @@
     from ${prefix}ACT_HI_TASKINST RES
     <choose>
       <when test="includeTaskLocalVariables &amp;&amp; includeProcessVariables">
-        left outer join ${prefix}ACT_HI_VARINST VAR ON RES.ID_ = VAR.TASK_ID_ or (RES.PROC_INST_ID_ = VAR.EXECUTION_ID_ and VAR.TASK_ID_ is null)
+        left outer join ${prefix}ACT_HI_VARINST VAR ON RES.ID_ = VAR.TASK_ID_ or RES.PROC_INST_ID_ = VAR.EXECUTION_ID_
       </when>
       <otherwise>
         <if test="includeTaskLocalVariables">
@@ -360,14 +243,11 @@
     <if test="candidateUser != null || candidateGroups != null">
       inner join ${prefix}ACT_HI_IDENTITYLINK HI on HI.TASK_ID_ = RES.ID_
     </if>
-    <if test="processFinished || processUnfinished || processInstanceBusinessKey != null || processInstanceBusinessKeyLike != null || processInstanceBusinessKeyLikeIgnoreCase != null">
+    <if test="processFinished || processUnfinished || processInstanceBusinessKey != null || processInstanceBusinessKeyLike != null">
       inner join ${prefix}ACT_HI_PROCINST HPI ON RES.PROC_INST_ID_ = HPI.ID_
     </if>
-    <if test="processDefinitionKey != null || processDefinitionKeyLike != null || processDefinitionKeyLikeIgnoreCase != null || processDefinitionName != null || processDefinitionNameLike != null || (processCategoryInList != null &amp;&amp; processCategoryInList.size() &gt; 0) || (processCategoryNotInList != null &amp;&amp; processCategoryNotInList.size() &gt; 0) || (processDefinitionKeys != null &amp;&amp; processDefinitionKeys.size() &gt; 0)">
+    <if test="processDefinitionKey != null || processDefinitionKeyLike != null || processDefinitionName != null || processDefinitionNameLike != null">
       inner join ${prefix}ACT_RE_PROCDEF D on RES.PROC_DEF_ID_ = D.ID_
-    </if>
-    <if test="deploymentId != null || (deploymentIds != null &amp;&amp; deploymentIds.size() &gt; 0)">
-      left outer join ${prefix}ACT_RE_PROCDEF DEPLOY_P ON RES.PROC_DEF_ID_ = DEPLOY_P.ID_
     </if>
     <foreach collection="queryVariableValues" index="index" item="var">
       <choose>
@@ -378,28 +258,6 @@
           inner join ${prefix}ACT_HI_VARINST A${index} on RES.PROC_INST_ID_ = A${index}.PROC_INST_ID_ 
         </otherwise>
       </choose>       
-    </foreach>
-    <foreach collection="orQueryObjects" index="orIndex" item="orQueryObject">
-      <if test="orQueryObject.candidateUser != null || orQueryObject.candidateGroups != null">
-        inner join ${prefix}ACT_HI_IDENTITYLINK HI_OR${orIndex} on HI_OR${orIndex}.TASK_ID_ = RES.ID_
-      </if>
-      <if test="orQueryObject.processFinished || orQueryObject.processUnfinished || orQueryObject.processInstanceBusinessKey != null || orQueryObject.processInstanceBusinessKeyLike != null || orQueryObject.processInstanceBusinessKeyLikeIgnoreCase != null">
-        inner join ${prefix}ACT_HI_PROCINST HPI_OR${orIndex} ON RES.PROC_INST_ID_ = HPI_OR${orIndex}.ID_
-      </if>
-      <if test="orQueryObject.processDefinitionKey != null || orQueryObject.processDefinitionKeyLike != null || orQueryObject.processDefinitionKeyLikeIgnoreCase != null || orQueryObject.processDefinitionName != null || orQueryObject.processDefinitionNameLike != null || (orQueryObject.processCategoryInList != null &amp;&amp; orQueryObject.processCategoryInList.size() &gt; 0) || (orQueryObject.processCategoryNotInList != null &amp;&amp; orQueryObject.processCategoryNotInList.size() &gt; 0) || (orQueryObject.processDefinitionKeys != null &amp;&amp; orQueryObject.processDefinitionKeys.size() &gt; 0)">
-        left outer join ${prefix}ACT_RE_PROCDEF D_OR${orIndex} on RES.PROC_DEF_ID_ = D_OR${orIndex}.ID_
-      </if>
-      <if test="orQueryObject.deploymentId != null || (orQueryObject.deploymentIds != null &amp;&amp; orQueryObject.deploymentIds.size() &gt; 0)">
-        left outer join ${prefix}ACT_RE_PROCDEF DEPLOY_P_OR${orIndex} ON RES.PROC_DEF_ID_ = DEPLOY_P_OR${orIndex}.ID_
-      </if>
-      <if test="orQueryObject.queryVariableValues.size() &gt; 0">
-        <if test="orQueryObject.hasLocalQueryVariableValue()">
-          left outer join ${prefix}ACT_HI_VARINST A_L_OR${orIndex} on RES.ID_ = A_L_OR${orIndex}.TASK_ID_ 
-        </if>
-        <if test="orQueryObject.hasNonLocalQueryVariableValue()">
-          left outer join ${prefix}ACT_HI_VARINST A_OR${orIndex} on RES.PROC_INST_ID_ = A_OR${orIndex}.PROC_INST_ID_ 
-        </if>
-      </if>
     </foreach>
     <where>
       <if test="taskId != null">
@@ -412,71 +270,28 @@
         and D.KEY_ = #{processDefinitionKey}
       </if>
       <if test="processDefinitionKeyLike != null">
-        and D.KEY_ like #{processDefinitionKeyLike}${wildcardEscapeClause}
-      </if>
-       <if test="processDefinitionKeyLikeIgnoreCase != null">
-        and lower(D.KEY_) like #{processDefinitionKeyLikeIgnoreCase}${wildcardEscapeClause}
-      </if>
-      <if test="processDefinitionKeys != null &amp;&amp; processDefinitionKeys.size() &gt; 0">
-        and D.KEY_ in
-        <foreach item="item" index="index" collection="processDefinitionKeys" open="(" separator="," close=")">
-          #{item}
-        </foreach>
+        and D.KEY_ like #{processDefinitionKeyLike}
       </if>
       <if test="processDefinitionName != null">
         and D.NAME_ = #{processDefinitionName}
       </if>
       <if test="processDefinitionNameLike != null">
-        and D.NAME_ like #{processDefinitionNameLike}${wildcardEscapeClause}
-      </if>
-      <if test="processCategoryInList != null &amp;&amp; processCategoryInList.size() &gt; 0">
-        and D.CATEGORY_ IN
-        <foreach item="processCategory" index="index" collection="processCategoryInList"
-                 open="(" separator="," close=")">
-          #{processCategory}
-        </foreach>
-      </if>
-      <if test="processCategoryNotInList != null &amp;&amp; processCategoryNotInList.size() &gt; 0">
-        and D.CATEGORY_ NOT IN
-        <foreach item="processCategory" index="index" collection="processCategoryNotInList"
-                 open="(" separator="," close=")">
-          #{processCategory}
-        </foreach>
-      </if>
-      <if test="deploymentId != null">
-        and DEPLOY_P.DEPLOYMENT_ID_ = #{deploymentId}
-      </if>
-      <if test="deploymentIds != null &amp;&amp; deploymentIds.size() &gt; 0">
-        and DEPLOY_P.DEPLOYMENT_ID_ IN
-        <foreach item="deployment" index="index" collection="deploymentIds" 
-                 open="(" separator="," close=")">
-          #{deployment}
-        </foreach>
+        and D.NAME_ like #{processDefinitionNameLike}
       </if>
       <if test="processInstanceId != null">
         and RES.PROC_INST_ID_ = #{processInstanceId}
-      </if>
-      <if test="processInstanceIds != null &amp;&amp; processInstanceIds.size() &gt; 0">
-        and RES.PROC_INST_ID_ IN
-        <foreach item="processInstance" index="index" collection="processInstanceIds" 
-                 open="(" separator="," close=")">
-          #{processInstance}
-        </foreach>
       </if>
       <if test="processInstanceBusinessKey != null">
         and HPI.BUSINESS_KEY_ = #{processInstanceBusinessKey}
       </if>
       <if test="processInstanceBusinessKeyLike != null">
-        and HPI.BUSINESS_KEY_ like #{processInstanceBusinessKeyLike}${wildcardEscapeClause}
-      </if>
-       <if test="processInstanceBusinessKeyLikeIgnoreCase != null">
-        and lower(HPI.BUSINESS_KEY_) like #{processInstanceBusinessKeyLikeIgnoreCase}${wildcardEscapeClause}
+        and HPI.BUSINESS_KEY_ like #{processInstanceBusinessKeyLike}
       </if>
       <if test="taskDefinitionKey != null">
         and RES.TASK_DEF_KEY_ = #{taskDefinitionKey}
       </if>
       <if test="taskDefinitionKeyLike != null">
-        and RES.TASK_DEF_KEY_ like #{taskDefinitionKeyLike}${wildcardEscapeClause}
+        and RES.TASK_DEF_KEY_ like #{taskDefinitionKeyLike}
       </if>
       <if test="executionId != null">
         and RES.EXECUTION_ID_ = #{executionId}
@@ -485,24 +300,7 @@
         and RES.NAME_ = #{taskName}
       </if>
       <if test="taskNameLike != null">
-        and RES.NAME_ like #{taskNameLike}${wildcardEscapeClause}
-      </if>
-      <if test="taskNameLikeIgnoreCase != null">
-        and lower(RES.NAME_) like #{taskNameLikeIgnoreCase}${wildcardEscapeClause}
-      </if>
-      <if test="taskNameList != null &amp;&amp; taskNameList.size() &gt; 0">
-        and RES.NAME_ IN
-        <foreach item="taskName" index="index" collection="taskNameList"
-                 open="(" separator="," close=")">
-          #{taskName}
-        </foreach>
-      </if>
-      <if test="taskNameListIgnoreCase != null &amp;&amp; taskNameListIgnoreCase.size() &gt; 0">
-        and lower(RES.NAME_) IN
-        <foreach item="taskName" index="index" collection="taskNameListIgnoreCase"
-                 open="(" separator="," close=")">
-          #{taskName}
-        </foreach>
+        and RES.NAME_ like #{taskNameLike}
       </if>
       <if test="taskParentTaskId != null">
         and RES.PARENT_TASK_ID_ = #{taskParentTaskId}
@@ -511,34 +309,25 @@
         and RES.DESCRIPTION_ = #{taskDescription}
       </if>
       <if test="taskDescriptionLike != null">
-        and RES.DESCRIPTION_ like #{taskDescriptionLike}${wildcardEscapeClause}
-      </if>
-       <if test="taskDescriptionLikeIgnoreCase != null">
-        and lower(RES.DESCRIPTION_) like #{taskDescriptionLikeIgnoreCase}${wildcardEscapeClause}
+        and RES.DESCRIPTION_ like #{taskDescriptionLike}
       </if>
       <if test="taskDeleteReason != null">
         and RES.DELETE_REASON_ = #{taskDeleteReason}
       </if>
       <if test="taskDeleteReasonLike != null">
-        and RES.DELETE_REASON_ like #{taskDeleteReasonLike}${wildcardEscapeClause}
+        and RES.DELETE_REASON_ like #{taskDeleteReasonLike}
       </if>
       <if test="taskOwner != null">
         and RES.OWNER_ = #{taskOwner}
       </if>
       <if test="taskOwnerLike != null">
-        and RES.OWNER_ like #{taskOwnerLike}${wildcardEscapeClause}
-      </if>
-       <if test="taskOwnerLikeIgnoreCase != null">
-        and lower(RES.OWNER_) like #{taskOwnerLikeIgnoreCase}${wildcardEscapeClause}
+        and RES.OWNER_ like #{taskOwnerLike}
       </if>
       <if test="taskAssignee != null">
         and RES.ASSIGNEE_ = #{taskAssignee}
       </if>
       <if test="taskAssigneeLike != null">
-        and RES.ASSIGNEE_ like #{taskAssigneeLike}${wildcardEscapeClause}
-      </if>
-      <if test="taskAssigneeLikeIgnoreCase != null">
-        and lower(RES.ASSIGNEE_) like #{taskAssigneeLikeIgnoreCase}${wildcardEscapeClause}
+        and RES.ASSIGNEE_ like #{taskAssigneeLike}
       </if>
       <if test="taskPriority != null">
         and RES.PRIORITY_ = #{taskPriority}
@@ -591,18 +380,6 @@
       <if test="completedAfterDate != null">
         and RES.END_TIME_ &gt; #{completedAfterDate}
       </if>
-      <if test="category != null">
-        and RES.CATEGORY_ = #{category}
-      </if>
-      <if test="tenantId != null">
-        and RES.TENANT_ID_ = #{tenantId}
-      </if>
-      <if test="tenantIdLike != null">
-        and RES.TENANT_ID_ like #{tenantIdLike}${wildcardEscapeClause}
-      </if>
-      <if test="withoutTenantId">
-        and (RES.TENANT_ID_ = '' or RES.TENANT_ID_ is null)
-      </if>
       <if test="candidateUser != null || candidateGroups != null">
         and RES.ASSIGNEE_ is null
         and HI.TYPE_ = 'candidate'
@@ -645,7 +422,7 @@
         <!-- Variable value -->
         <if test="queryVar.textValue != null &amp;&amp; queryVar.longValue == null &amp;&amp; queryVar.doubleValue == null">
           <choose>
-            <when test="queryVar.operator.equals('EQUALS_IGNORE_CASE') || queryVar.operator.equals('NOT_EQUALS_IGNORE_CASE') || queryVar.operator.equals('LIKE_IGNORE_CASE')">
+            <when test="queryVar.operator.equals('EQUALS_IGNORE_CASE') || queryVar.operator.equals('NOT_EQUALS_IGNORE_CASE')">
               and lower(A${index}.TEXT_)
             </when>
             <otherwise>
@@ -653,13 +430,10 @@
             </otherwise>
           </choose> 
           <choose>
-              <when test="queryVar.operator.equals('LIKE') || queryVar.operator.equals('LIKE_IGNORE_CASE')">LIKE</when>
+              <when test="queryVar.operator.equals('LIKE')">LIKE</when>
               <otherwise><include refid="executionVariableOperator" /></otherwise>
           </choose>          
           #{queryVar.textValue}
-          <choose>
-            <when test="queryVar.operator.equals('LIKE') || queryVar.operator.equals('LIKE_IGNORE_CASE')">${wildcardEscapeClause}</when>
-          </choose>
         </if>
         <if test="queryVar.textValue2 != null">
           and A${index}.TEXT2_ 
@@ -668,9 +442,6 @@
             <otherwise><include refid="executionVariableOperator" /></otherwise>
           </choose>          
           #{queryVar.textValue2}
-          <choose>
-            <when test="queryVar.operator.equals('LIKE')">${wildcardEscapeClause}</when>
-          </choose>
         </if>
         <if test="queryVar.longValue != null">
           and A${index}.LONG_
@@ -693,312 +464,6 @@
             </otherwise>
           </choose>          
         </if>
-      </foreach>
-      <foreach item="orQueryObject" index="orIndex" collection="orQueryObjects">
-        and 
-        <trim prefix="(" prefixOverrides="OR" suffix=")">
-          <if test="orQueryObject.taskId != null">
-            RES.ID_ = #{orQueryObject.taskId}
-          </if>
-          <if test="orQueryObject.processDefinitionId != null">
-            or RES.PROC_DEF_ID_ = #{orQueryObject.processDefinitionId}
-          </if>
-          <if test="orQueryObject.processDefinitionKey != null">
-            or D_OR${orIndex}.KEY_ = #{orQueryObject.processDefinitionKey}
-          </if>
-          <if test="orQueryObject.processDefinitionKeyLike != null">
-            or D_OR${orIndex}.KEY_ like #{orQueryObject.processDefinitionKeyLike}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.processDefinitionKeyLikeIgnoreCase != null">
-            or lower(D_OR${orIndex}.KEY_) like #{orQueryObject.processDefinitionKeyLikeIgnoreCase}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.processDefinitionKeys != null &amp;&amp; orQueryObject.processDefinitionKeys.size() &gt; 0">
-            or D_OR${orIndex}.KEY_ in
-            <foreach item="item" index="index" collection="orQueryObject.processDefinitionKeys" open="(" separator="," close=")">
-              #{item}
-            </foreach>
-          </if>
-          <if test="orQueryObject.processDefinitionName != null">
-            or D_OR${orIndex}.NAME_ = #{orQueryObject.processDefinitionName}
-          </if>
-          <if test="orQueryObject.processDefinitionNameLike != null">
-            or D_OR${orIndex}.NAME_ like #{orQueryObject.processDefinitionNameLike}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.processCategoryInList != null &amp;&amp; orQueryObject.processCategoryInList.size() &gt; 0">
-            or D_OR${orIndex}.CATEGORY_ IN
-            <foreach item="processCategory" index="index" collection="orQueryObject.processCategoryInList"
-                     open="(" separator="," close=")">
-              #{processCategory}
-            </foreach>
-          </if>
-          <if test="orQueryObject.processCategoryNotInList != null &amp;&amp; orQueryObject.processCategoryNotInList.size() &gt; 0">
-            or D_OR${orIndex}.CATEGORY_ NOT IN
-            <foreach item="processCategory" index="index" collection="orQueryObject.processCategoryNotInList"
-                     open="(" separator="," close=")">
-              #{processCategory}
-            </foreach>
-          </if>
-          <if test="orQueryObject.deploymentId != null">
-            or DEPLOY_P_OR${orIndex}.DEPLOYMENT_ID_ = #{orQueryObject.deploymentId}
-          </if>
-          <if test="orQueryObject.deploymentIds != null &amp;&amp; orQueryObject.deploymentIds.size() &gt; 0">
-            or DEPLOY_P_OR${orIndex}.DEPLOYMENT_ID_ IN
-            <foreach item="deployment" index="index" collection="orQueryObject.deploymentIds" 
-                     open="(" separator="," close=")">
-              #{deployment}
-            </foreach>
-          </if>
-          <if test="orQueryObject.processInstanceId != null">
-            or RES.PROC_INST_ID_ = #{orQueryObject.processInstanceId}
-          </if>
-          <if test="orQueryObject.processInstanceIds != null &amp;&amp; orQueryObject.processInstanceIds.size() &gt; 0">
-            or RES.PROC_INST_ID_ IN
-            <foreach item="processInstance" index="index" collection="orQueryObject.processInstanceIds" 
-                     open="(" separator="," close=")">
-              #{processInstance}
-            </foreach>
-          </if>
-          <if test="orQueryObject.processInstanceBusinessKey != null">
-            or HPI_OR${orIndex}.BUSINESS_KEY_ = #{orQueryObject.processInstanceBusinessKey}
-          </if>
-          <if test="orQueryObject.processInstanceBusinessKeyLike != null">
-            or HPI_OR${orIndex}.BUSINESS_KEY_ like #{orQueryObject.processInstanceBusinessKeyLike}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.processInstanceBusinessKeyLikeIgnoreCase != null">
-            or lower(HPI_OR${orIndex}.BUSINESS_KEY_) like #{orQueryObject.processInstanceBusinessKeyLikeIgnoreCase}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.taskDefinitionKey != null">
-            or RES.TASK_DEF_KEY_ = #{orQueryObject.taskDefinitionKey}
-          </if>
-          <if test="orQueryObject.taskDefinitionKeyLike != null">
-            or RES.TASK_DEF_KEY_ like #{orQueryObject.taskDefinitionKeyLike}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.executionId != null">
-            or RES.EXECUTION_ID_ = #{orQueryObject.executionId}
-          </if>
-          <if test="orQueryObject.taskName != null">
-            or RES.NAME_ = #{orQueryObject.taskName}
-          </if>
-          <if test="orQueryObject.taskNameLike != null">
-            or RES.NAME_ like #{orQueryObject.taskNameLike}${wildcardEscapeClause}
-          </if>
-           <if test="orQueryObject.taskNameLikeIgnoreCase != null">
-            or lower(RES.NAME_) like #{orQueryObject.taskNameLikeIgnoreCase}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.taskNameList != null &amp;&amp; orQueryObject.taskNameList.size() &gt; 0">
-            or RES.NAME_ IN
-            <foreach item="taskName" index="index" collection="orQueryObject.taskNameList"
-                     open="(" separator="," close=")">
-              #{taskName}
-            </foreach>
-          </if>
-          <if test="orQueryObject.taskNameListIgnoreCase != null &amp;&amp; orQueryObject.taskNameListIgnoreCase.size() &gt; 0">
-            or lower(RES.NAME_) IN
-            <foreach item="taskName" index="index" collection="orQueryObject.taskNameListIgnoreCase"
-                     open="(" separator="," close=")">
-              #{taskName}
-            </foreach>
-          </if>
-          <if test="orQueryObject.taskParentTaskId != null">
-            or RES.PARENT_TASK_ID_ = #{orQueryObject.taskParentTaskId}
-          </if>
-          <if test="orQueryObject.taskDescription != null">
-            or RES.DESCRIPTION_ = #{orQueryObject.taskDescription}
-          </if>
-          <if test="orQueryObject.taskDescriptionLike != null">
-            or RES.DESCRIPTION_ like #{orQueryObject.taskDescriptionLike}${wildcardEscapeClause}
-          </if>
-           <if test="orQueryObject.taskDescriptionLikeIgnoreCase != null">
-            or lower(RES.DESCRIPTION_) like #{orQueryObject.taskDescriptionLikeIgnoreCase}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.taskDeleteReason != null">
-            or RES.DELETE_REASON_ = #{orQueryObject.taskDeleteReason}
-          </if>
-          <if test="orQueryObject.taskDeleteReasonLike != null">
-            or RES.DELETE_REASON_ like #{orQueryObject.taskDeleteReasonLike}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.taskOwner != null">
-            or RES.OWNER_ = #{orQueryObject.taskOwner}
-          </if>
-          <if test="orQueryObject.taskOwnerLike != null">
-            or RES.OWNER_ like #{orQueryObject.taskOwnerLike}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.taskOwnerLikeIgnoreCase != null">
-            or lower(RES.OWNER_) like #{orQueryObject.taskOwnerLikeIgnoreCase}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.taskAssignee != null">
-            or RES.ASSIGNEE_ = #{orQueryObject.taskAssignee}
-          </if>
-          <if test="orQueryObject.taskAssigneeLike != null">
-            or RES.ASSIGNEE_ like #{orQueryObject.taskAssigneeLike}${wildcardEscapeClause}
-          </if>
-           <if test="orQueryObject.taskAssigneeLikeIgnoreCase != null">
-            or RES.ASSIGNEE_ like #{orQueryObject.taskAssigneeLikeIgnoreCase}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.taskPriority != null">
-            or RES.PRIORITY_ = #{orQueryObject.taskPriority}
-          </if>
-          <if test="orQueryObject.taskMinPriority != null">
-            or RES.PRIORITY_ &gt;= #{orQueryObject.taskMinPriority}
-          </if>
-          <if test="orQueryObject.taskMaxPriority != null">
-            or RES.PRIORITY_ &lt;= #{orQueryObject.taskMaxPriority}
-          </if>
-          <if test="orQueryObject.unfinished">
-            or RES.END_TIME_ is null
-          </if>
-          <if test="orQueryObject.finished">
-            or RES.END_TIME_ is not null
-          </if>
-          <if test="orQueryObject.processFinished">
-            or HPI_OR${orIndex}.END_TIME_ is not null
-          </if>
-          <if test="orQueryObject.processUnfinished">
-            or HPI_OR${orIndex}.END_TIME_ is null
-          </if>
-          <if test="orQueryObject.dueDate != null">
-            or RES.DUE_DATE_ = #{orQueryObject.dueDate}
-          </if>
-          <if test="orQueryObject.dueBefore != null">
-            or RES.DUE_DATE_ &lt; #{orQueryObject.dueBefore}
-          </if>
-          <if test="orQueryObject.dueAfter != null">
-            or RES.DUE_DATE_ &gt; #{orQueryObject.dueAfter}
-          </if>
-          <if test="orQueryObject.withoutDueDate">
-            or RES.DUE_DATE_ is null
-          </if>
-          <if test="orQueryObject.creationDate != null">
-            or RES.START_TIME_ = #{orQueryObject.creationDate}
-          </if>
-          <if test="orQueryObject.creationBeforeDate != null">
-            or RES.START_TIME_ &lt; #{orQueryObject.creationBeforeDate}
-          </if>
-          <if test="orQueryObject.creationAfterDate != null">
-            or RES.START_TIME_ &gt; #{orQueryObject.creationAfterDate}
-          </if>
-          <if test="orQueryObject.completedDate != null">
-            or RES.END_TIME_ = #{orQueryObject.completedDate}
-          </if>
-          <if test="orQueryObject.completedBeforeDate != null">
-            or RES.END_TIME_ &lt; #{orQueryObject.completedBeforeDate}
-          </if>
-          <if test="orQueryObject.completedAfterDate != null">
-            or RES.END_TIME_ &gt; #{orQueryObject.completedAfterDate}
-          </if>
-          <if test="orQueryObject.category != null">
-            or RES.CATEGORY_ = #{orQueryObject.category}
-          </if>
-          <if test="orQueryObject.tenantId != null">
-            or RES.TENANT_ID_ = #{orQueryObject.tenantId}
-          </if>
-          <if test="orQueryObject.tenantIdLike != null">
-            or RES.TENANT_ID_ like #{orQueryObject.tenantIdLike}${wildcardEscapeClause}
-          </if>
-          <if test="orQueryObject.withoutTenantId">
-            or (RES.TENANT_ID_ = '' or RES.TENANT_ID_ is null)
-          </if>
-          <if test="orQueryObject.candidateUser != null || orQueryObject.candidateGroups != null">
-            or (RES.ASSIGNEE_ is null
-            and HI_OR${orIndex}.TYPE_ = 'candidate'
-            and
-            (
-              <if test="orQueryObject.candidateUser != null">
-                HI_OR${orIndex}.USER_ID_ = #{orQueryObject.candidateUser}
-              </if>
-              <if test="orQueryObject.candidateUser != null &amp;&amp; orQueryObject.candidateGroups != null &amp;&amp; orQueryObject.candidateGroups.size() &gt; 0">
-                or
-              </if>
-              <if test="orQueryObject.candidateGroups != null &amp;&amp; orQueryObject.candidateGroups.size() &gt; 0">
-                HI_OR${orIndex}.GROUP_ID_ IN
-                <foreach item="group" index="index" collection="orQueryObject.candidateGroups"
-                         open="(" separator="," close=")">
-                  #{group}
-                </foreach>
-              </if>
-            ))
-          </if>
-          <if test="orQueryObject.involvedUser != null">
-            or (
-              exists(select LINK.USER_ID_ from ${prefix}ACT_HI_IDENTITYLINK LINK where USER_ID_ = #{orQueryObject.involvedUser} and LINK.TASK_ID_ = RES.ID_)
-              or RES.ASSIGNEE_ = #{orQueryObject.involvedUser}
-              or RES.OWNER_ = #{orQueryObject.involvedUser}
-              )
-          </if>
-          <foreach item="queryVar" collection="orQueryObject.queryVariableValues" index="index">
-            or
-            <trim prefix="(" prefixOverrides="AND" suffix=")">
-              <choose>
-                <when test="!queryVar.local">
-                  <bind name="orLocal" value="''" />
-                  <!-- When process instance variable is queried for, taskId should be null -->
-                  and A_OR${orIndex}.TASK_ID_ is null
-                </when>
-                <otherwise>
-                  <bind name="orLocal" value="'L_'" />
-                </otherwise>
-              </choose>
-              <if test="queryVar.name != null">
-                <!-- Match-all variable-names when name is null -->
-                and A_${orLocal}OR${orIndex}.NAME_= #{queryVar.name}
-              </if>
-              <if test="!queryVar.type.equals('null')">
-                and A_${orLocal}OR${orIndex}.VAR_TYPE_ = #{queryVar.type}
-              </if>
-              <!-- Variable value -->
-              <if test="queryVar.textValue != null &amp;&amp; queryVar.longValue == null &amp;&amp; queryVar.doubleValue == null">
-                <choose>
-                  <when test="queryVar.operator.equals('EQUALS_IGNORE_CASE') || queryVar.operator.equals('NOT_EQUALS_IGNORE_CASE') || queryVar.operator.equals('LIKE_IGNORE_CASE')">
-                    and lower(A_${orLocal}OR${orIndex}.TEXT_)
-                  </when>
-                  <otherwise>
-                    and A_${orLocal}OR${orIndex}.TEXT_
-                  </otherwise>
-                </choose> 
-                <choose>
-                    <when test="queryVar.operator.equals('LIKE') || queryVar.operator.equals('LIKE_IGNORE_CASE')">LIKE</when>
-                    <otherwise><include refid="executionVariableOperator" /></otherwise>
-                </choose>          
-                #{queryVar.textValue}
-                <choose>
-                  <when test="queryVar.operator.equals('LIKE') || queryVar.operator.equals('LIKE_IGNORE_CASE')">${wildcardEscapeClause}</when>
-                </choose>
-              </if>
-              <if test="queryVar.textValue2 != null">
-                and A_${orLocal}OR${orIndex}.TEXT2_ 
-                <choose>
-                  <when test="queryVar.operator.equals('LIKE')">LIKE</when>
-                  <otherwise><include refid="executionVariableOperator" /></otherwise>
-                </choose>          
-                #{queryVar.textValue2}
-                <choose>
-                  <when test="queryVar.operator.equals('LIKE')">${wildcardEscapeClause}</when>
-                </choose>
-              </if>
-              <if test="queryVar.longValue != null">
-                and A_${orLocal}OR${orIndex}.LONG_
-                <include refid="executionVariableOperator" />
-                #{queryVar.longValue}
-              </if>
-              <if test="queryVar.doubleValue != null">
-                and A_${orLocal}OR${orIndex}.DOUBLE_ 
-                <include refid="executionVariableOperator" />
-                #{queryVar.doubleValue}
-              </if>
-              <!-- Null variable type -->
-              <if test="queryVar.textValue == null &amp;&amp; queryVar.textValue2 == null &amp;&amp; queryVar.longValue == null &amp;&amp; queryVar.doubleValue == null">
-                <choose>
-                  <when test="queryVar.operator.equals('NOT_EQUALS')">
-                    and (A_${orLocal}OR${orIndex}.TEXT_ is not null or A_${orLocal}OR${orIndex}.TEXT2_ is not null or A_${orLocal}OR${orIndex}.LONG_ is not null or A_${orLocal}OR${orIndex}.DOUBLE_ is not null or A_${orLocal}OR${orIndex}.BYTEARRAY_ID_ is not null)
-                  </when>
-                  <otherwise>
-                    and A_${orLocal}OR${orIndex}.TEXT_ is null and A_${orLocal}OR${orIndex}.TEXT2_ is null and A_${orLocal}OR${orIndex}.LONG_ is null and A_${orLocal}OR${orIndex}.DOUBLE_ is null and A_${orLocal}OR${orIndex}.BYTEARRAY_ID_ is null
-                  </otherwise>
-                </choose>          
-              </if>
-            </trim>
-          </foreach>
-        </trim>
       </foreach>
     </where>
   </sql>

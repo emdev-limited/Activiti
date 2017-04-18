@@ -18,18 +18,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.history.HistoricProcessInstance;
 import org.activiti.engine.impl.context.Context;
-import org.activiti.engine.impl.db.BulkDeleteable;
 import org.activiti.engine.impl.identity.Authentication;
+import org.activiti.engine.impl.util.ClockUtil;
 
 /**
  * @author Tom Baeyens
  * @author Christian Stettler
- * @author Joram Barrez
  */
-public class HistoricProcessInstanceEntity extends HistoricScopeInstanceEntity implements HistoricProcessInstance, BulkDeleteable {
+public class HistoricProcessInstanceEntity extends HistoricScopeInstanceEntity implements HistoricProcessInstance {
 
   private static final long serialVersionUID = 1L;
   
@@ -38,11 +36,6 @@ public class HistoricProcessInstanceEntity extends HistoricScopeInstanceEntity i
   protected String startUserId;
   protected String startActivityId;
   protected String superProcessInstanceId;
-  protected String tenantId = ProcessEngineConfiguration.NO_TENANT_ID;
-  protected String name;
-  protected String localizedName;
-  protected String description;
-  protected String localizedDescription;
   protected List<HistoricVariableInstanceEntity> queryVariables;
 
   public HistoricProcessInstanceEntity() {
@@ -53,19 +46,10 @@ public class HistoricProcessInstanceEntity extends HistoricScopeInstanceEntity i
     processInstanceId = processInstance.getId();
     businessKey = processInstance.getBusinessKey();
     processDefinitionId = processInstance.getProcessDefinitionId();
-    processDefinitionKey = processInstance.getProcessDefinitionKey();
-    processDefinitionName = processInstance.getProcessDefinitionName();
-    processDefinitionVersion = processInstance.getProcessDefinitionVersion();
-    deploymentId = processInstance.getDeploymentId();
-    startTime = Context.getProcessEngineConfiguration().getClock().getCurrentTime();
+    startTime = ClockUtil.getCurrentTime();
     startUserId = Authentication.getAuthenticatedUserId();
     startActivityId = processInstance.getActivityId();
     superProcessInstanceId = processInstance.getSuperExecution() != null ? processInstance.getSuperExecution().getProcessInstanceId() : null;
-    
-    // Inherit tenant id (if applicable)
-    if (processInstance.getTenantId() != null) {
-    	tenantId = processInstance.getTenantId();
-    }
   }
 
   
@@ -73,16 +57,11 @@ public class HistoricProcessInstanceEntity extends HistoricScopeInstanceEntity i
     Map<String, Object> persistentState = (Map<String, Object>) new HashMap<String, Object>();
     persistentState.put("endTime", endTime);
     persistentState.put("businessKey", businessKey);
-    persistentState.put("name", name);
     persistentState.put("durationInMillis", durationInMillis);
     persistentState.put("deleteReason", deleteReason);
     persistentState.put("endStateName", endActivityId);
     persistentState.put("superProcessInstanceId", superProcessInstanceId);
     persistentState.put("processDefinitionId", processDefinitionId);
-    persistentState.put("processDefinitionKey", processDefinitionKey);
-    persistentState.put("processDefinitionName", processDefinitionName);
-    persistentState.put("processDefinitionVersion", processDefinitionVersion);
-    persistentState.put("deploymentId", deploymentId);
     return persistentState;
   }
 
@@ -124,55 +103,7 @@ public class HistoricProcessInstanceEntity extends HistoricScopeInstanceEntity i
     this.superProcessInstanceId = superProcessInstanceId;
   }
   
-  public String getTenantId() {
-		return tenantId;
-	}
-
-	public void setTenantId(String tenantId) {
-		this.tenantId = tenantId;
-	}
-	
-	public String getName() {
-    if (localizedName != null && localizedName.length() > 0) {
-      return localizedName;
-    } else {
-      return name;
-    }
-  }
-
-  public void setName(String name) {
-    this.name = name;
-  }
-
-  public String getLocalizedName() {
-    return localizedName;
-  }
-  
-  public void setLocalizedName(String localizedName) {
-    this.localizedName = localizedName;
-  }
-  
-  public String getDescription() {
-    if (localizedDescription != null && localizedDescription.length() > 0) {
-      return localizedDescription;
-    } else {
-      return description;
-    }
-  }
-  
-  public void setDescription(String description) {
-    this.description = description;
-  }
-  
-  public String getLocalizedDescription() {
-    return localizedDescription;
-  }
-  
-  public void setLocalizedDescription(String localizedDescription) {
-    this.localizedDescription = localizedDescription;
-  }
-	
-	public Map<String, Object> getProcessVariables() {
+  public Map<String, Object> getProcessVariables() {
     Map<String, Object> variables = new HashMap<String, Object>();
     if (queryVariables != null) {
       for (HistoricVariableInstanceEntity variableInstance: queryVariables) {

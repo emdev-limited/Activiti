@@ -13,53 +13,55 @@
 
 package org.activiti.rest.service.api.identity;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.activiti.engine.identity.User;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Status;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Get;
+import org.restlet.resource.Put;
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class UserResource extends BaseUserResource {
 
-  @RequestMapping(value="/identity/users/{userId}", method = RequestMethod.GET, produces = "application/json")
-  public UserResponse getUser(@PathVariable String userId, HttpServletRequest request) {
-    return restResponseFactory.createUserResponse(getUserFromRequest(userId), false);
+  @Get
+  public UserResponse getUser() {
+    if(!authenticate())
+      return null;
+    
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createUserResponse(this, getUserFromRequest(), false);
   }
   
-  @RequestMapping(value="/identity/users/{userId}", method = RequestMethod.PUT, produces = "application/json")
-  public UserResponse updateUser(@PathVariable String userId, @RequestBody UserRequest userRequest, HttpServletRequest request) {
-    User user = getUserFromRequest(userId);
-    if (userRequest.isEmailChanged()) {
-      user.setEmail(userRequest.getEmail());
+  @Put
+  public UserResponse updateUser(UserRequest request) {
+
+    User user = getUserFromRequest();
+    if(request.isEmailChanged()) {
+      user.setEmail(request.getEmail());
     }
-    if (userRequest.isFirstNameChanged()) {
-      user.setFirstName(userRequest.getFirstName());
+    if(request.isFirstNameChanged()) {
+      user.setFirstName(request.getFirstName());
     }
-    if (userRequest.isLastNameChanged()) {
-      user.setLastName(userRequest.getLastName());
+    if(request.isLastNameChanged()) {
+      user.setLastName(request.getLastName());
     }
-    if (userRequest.isPasswordChanged()) {
-      user.setPassword(userRequest.getPassword());
+    if(request.isPasswordChanged()) {
+      user.setPassword(request.getPassword());
     }
     
-    identityService.saveUser(user);
+    ActivitiUtil.getIdentityService().saveUser(user);
     
-    return restResponseFactory.createUserResponse(user, false);
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createUserResponse(this, user, false);
   }
   
-  @RequestMapping(value="/identity/users/{userId}", method = RequestMethod.DELETE)
-  public void deleteUser(@PathVariable String userId, HttpServletResponse response) {
-    User user = getUserFromRequest(userId);
-    identityService.deleteUser(user.getId());
-    response.setStatus(HttpStatus.NO_CONTENT.value());
+  @Delete
+  public void deleteUser() {
+    User user = getUserFromRequest();
+    ActivitiUtil.getIdentityService().deleteUser(user.getId());
+    setStatus(Status.SUCCESS_NO_CONTENT);
   }
 }

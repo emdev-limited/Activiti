@@ -14,21 +14,21 @@ package org.activiti.engine.impl.bpmn.parser.handler;
 
 import org.activiti.bpmn.constants.BpmnXMLConstants;
 import org.activiti.bpmn.model.BaseElement;
+import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.EventDefinition;
 import org.activiti.bpmn.model.SignalEventDefinition;
 import org.activiti.bpmn.model.ThrowEvent;
 import org.activiti.engine.impl.bpmn.parser.BpmnParse;
+import org.activiti.engine.impl.bpmn.parser.CompensateEventDefinition;
 import org.activiti.engine.impl.pvm.process.ActivityImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.activiti.engine.impl.pvm.process.ScopeImpl;
+import org.apache.commons.lang3.StringUtils;
 
 
 /**
  * @author Joram Barrez
  */
 public class IntermediateThrowEventParseHandler extends AbstractActivityBpmnParseHandler<ThrowEvent> {
-	
-	private static final Logger logger = LoggerFactory.getLogger(IntermediateThrowEventParseHandler.class);
   
   public Class< ? extends BaseElement> getHandledType() {
     return ThrowEvent.class;
@@ -36,15 +36,14 @@ public class IntermediateThrowEventParseHandler extends AbstractActivityBpmnPars
   
   protected void executeParse(BpmnParse bpmnParse, ThrowEvent intermediateEvent) {
 
+    BpmnModel bpmnModel = bpmnParse.getBpmnModel();
+
     ActivityImpl nestedActivityImpl = createActivityOnCurrentScope(bpmnParse, intermediateEvent, BpmnXMLConstants.ELEMENT_EVENT_THROW);
     
     EventDefinition eventDefinition = null;
-    if (!intermediateEvent.getEventDefinitions().isEmpty()) {
+    if (intermediateEvent.getEventDefinitions().size() > 0) {
       eventDefinition = intermediateEvent.getEventDefinitions().get(0);
     }
-    
-    nestedActivityImpl.setAsync(intermediateEvent.isAsynchronous());
-    nestedActivityImpl.setExclusive(!intermediateEvent.isNotExclusive());
     
     if (eventDefinition instanceof SignalEventDefinition) {
       bpmnParse.getBpmnParserHandlers().parseElement(bpmnParse, eventDefinition);
@@ -53,26 +52,23 @@ public class IntermediateThrowEventParseHandler extends AbstractActivityBpmnPars
     } else if (eventDefinition == null) {
       nestedActivityImpl.setActivityBehavior(bpmnParse.getActivityBehaviorFactory().createIntermediateThrowNoneEventActivityBehavior(intermediateEvent)); 
     } else { 
-      logger.warn("Unsupported intermediate throw event type for throw event " + intermediateEvent.getId());
+      bpmnModel.addProblem("Unsupported intermediate throw event type " + eventDefinition, intermediateEvent);
     }
   }
   
-  //
-  // Seems not to be used anymore?
-  //
-//  protected CompensateEventDefinition createCompensateEventDefinition(BpmnParse bpmnParse, org.activiti.bpmn.model.CompensateEventDefinition eventDefinition, ScopeImpl scopeElement) {
-//    if(StringUtils.isNotEmpty(eventDefinition.getActivityRef())) {
-//      if(scopeElement.findActivity(eventDefinition.getActivityRef()) == null) {
-//        bpmnParse.getBpmnModel().addProblem("Invalid attribute value for 'activityRef': no activity with id '" + eventDefinition.getActivityRef() +
-//            "' in current scope " + scopeElement.getId(), eventDefinition);
-//      }
-//    }
-//    
-//    CompensateEventDefinition compensateEventDefinition =  new CompensateEventDefinition();
-//    compensateEventDefinition.setActivityRef(eventDefinition.getActivityRef());
-//    compensateEventDefinition.setWaitForCompletion(eventDefinition.isWaitForCompletion());
-//    
-//    return compensateEventDefinition;
-//  }
+  protected CompensateEventDefinition createCompensateEventDefinition(BpmnParse bpmnParse, org.activiti.bpmn.model.CompensateEventDefinition eventDefinition, ScopeImpl scopeElement) {
+    if(StringUtils.isNotEmpty(eventDefinition.getActivityRef())) {
+      if(scopeElement.findActivity(eventDefinition.getActivityRef()) == null) {
+        bpmnParse.getBpmnModel().addProblem("Invalid attribute value for 'activityRef': no activity with id '" + eventDefinition.getActivityRef() +
+            "' in current scope " + scopeElement.getId(), eventDefinition);
+      }
+    }
+    
+    CompensateEventDefinition compensateEventDefinition =  new CompensateEventDefinition();
+    compensateEventDefinition.setActivityRef(eventDefinition.getActivityRef());
+    compensateEventDefinition.setWaitForCompletion(eventDefinition.isWaitForCompletion());
+    
+    return compensateEventDefinition;
+  }
 
 }

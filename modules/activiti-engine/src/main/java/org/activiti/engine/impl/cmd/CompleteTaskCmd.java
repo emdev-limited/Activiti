@@ -25,31 +25,18 @@ public class CompleteTaskCmd extends NeedsActiveTaskCmd<Void> {
       
   private static final long serialVersionUID = 1L;
   protected Map<String, Object> variables;
-  protected boolean localScope;
   
   public CompleteTaskCmd(String taskId, Map<String, Object> variables) {
     super(taskId);
     this.variables = variables;
   }
   
-  public CompleteTaskCmd(String taskId, Map<String, Object> variables, boolean localScope) {
-    super(taskId);
-    this.variables = variables;
-    this.localScope = localScope;
-  }
-  
   protected Void execute(CommandContext commandContext, TaskEntity task) {
     if (variables!=null) {
-    	if (localScope) {
-    		task.setVariablesLocal(variables);
-    	} else if (task.getExecutionId() != null) {
-    		task.setExecutionVariables(variables);
-    	} else {
-    		task.setVariables(variables);
-    	}
+      task.setExecutionVariables(variables);
     }
     
-    task.complete(variables, localScope);
+    task.complete();
     return null;
   }
   

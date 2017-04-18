@@ -12,32 +12,33 @@
  */
 package org.activiti.engine.impl.calendar;
 
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
+
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.Duration;
 
 import org.activiti.engine.ActivitiException;
-import org.activiti.engine.runtime.ClockReader;
+import org.activiti.engine.impl.util.ClockUtil;
 
 
 /**
  * @author Tom Baeyens
  */
-public class DurationBusinessCalendar extends BusinessCalendarImpl {
+public class DurationBusinessCalendar implements BusinessCalendar {
   
   public static String NAME = "duration";
 
-  public DurationBusinessCalendar(ClockReader clockReader) {
-    super(clockReader);
-  }
-
-  public Date resolveDuedate(String duedate, int maxIterations) {
+  public Date resolveDuedate(String duedate) {
     try {
-      DurationHelper dh = new DurationHelper(duedate, clockReader);
+      DurationHelper dh = new DurationHelper(duedate);
       return dh.getDateAfter();
     } catch (Exception e) {
       throw new ActivitiException("couldn't resolve duedate: "+e.getMessage(), e);
     }
   }
-
+    
 // Code below just left in for a while just in case it would be needed again.
 //  
 //  private static Map<String, Integer> units = new HashMap<String, Integer>();

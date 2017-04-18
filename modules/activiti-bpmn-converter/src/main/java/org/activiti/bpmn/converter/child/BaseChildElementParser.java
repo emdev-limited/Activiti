@@ -46,8 +46,4 @@ public abstract class BaseChildElementParser implements BpmnXMLConstants {
       }
     }
   }
-
-  public boolean accepts(BaseElement element){
-    return element!=null;
-  };
 }

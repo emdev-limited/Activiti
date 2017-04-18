@@ -17,8 +17,6 @@ import java.util.List;
 
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiIllegalArgumentException;
-import org.activiti.engine.ManagementService;
-import org.activiti.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.db.ListQueryParameterObject;
 import org.activiti.engine.impl.interceptor.Command;
@@ -43,25 +41,15 @@ public abstract class AbstractQuery<T extends Query<?,?>, U> extends ListQueryPa
   private static enum ResultType {
     LIST, LIST_PAGE, SINGLE_RESULT, COUNT
   }
-  
     
   protected transient CommandExecutor commandExecutor;
   protected transient CommandContext commandContext;
-  
-  protected String databaseType;
-  
   protected String orderBy;
   
   protected ResultType resultType;
 
   protected QueryProperty orderProperty;
-  
-  public static enum NullHandlingOnOrder {
-  	NULLS_FIRST, NULLS_LAST
-  }
-  
-  protected NullHandlingOnOrder nullHandlingOnOrder;
-  
+
   protected AbstractQuery() {
     parameter = this;
   }
@@ -74,11 +62,6 @@ public abstract class AbstractQuery<T extends Query<?,?>, U> extends ListQueryPa
     this.commandContext = commandContext;
   }
   
-  // To be used by custom queries
-  public AbstractQuery(ManagementService managementService){
-    this(((ManagementServiceImpl) managementService).getCommandExecutor());
-  }
-  
   public AbstractQuery<T, U> setCommandExecutor(CommandExecutor commandExecutor) {
     this.commandExecutor = commandExecutor;
     return this;
@@ -88,13 +71,6 @@ public abstract class AbstractQuery<T extends Query<?,?>, U> extends ListQueryPa
   public T orderBy(QueryProperty property) {
     this.orderProperty = property;
     return (T) this;
-  }
-
-  @SuppressWarnings("unchecked")
-  public T orderBy(QueryProperty property, NullHandlingOnOrder nullHandlingOnOrder) {
-  	orderBy(property);
-  	this.nullHandlingOnOrder = nullHandlingOnOrder;
-  	return (T) this;
   }
   
   public T asc() {
@@ -110,9 +86,8 @@ public abstract class AbstractQuery<T extends Query<?,?>, U> extends ListQueryPa
     if (orderProperty==null) {
       throw new ActivitiIllegalArgumentException("You should call any of the orderBy methods first before specifying a direction");
     }
-    addOrder(orderProperty.getName(), direction.getName(), nullHandlingOnOrder);
+    addOrder(orderProperty.getName(), direction.getName());
     orderProperty = null;
-    nullHandlingOnOrder = null;
     return (T) this;
   }
   
@@ -189,57 +164,13 @@ public abstract class AbstractQuery<T extends Query<?,?>, U> extends ListQueryPa
     return null;
   }
 
-  protected void addOrder(String column, String sortOrder, NullHandlingOnOrder nullHandlingOnOrder) {
-    
-  	if (orderBy==null) {
+  protected void addOrder(String column, String sortOrder) {
+    if (orderBy==null) {
       orderBy = "";
     } else {
       orderBy = orderBy+", ";
     }
-  	
-  	String defaultOrderByClause =  column + " "+sortOrder;
-    
-  	if (nullHandlingOnOrder != null) {
-  		
-  		if (nullHandlingOnOrder.equals(NullHandlingOnOrder.NULLS_FIRST)) {
-  			
-  			if (ProcessEngineConfigurationImpl.DATABASE_TYPE_H2.equals(databaseType)
-            || ProcessEngineConfigurationImpl.DATABASE_TYPE_HSQL.equals(databaseType)
-  					|| ProcessEngineConfigurationImpl.DATABASE_TYPE_POSTGRES.equals(databaseType)
-  					|| ProcessEngineConfigurationImpl.DATABASE_TYPE_ORACLE.equals(databaseType)) {
-  				orderBy = orderBy + defaultOrderByClause + " NULLS FIRST";
-  			} else if (ProcessEngineConfigurationImpl.DATABASE_TYPE_MYSQL.equals(databaseType)) {
-    			orderBy = orderBy + "isnull(" + column +") desc," + defaultOrderByClause;
-    		} else if (ProcessEngineConfigurationImpl.DATABASE_TYPE_DB2.equals(databaseType)
-    				|| ProcessEngineConfigurationImpl.DATABASE_TYPE_MSSQL.equals(databaseType)) {
-    			orderBy = orderBy + "case when " + column + " is null then 0 else 1 end," + defaultOrderByClause;
-    		} else {
-    			orderBy = orderBy + defaultOrderByClause;
-    		}
-    		
-  			
-      } else if (nullHandlingOnOrder.equals(NullHandlingOnOrder.NULLS_LAST)) {
-      	
-  			if (ProcessEngineConfigurationImpl.DATABASE_TYPE_H2.equals(databaseType)
-  			    || ProcessEngineConfigurationImpl.DATABASE_TYPE_HSQL.equals(databaseType)
-  					|| ProcessEngineConfigurationImpl.DATABASE_TYPE_POSTGRES.equals(databaseType)
-  					|| ProcessEngineConfigurationImpl.DATABASE_TYPE_ORACLE.equals(databaseType)) {
-  				orderBy = orderBy + column + " "+sortOrder + " NULLS LAST";
-  			} else if (ProcessEngineConfigurationImpl.DATABASE_TYPE_MYSQL.equals(databaseType)) {
-    			orderBy = orderBy + "isnull(" + column +") asc," + defaultOrderByClause;
-    		} else if (ProcessEngineConfigurationImpl.DATABASE_TYPE_DB2.equals(databaseType)
-    				|| ProcessEngineConfigurationImpl.DATABASE_TYPE_MSSQL.equals(databaseType)) {
-    			orderBy = orderBy + "case when " + column + " is null then 1 else 0 end," + defaultOrderByClause;
-    		} else {
-    			orderBy = orderBy + defaultOrderByClause;
-    		}
-      	
-      }
-  		
-  	} else {
-  		orderBy = orderBy + defaultOrderByClause;
-  	}
-    
+    orderBy = orderBy+column+" "+sortOrder;
   }
 
   public String getOrderBy() {
@@ -249,17 +180,4 @@ public abstract class AbstractQuery<T extends Query<?,?>, U> extends ListQueryPa
       return orderBy;
     }
   }
-  
-  public String getOrderByColumns() {
-      return getOrderBy();
-  }
-
-	public String getDatabaseType() {
-		return databaseType;
-	}
-
-	public void setDatabaseType(String databaseType) {
-		this.databaseType = databaseType;
-	}
-  
 }

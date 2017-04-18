@@ -3,6 +3,7 @@ package org.activiti.examples.bpmn.shell;
 import org.activiti.engine.impl.test.PluggableActivitiTestCase;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.test.Deployment;
+import org.junit.Test;
 
 public class ShellTaskTest extends PluggableActivitiTestCase {
 
@@ -14,13 +15,13 @@ public class ShellTaskTest extends PluggableActivitiTestCase {
 
   OsType getSystemOsType() {
     String osName = System.getProperty("os.name").toLowerCase();
-    if (osName.contains("win"))
+    if (osName.indexOf("win") >= 0)
       return OsType.WINDOWS;
-    else if (osName.contains("mac"))
+    else if (osName.indexOf("mac") >= 0)
       return OsType.MAC;
-    else if ((osName.contains("nix")) || (osName.contains("nux")))
+    else if ((osName.indexOf("nix") >= 0) || (osName.indexOf("nux") >= 0))
       return OsType.LINUX;
-    else if (osName.contains("sunos"))
+    else if (osName.indexOf("sunos") >= 0)
       return OsType.SOLARIS;
     else
       return OsType.UNKOWN;
@@ -30,6 +31,7 @@ public class ShellTaskTest extends PluggableActivitiTestCase {
     osType = getSystemOsType();
   }
 
+  @Test
   public void testOsDetection() throws Exception {
     assertTrue(osType != OsType.UNKOWN);
   }

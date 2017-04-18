@@ -71,14 +71,9 @@ public class HistoricProcessInstanceEntityManager extends AbstractManager {
         .getHistoricTaskInstanceEntityManager()
         .deleteHistoricTaskInstancesByProcessInstanceId(historicProcessInstanceId);
       
-      commandContext
-      	.getHistoricIdentityLinkEntityManager()
+      commandContext.getHistoricIdentityLinkEntityManager()
         .deleteHistoricIdentityLinksByProcInstance(historicProcessInstanceId);
-      
-      commandContext
-        .getCommentEntityManager()
-        .deleteCommentsByProcessInstanceId(historicProcessInstanceId);
-      
+
       getDbSqlSession().delete(historicProcessInstance);
       
       // Also delete any sub-processes that may be active (ACT-821)
@@ -119,17 +114,12 @@ public class HistoricProcessInstanceEntityManager extends AbstractManager {
       int maxResults = historicProcessInstanceQuery.getMaxResults();
       
       // setting max results, limit to 20000 results for performance reasons
-      if (historicProcessInstanceQuery.getProcessInstanceVariablesLimit() != null) {
-        historicProcessInstanceQuery.setMaxResults(historicProcessInstanceQuery.getProcessInstanceVariablesLimit());
-      } else {
-        historicProcessInstanceQuery.setMaxResults(Context.getProcessEngineConfiguration().getHistoricProcessInstancesQueryLimit());
-      }
+      historicProcessInstanceQuery.setMaxResults(20000);
       historicProcessInstanceQuery.setFirstResult(0);
       
-      List<HistoricProcessInstance> instanceList = getDbSqlSession().selectListWithRawParameterWithoutFilter("selectHistoricProcessInstancesWithVariablesByQueryCriteria", 
-          historicProcessInstanceQuery, historicProcessInstanceQuery.getFirstResult(), historicProcessInstanceQuery.getMaxResults());
+      List<HistoricProcessInstance> instanceList = getDbSqlSession().selectList("selectHistoricProcessInstancesWithVariablesByQueryCriteria", historicProcessInstanceQuery);
       
-      if (instanceList != null && !instanceList.isEmpty()) {
+      if (instanceList != null && instanceList.size() > 0) {
         if (firstResult > 0) {
           if (firstResult <= instanceList.size()) {
             int toIndex = firstResult + Math.min(maxResults, instanceList.size() - firstResult);

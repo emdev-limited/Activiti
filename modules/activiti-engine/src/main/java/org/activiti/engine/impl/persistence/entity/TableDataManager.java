@@ -13,16 +13,6 @@
 
 package org.activiti.engine.impl.persistence.entity;
 
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.history.HistoricActivityInstance;
 import org.activiti.engine.history.HistoricDetail;
@@ -49,6 +39,16 @@ import org.apache.ibatis.session.RowBounds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 
 /**
  * @author Tom Baeyens
@@ -71,10 +71,10 @@ public class TableDataManager extends AbstractManager {
     persistentObjectToTableNameMap.put(MessageEntity.class, "ACT_RU_JOB");
     persistentObjectToTableNameMap.put(TimerEntity.class, "ACT_RU_JOB");
     
-    persistentObjectToTableNameMap.put(EventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCR");
-    persistentObjectToTableNameMap.put(CompensateEventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCR");    
-    persistentObjectToTableNameMap.put(MessageEventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCR");    
-    persistentObjectToTableNameMap.put(SignalEventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCR");
+    persistentObjectToTableNameMap.put(EventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCRIPTION");
+    persistentObjectToTableNameMap.put(CompensateEventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCRIPTION");    
+    persistentObjectToTableNameMap.put(MessageEventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCRIPTION");    
+    persistentObjectToTableNameMap.put(SignalEventSubscriptionEntity.class, "ACT_RU_EVENT_SUBSCRIPTION");
         
     // repository
     persistentObjectToTableNameMap.put(DeploymentEntity.class, "ACT_RE_DEPLOYMENT");
@@ -165,22 +165,7 @@ public class TableDataManager extends AbstractManager {
         if ("oracle".equals(getDbSqlSession().getDbSqlSessionFactory().getDatabaseType())) {
           tableNameFilter = databaseTablePrefix+"ACT" + databaseMetaData.getSearchStringEscape() + "_%";
         }
-        
-        String catalog = null;
-        if (getProcessEngineConfiguration().getDatabaseCatalog() != null && getProcessEngineConfiguration().getDatabaseCatalog().length() > 0) {
-          catalog = getProcessEngineConfiguration().getDatabaseCatalog();
-        }
-        
-        String schema = null;
-        if (getProcessEngineConfiguration().getDatabaseSchema() != null && getProcessEngineConfiguration().getDatabaseSchema().length() > 0) {
-          if ("oracle".equals(getDbSqlSession().getDbSqlSessionFactory().getDatabaseType())) {
-            schema = getProcessEngineConfiguration().getDatabaseSchema().toUpperCase();
-          } else {
-            schema = getProcessEngineConfiguration().getDatabaseSchema();
-          }
-        }
-        
-        tables = databaseMetaData.getTables(catalog, schema, tableNameFilter, getDbSqlSession().JDBC_METADATA_TABLE_TYPES);
+        tables = databaseMetaData.getTables(null, null, tableNameFilter, getDbSqlSession().JDBC_METADATA_TABLE_TYPES);
         while (tables.next()) {
           String tableName = tables.getString("TABLE_NAME");
           tableName = tableName.toUpperCase();
@@ -250,48 +235,19 @@ public class TableDataManager extends AbstractManager {
       if ("postgres".equals(getDbSqlSession().getDbSqlSessionFactory().getDatabaseType())) {
         tableName = tableName.toLowerCase();
       }
-      
-      String catalog = null;
-      if (getProcessEngineConfiguration().getDatabaseCatalog() != null && getProcessEngineConfiguration().getDatabaseCatalog().length() > 0) {
-        catalog = getProcessEngineConfiguration().getDatabaseCatalog();
-      }
-      
-      String schema = null;
-      if (getProcessEngineConfiguration().getDatabaseSchema() != null && getProcessEngineConfiguration().getDatabaseSchema().length() > 0) {
-        if ("oracle".equals(getDbSqlSession().getDbSqlSessionFactory().getDatabaseType())) {
-          schema = getProcessEngineConfiguration().getDatabaseSchema().toUpperCase();
-        } else {
-          schema = getProcessEngineConfiguration().getDatabaseSchema();
-        }
-      }
 
-      ResultSet resultSet = metaData.getColumns(catalog, schema, tableName, null);
+      ResultSet resultSet = metaData.getColumns(null, null, tableName, null);
       while(resultSet.next()) {
-        boolean wrongSchema = false;
-        if (schema != null && schema.length() > 0) {
-          for (int i = 0; i < resultSet.getMetaData().getColumnCount(); i++) {
-            String columnName = resultSet.getMetaData().getColumnName(i+1);
-            if ("TABLE_SCHEM".equalsIgnoreCase(columnName) || "TABLE_SCHEMA".equalsIgnoreCase(columnName)) {
-              if (schema.equalsIgnoreCase(resultSet.getString(resultSet.getMetaData().getColumnName(i+1))) == false) {
-                wrongSchema = true;
-              }
-              break;
-            }
-          }
-        }
-        
-        if (wrongSchema == false) {
-          String name = resultSet.getString("COLUMN_NAME").toUpperCase();
-          String type = resultSet.getString("TYPE_NAME").toUpperCase();
-          result.addColumnMetaData(name, type);
-        }
+        String name = resultSet.getString("COLUMN_NAME").toUpperCase();
+        String type = resultSet.getString("TYPE_NAME").toUpperCase();
+        result.addColumnMetaData(name, type);
       }
       
     } catch (SQLException e) {
       throw new ActivitiException("Could not retrieve database metadata: " + e.getMessage());
     }
 
-    if(result.getColumnNames().isEmpty()) {
+    if(result.getColumnNames().size() == 0) {
       // According to API, when a table doesn't exist, null should be returned
       result = null;
     }

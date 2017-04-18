@@ -17,7 +17,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.StringTokenizer;
 
 import org.activiti.engine.impl.db.PersistentObject;
 import org.activiti.engine.task.Comment;
@@ -60,7 +60,6 @@ public class CommentEntity implements Comment, Event, PersistentObject, Serializ
   }
   
   public static String MESSAGE_PARTS_MARKER = "_|_";
-  public static Pattern MESSAGE_PARTS_MARKER_REGEX = Pattern.compile("_\\|_");
   
   public void setMessage(String[] messageParts) {
     StringBuilder stringBuilder = new StringBuilder();
@@ -84,13 +83,13 @@ public class CommentEntity implements Comment, Event, PersistentObject, Serializ
       return null;
     }
     List<String> messageParts = new ArrayList<String>();
-    
-    String[] parts = MESSAGE_PARTS_MARKER_REGEX.split(message);
-    for(String part : parts) {
-      if ("null".equals(part)) {
+    StringTokenizer tokenizer = new StringTokenizer(message, MESSAGE_PARTS_MARKER);
+    while (tokenizer.hasMoreTokens()) {
+      String nextToken = tokenizer.nextToken();
+      if ("null".equals(nextToken)) {
         messageParts.add(null);
       } else {
-        messageParts.add(part);
+        messageParts.add(nextToken);
       }
     }
     return messageParts;

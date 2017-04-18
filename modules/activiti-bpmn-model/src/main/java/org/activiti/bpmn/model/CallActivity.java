@@ -21,7 +21,6 @@ import java.util.List;
 public class CallActivity extends Activity {
 
   protected String calledElement;
-  protected boolean inheritVariables;
   protected List<IOParameter> inParameters = new ArrayList<IOParameter>();
   protected List<IOParameter> outParameters = new ArrayList<IOParameter>();
 
@@ -30,12 +29,6 @@ public class CallActivity extends Activity {
   }
   public void setCalledElement(String calledElement) {
     this.calledElement = calledElement;
-  }
-  public boolean isInheritVariables() {
-    return inheritVariables;
-  }
-  public void setInheritVariables(boolean inheritVariables) {
-    this.inheritVariables = inheritVariables;
   }
   public List<IOParameter> getInParameters() {
     return inParameters;
@@ -48,30 +41,5 @@ public class CallActivity extends Activity {
   }
   public void setOutParameters(List<IOParameter> outParameters) {
     this.outParameters = outParameters;
-  }
-  
-  public CallActivity clone() {
-    CallActivity clone = new CallActivity();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(CallActivity otherElement) {
-    super.setValues(otherElement);
-    setCalledElement(otherElement.getCalledElement());
-    
-    inParameters = new ArrayList<IOParameter>();
-    if (otherElement.getInParameters() != null && !otherElement.getInParameters().isEmpty()) {
-      for (IOParameter parameter : otherElement.getInParameters()) {
-        inParameters.add(parameter.clone());
-      }
-    }
-    
-    outParameters = new ArrayList<IOParameter>();
-    if (otherElement.getOutParameters() != null && !otherElement.getOutParameters().isEmpty()) {
-      for (IOParameter parameter : otherElement.getOutParameters()) {
-        outParameters.add(parameter.clone());
-      }
-    }
   }
 }

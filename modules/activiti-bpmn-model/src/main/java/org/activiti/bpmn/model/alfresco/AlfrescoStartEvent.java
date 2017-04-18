@@ -19,16 +19,4 @@ public class AlfrescoStartEvent extends StartEvent {
 	public void setScriptProcessor(String scriptProcessor) {
   	this.scriptProcessor = scriptProcessor;
   }
-	
-	public AlfrescoStartEvent clone() {
-	  AlfrescoStartEvent clone = new AlfrescoStartEvent();
-    clone.setValues(this);
-    return clone;
-  }
-  
-  public void setValues(AlfrescoStartEvent otherElement) {
-    super.setValues(otherElement);
-    setRunAs(otherElement.getRunAs());
-    setScriptProcessor(otherElement.getScriptProcessor());
-  }
 }

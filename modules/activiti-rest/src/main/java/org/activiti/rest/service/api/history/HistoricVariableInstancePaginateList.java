@@ -13,25 +13,34 @@
 
 package org.activiti.rest.service.api.history;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.activiti.engine.history.HistoricVariableInstance;
 import org.activiti.rest.common.api.AbstractPaginateList;
+import org.activiti.rest.common.api.SecuredResource;
 import org.activiti.rest.service.api.RestResponseFactory;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
 
 /**
  * @author Tijs Rademakers
  */
 public class HistoricVariableInstancePaginateList extends AbstractPaginateList {
 
-  protected RestResponseFactory restResponseFactory;
+  private SecuredResource resource;
   
-  public HistoricVariableInstancePaginateList(RestResponseFactory restResponseFactory) {
-    this.restResponseFactory = restResponseFactory;
+  public HistoricVariableInstancePaginateList(SecuredResource resource) {
+    this.resource = resource;
   }
   
-  @SuppressWarnings({ "rawtypes", "unchecked" })
+  @SuppressWarnings("rawtypes")
   @Override
   protected List processList(List list) {
-    return restResponseFactory.createHistoricVariableInstanceResponseList(list);
+    List<HistoricVariableInstanceResponse> responseList = new ArrayList<HistoricVariableInstanceResponse>();
+    RestResponseFactory restResponseFactory = resource.getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
+    for (Object instance : list) {
+      responseList.add(restResponseFactory.createHistoricVariableInstanceResponse(resource, (HistoricVariableInstance) instance));
+    }
+    return responseList;
   }
 }

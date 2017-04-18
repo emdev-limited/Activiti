@@ -13,54 +13,64 @@
 
 package org.activiti.rest.service.api.runtime.task;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
 import org.activiti.engine.history.HistoricTaskInstance;
 import org.activiti.engine.task.Comment;
 import org.activiti.engine.task.Task;
+import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.service.api.engine.CommentResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Status;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Get;
 
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class TaskCommentResource extends TaskBaseResource {
 
-  @RequestMapping(value="/runtime/tasks/{taskId}/comments/{commentId}", method = RequestMethod.GET, produces="application/json")
-  public CommentResponse getComment(@PathVariable("taskId") String taskId, 
-      @PathVariable("commentId") String commentId, HttpServletRequest request) {
+  @Get
+  public CommentResponse getComment() {
+    if(!authenticate())
+      return null;
     
-    HistoricTaskInstance task = getHistoricTaskFromRequest(taskId);
+    HistoricTaskInstance task = getHistoricTaskFromRequest();
     
-    Comment comment = taskService.getComment(commentId);
-    if (comment == null || !task.getId().equals(comment.getTaskId())) {
+    String commentId = getAttribute("commentId");
+    if(commentId == null) {
+      throw new ActivitiIllegalArgumentException("CommentId is required.");
+    }
+    
+    Comment comment = ActivitiUtil.getTaskService().getComment(commentId);
+    if(comment == null || !task.getId().equals(comment.getTaskId())) {
       throw new ActivitiObjectNotFoundException("Task '" + task.getId() +"' doesn't have a comment with id '" + commentId + "'.", Comment.class);
     }
     
-    return restResponseFactory.createRestComment(comment);
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createRestComment(this, comment);
   }
   
-  @RequestMapping(value="/runtime/tasks/{taskId}/comments/{commentId}", method = RequestMethod.DELETE)
-  public void deleteComment(@PathVariable("taskId") String taskId, 
-      @PathVariable("commentId") String commentId, HttpServletResponse response) {
+  @Delete
+  public void deleteComment() {
+    if(!authenticate())
+      return;
     
     // Check if task exists
-    Task task = getTaskFromRequest(taskId);
+    Task task = getTaskFromRequest();
     
-    Comment comment = taskService.getComment(commentId);
-    if (comment == null || comment.getTaskId() == null || !comment.getTaskId().equals(task.getId())) {
+    String commentId = getAttribute("commentId");
+    if(commentId == null) {
+      throw new ActivitiIllegalArgumentException("CommentId is required.");
+    }
+    
+    Comment comment = ActivitiUtil.getTaskService().getComment(commentId);
+    if(comment == null || comment.getTaskId() == null || !comment.getTaskId().equals(task.getId())) {
       throw new ActivitiObjectNotFoundException("Task '" + task.getId() +"' doesn't have a comment with id '" + commentId + "'.", Comment.class);
     }
     
-    taskService.deleteComment(commentId);
-    response.setStatus(HttpStatus.NO_CONTENT.value());
+    ActivitiUtil.getTaskService().deleteComment(commentId);
+    setStatus(Status.SUCCESS_NO_CONTENT);
   }
 }

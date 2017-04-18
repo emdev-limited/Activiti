@@ -26,7 +26,7 @@ public class ThrowsExceptionBehavior implements ActivityBehavior {
   public void execute(ActivityExecution execution) throws Exception {
     String var = (String) execution.getVariable("var");
 
-    PvmTransition transition;
+    PvmTransition transition = null;
     try {
       executeLogic(var);
       transition = execution.getActivity().findOutgoingTransition("no-exception");

@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.codehaus.jackson.map.annotate.JsonSerialize;
+
 /**
  * @author Joram Barrez
  * @author Tijs Rademakers
@@ -42,6 +44,7 @@ public abstract class AbstractStepDefinitionContainer<T> implements StepDefiniti
     steps.add(stepDefinition);
   }
 
+  @JsonSerialize(contentAs=StepDefinition.class)
   public List<StepDefinition> getSteps() {
     return steps;
   }

@@ -54,10 +54,10 @@ public class PropertySharing {
   }
 	
 	public boolean hasIncomingProperties() {
-		return incomingProperties != null && !incomingProperties.isEmpty();
+		return incomingProperties != null && incomingProperties.size() > 0;
 	}
 	
 	public boolean hasOutgoingProperties() {
-		return outgoingProperties != null && !outgoingProperties.isEmpty();
+		return outgoingProperties != null && outgoingProperties.size() > 0;
 	}
 }

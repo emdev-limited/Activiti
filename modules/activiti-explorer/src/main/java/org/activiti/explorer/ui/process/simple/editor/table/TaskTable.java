@@ -97,7 +97,7 @@ public class TaskTable extends Table implements TaskFormModelListener {
   }
 
   protected String getCommaSeperated(List<String> list) {
-	  if(list != null && !list.isEmpty()) {
+	  if(list != null && list.size() > 0) {
 	  	return StringUtils.join(list, ", ");
 	  }
 	  return null;
@@ -129,13 +129,9 @@ public class TaskTable extends Table implements TaskFormModelListener {
     ComboBox assigneeComboBox = new ComboBox();
     assigneeComboBox.setNullSelectionAllowed(true);
    
-    try {
-      for (User user : ProcessEngines.getDefaultProcessEngine().getIdentityService().createUserQuery().orderByUserFirstName().asc().list()) {
-	    assigneeComboBox.addItem(user.getId());
-	    assigneeComboBox.setItemCaption(user.getId(), user.getFirstName() + " " + user.getLastName());
-	  }
-    } catch(Exception e) { 
-    	// Don't do anything. Will be an empty dropdown.
+    for (User user : ProcessEngines.getDefaultProcessEngine().getIdentityService().createUserQuery().orderByUserFirstName().asc().list()) {
+      assigneeComboBox.addItem(user.getId());
+      assigneeComboBox.setItemCaption(user.getId(), user.getFirstName() + " " + user.getLastName());
     }
     
     if (taskAssignee != null) {
@@ -147,14 +143,9 @@ public class TaskTable extends Table implements TaskFormModelListener {
     // groups
     ComboBox groupComboBox = new ComboBox();
     groupComboBox.setNullSelectionAllowed(true);
-    
-    try {
-      for (Group group : ProcessEngines.getDefaultProcessEngine().getIdentityService().createGroupQuery().orderByGroupName().asc().list()) {
-        groupComboBox.addItem(group.getId());
-        groupComboBox.setItemCaption(group.getId(), group.getName());
-      }
-    } catch (Exception e) {
-    	// Don't do anything. Will be an empty dropdown.
+    for (Group group : ProcessEngines.getDefaultProcessEngine().getIdentityService().createGroupQuery().orderByGroupName().asc().list()) {
+      groupComboBox.addItem(group.getId());
+      groupComboBox.setItemCaption(group.getId(), group.getName());
     }
     
     if (taskGroups != null) {

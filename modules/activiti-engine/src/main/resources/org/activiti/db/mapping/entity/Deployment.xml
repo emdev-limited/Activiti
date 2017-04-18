@@ -7,41 +7,15 @@
   <!-- DEPLOYMENT INSERT -->
   
   <insert id="insertDeployment" parameterType="org.activiti.engine.impl.persistence.entity.DeploymentEntity">
-    insert into ${prefix}ACT_RE_DEPLOYMENT(ID_, NAME_, CATEGORY_, TENANT_ID_, DEPLOY_TIME_)
-    values(#{id, jdbcType=VARCHAR}, #{name, jdbcType=VARCHAR}, #{category, jdbcType=VARCHAR}, #{tenantId, jdbcType=VARCHAR}, #{deploymentTime, jdbcType=TIMESTAMP})
+    insert into ${prefix}ACT_RE_DEPLOYMENT(ID_, NAME_, CATEGORY_, DEPLOY_TIME_)
+    values(#{id, jdbcType=VARCHAR}, #{name, jdbcType=VARCHAR}, #{category, jdbcType=VARCHAR}, #{deploymentTime, jdbcType=TIMESTAMP})
   </insert>
-
-  <insert id="bulkInsertDeployment" parameterType="java.util.List">
-    insert into ${prefix}ACT_RE_DEPLOYMENT(ID_, NAME_, CATEGORY_, TENANT_ID_, DEPLOY_TIME_)
-    values
-      <foreach collection="list" item="deployment" index="index" separator=",">
-        (#{deployment.id, jdbcType=VARCHAR},
-         #{deployment.name, jdbcType=VARCHAR},
-         #{deployment.category, jdbcType=VARCHAR},
-         #{deployment.tenantId, jdbcType=VARCHAR},
-         #{deployment.deploymentTime, jdbcType=TIMESTAMP})
-      </foreach>
-  </insert>
-
-  <insert id="bulkInsertDeployment_oracle" parameterType="java.util.List">
-    INSERT ALL 
-      <foreach collection="list" item="deployment" index="index">
-        into ${prefix}ACT_RE_DEPLOYMENT(ID_, NAME_, CATEGORY_, TENANT_ID_, DEPLOY_TIME_) VALUES 
-          (#{deployment.id, jdbcType=VARCHAR},
-           #{deployment.name, jdbcType=VARCHAR},
-           #{deployment.category, jdbcType=VARCHAR},
-           #{deployment.tenantId, jdbcType=VARCHAR},
-           #{deployment.deploymentTime, jdbcType=TIMESTAMP})
-      </foreach>
-    SELECT * FROM dual
-  </insert>
-
+  
   <!-- DEPLOYMENT UPDATE -->
   
   <update id="updateDeployment" parameterType="org.activiti.engine.impl.persistence.entity.DeploymentEntity">
     update ${prefix}ACT_RE_DEPLOYMENT set
-      CATEGORY_ = #{category, jdbcType=VARCHAR},
-      TENANT_ID_ = #{tenantId, jdbcType=VARCHAR}
+      CATEGORY_ = #{category, jdbcType=VARCHAR}
     where ID_ = #{id, jdbcType=VARCHAR}
   </update>
   
@@ -57,7 +31,6 @@
     <id property="id" column="ID_" jdbcType="VARCHAR" />
     <result property="name" column="NAME_" jdbcType="VARCHAR" />
     <result property="category" column="CATEGORY_" jdbcType="VARCHAR" />
-    <result property="tenantId" column="TENANT_ID_" jdbcType="VARCHAR" />
     <result property="deploymentTime" column="DEPLOY_TIME_" jdbcType="TIMESTAMP"/>
   </resultMap>
 
@@ -89,7 +62,7 @@
         and RES.NAME_ = #{name}
       </if>
       <if test="nameLike != null">
-        and RES.NAME_ like #{nameLike}${wildcardEscapeClause}
+        and RES.NAME_ like #{nameLike}
       </if>
       <if test="category != null">
         and RES.CATEGORY_ = #{category}
@@ -97,20 +70,11 @@
       <if test="categoryNotEquals != null">
         and ( RES.CATEGORY_ &lt;&gt; #{categoryNotEquals} OR RES.CATEGORY_ is null )  
       </if>
-      <if test="tenantId != null">
-        and RES.TENANT_ID_ = #{tenantId}
-      </if>
-      <if test="tenantIdLike != null">
-        and RES.TENANT_ID_ like #{tenantIdLike}${wildcardEscapeClause}
-      </if>
-      <if test="withoutTenantId">
-        and (RES.TENANT_ID_ = '' or RES.TENANT_ID_ is null)
-      </if>
       <if test="processDefinitionKey != null">
         and PROCDEF.KEY_ = #{processDefinitionKey}
       </if>
       <if test="processDefinitionKeyLike != null">
-        and PROCDEF.KEY_ like #{processDefinitionKeyLike}${wildcardEscapeClause}
+        and PROCDEF.KEY_ like #{processDefinitionKeyLike}
       </if>
     </where>
   </sql>

@@ -13,8 +13,7 @@
 package org.activiti.workflow.simple.definition.form;
 
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.codehaus.jackson.annotate.JsonTypeName;
 
 /**
  * A form-property with a value that is represented as a boolean.

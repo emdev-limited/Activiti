@@ -18,14 +18,13 @@ import java.util.Map;
 
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.history.HistoricIdentityLink;
-import org.activiti.engine.impl.db.BulkDeleteable;
 import org.activiti.engine.impl.db.PersistentObject;
 
 
 /**
  * @author Frederik Heremans
  */
-public class HistoricIdentityLinkEntity implements Serializable, HistoricIdentityLink, BulkDeleteable, PersistentObject {
+public class HistoricIdentityLinkEntity implements Serializable, HistoricIdentityLink, PersistentObject {
   
   private static final long serialVersionUID = 1L;
   

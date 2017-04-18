@@ -15,24 +15,21 @@ package org.activiti.rest.service.api.management;
 
 import java.util.Map;
 
-import org.activiti.engine.ManagementService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.common.api.SecuredResource;
+import org.restlet.resource.Get;
 
 /**
  * @author Frederik Heremans
  */
-@RestController
-public class PropertiesCollectionResource {
-  
-  @Autowired
-  protected ManagementService managementService;
+public class PropertiesCollectionResource extends SecuredResource {
 
-  @RequestMapping(value="/management/properties", method = RequestMethod.GET, produces = "application/json")
+  @Get
   public Map<String, String> getProperties() {
-    return managementService.getProperties();
+    if (authenticate() == false)
+      return null;
+
+    return ActivitiUtil.getManagementService().getProperties();
   }
 }
 

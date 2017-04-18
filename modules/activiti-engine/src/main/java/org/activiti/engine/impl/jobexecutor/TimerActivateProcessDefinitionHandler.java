@@ -35,7 +35,7 @@ public class TimerActivateProcessDefinitionHandler extends TimerChangeProcessDef
     boolean activateProcessInstances = getIncludeProcessInstances(cfgJson);
     
     ActivateProcessDefinitionCmd activateProcessDefinitionCmd =
-            new ActivateProcessDefinitionCmd(processDefinitionId, null, activateProcessInstances, null, job.getTenantId());
+            new ActivateProcessDefinitionCmd(processDefinitionId, null, activateProcessInstances, null);
     activateProcessDefinitionCmd.execute(commandContext);
   }
   

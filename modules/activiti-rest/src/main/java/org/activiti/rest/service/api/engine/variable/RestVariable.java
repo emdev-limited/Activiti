@@ -14,10 +14,9 @@
 package org.activiti.rest.service.api.engine.variable;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
+import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
+import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 
 
 /**
@@ -30,7 +29,7 @@ public class RestVariable {
   
   public enum RestVariableScope {
     LOCAL, GLOBAL
-  }
+  };
 
   private String name;
   private String type;
@@ -83,9 +82,9 @@ public class RestVariable {
   }
   
   public static RestVariableScope getScopeFromString(String scope) {
-    if (scope != null) {
-      for (RestVariableScope s : RestVariableScope.values()) {
-        if (s.name().equalsIgnoreCase(scope)) {
+    if(scope != null) {
+      for(RestVariableScope s : RestVariableScope.values()) {
+        if(s.name().equalsIgnoreCase(scope)) {
           return s;
         }
       }

@@ -19,10 +19,9 @@ import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.UUID;
 
-import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.ProcessEngines;
 import org.activiti.engine.RepositoryService;
-import org.activiti.engine.impl.ProcessEngineImpl;
+import org.activiti.engine.impl.bpmn.diagram.ProcessDiagramGenerator;
 import org.activiti.engine.repository.Model;
 import org.activiti.explorer.ExplorerApp;
 import org.activiti.explorer.Messages;
@@ -32,7 +31,6 @@ import org.activiti.explorer.ui.custom.ToolBar;
 import org.activiti.explorer.ui.custom.ToolbarEntry.ToolbarCommand;
 import org.activiti.explorer.ui.mainlayout.ExplorerLayout;
 import org.activiti.explorer.ui.process.simple.editor.table.TaskTable;
-import org.activiti.image.ProcessDiagramGenerator;
 import org.activiti.workflow.simple.converter.WorkflowDefinitionConversion;
 import org.activiti.workflow.simple.definition.HumanStepDefinition;
 import org.activiti.workflow.simple.definition.ListStepDefinition;
@@ -246,12 +244,7 @@ public class SimpleTableEditor extends AbstractPage {
       public InputStream getStream() {
         WorkflowDefinitionConversion workflowDefinitionConversion =
                 ExplorerApp.get().getWorkflowDefinitionConversionFactory().createWorkflowDefinitionConversion(createWorkflow());
-        final ProcessEngineImpl defaultProcessEngine = (ProcessEngineImpl) ProcessEngines.getDefaultProcessEngine();
-        final ProcessEngineConfiguration processEngineConfiguration = defaultProcessEngine.getProcessEngineConfiguration();
-        final ProcessDiagramGenerator diagramGenerator = processEngineConfiguration.getProcessDiagramGenerator();
-
-        return diagramGenerator.generateDiagram(workflowDefinitionConversion.getBpmnModel(), "png", processEngineConfiguration.getActivityFontName(),
-            processEngineConfiguration.getLabelFontName(), processEngineConfiguration.getAnnotationFontName(), processEngineConfiguration.getClassLoader());
+        return ProcessDiagramGenerator.generatePngDiagram(workflowDefinitionConversion.getBpmnModel());
       }
     };
     
@@ -276,11 +269,8 @@ public class SimpleTableEditor extends AbstractPage {
 	
 	protected void save() {
 	  WorkflowDefinition workflowDefinition = createWorkflow();
-
-    final ProcessEngineImpl defaultProcessEngine = (ProcessEngineImpl) ProcessEngines.getDefaultProcessEngine();
-    RepositoryService repositoryService = defaultProcessEngine.getRepositoryService();
-    ProcessEngineConfiguration processEngineConfiguration = defaultProcessEngine.getProcessEngineConfiguration();
-    ProcessDiagramGenerator diagramGenerator = processEngineConfiguration.getProcessDiagramGenerator();
+	  
+	  RepositoryService repositoryService = ProcessEngines.getDefaultProcessEngine().getRepositoryService();
 	  
 	  Model model = null;
 	  if (modelId == null) { // new process
@@ -298,7 +288,16 @@ public class SimpleTableEditor extends AbstractPage {
             ExplorerApp.get().getWorkflowDefinitionConversionFactory().createWorkflowDefinitionConversion(workflowDefinition);
     conversion.convert();
     
+//    // Store BPMN 2.0: not needed at the moment, we store the modeler json
+//    BpmnXMLConverter bpmnXMLConverter = new BpmnXMLConverter();
+//    repositoryService.addModelEditorSource(model.getId(), bpmnXMLConverter.convertToXML(conversion.getBpmnModel()));
+    
     try {
+//      BpmnJsonConverter bpmnJsonConverter = new BpmnJsonConverter();
+//      ObjectNode json = bpmnJsonConverter.convertToJson(conversion.getBpmnModel());
+//      
+//      repositoryService.addModelEditorSource(model.getId(), json.toString().getBytes("utf-8"));
+    
     	// Write JSON to byte-array and set as editor-source
     	ByteArrayOutputStream baos = new ByteArrayOutputStream();
     	ExplorerApp.get().getSimpleWorkflowJsonConverter().writeWorkflowDefinition(workflowDefinition, new OutputStreamWriter(baos));
@@ -307,8 +306,7 @@ public class SimpleTableEditor extends AbstractPage {
       // Store process image
       // TODO: we should really allow the service to take an inputstream as input. Now we load it into memory ...
       repositoryService.addModelEditorSourceExtra(model.getId(), IOUtils.toByteArray(
-          diagramGenerator.generateDiagram(conversion.getBpmnModel(), "png", processEngineConfiguration.getActivityFontName(),
-              processEngineConfiguration.getLabelFontName(), processEngineConfiguration.getAnnotationFontName(), processEngineConfiguration.getClassLoader())));
+          ProcessDiagramGenerator.generatePngDiagram(conversion.getBpmnModel())));
     } catch (IOException e) {
       logger.warn("Could not generate process image. Image is not stored and will not be shown.", e);
     }

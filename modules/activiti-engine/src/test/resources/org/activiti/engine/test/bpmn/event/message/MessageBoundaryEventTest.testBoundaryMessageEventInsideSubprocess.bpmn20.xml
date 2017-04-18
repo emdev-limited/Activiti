@@ -11,7 +11,7 @@
   
     <startEvent id="theStart" />
     
-    <sequenceFlow sourceRef="theStart" targetRef="subProcess" />
+    <sequenceFlow sourceRef="theStart" targetRef="task" />
     
     <subProcess id="subProcess">
     

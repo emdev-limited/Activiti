@@ -16,10 +16,8 @@ package org.activiti.rest.service.api.engine;
 import java.util.Date;
 import java.util.List;
 
-import org.activiti.rest.common.util.DateToStringSerializer;
-
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize.Inclusion;
+import org.codehaus.jackson.map.annotate.JsonSerialize;
+import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 
 
 /**
@@ -31,7 +29,6 @@ public class EventResponse {
   protected String id;
   protected String action;
   protected String userId;
-  @JsonSerialize(using = DateToStringSerializer.class, as=Date.class)
   protected Date time;
   protected String taskUrl;
   protected String processInstanceUrl;

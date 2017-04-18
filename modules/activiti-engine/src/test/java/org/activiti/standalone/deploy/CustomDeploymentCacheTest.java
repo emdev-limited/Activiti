@@ -14,6 +14,8 @@ package org.activiti.standalone.deploy;
 
 import java.text.MessageFormat;
 
+import org.activiti.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.activiti.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.activiti.engine.impl.test.ResourceActivitiTestCase;
 import org.activiti.engine.repository.Deployment;
 
@@ -27,10 +29,11 @@ public class CustomDeploymentCacheTest extends ResourceActivitiTestCase {
   }
   
   public void testCustomDeploymentCacheUsed() {
-    CustomDeploymentCache customCache = (CustomDeploymentCache)
-              processEngineConfiguration.getProcessDefinitionCache();
+    CustomDeploymentCache customCache = (CustomDeploymentCache) 
+             ((ProcessEngineConfigurationImpl) processEngineConfiguration).getProcessDefinitionCache();
     assertNull(customCache.getCachedProcessDefinition());
 
+    ProcessDefinitionEntity previousProcessDefinition = null;
     String processDefinitionTemplate = DeploymentCacheTestUtil.readTemplateFile(
             "/org/activiti/standalone/deploy/deploymentCacheTest.bpmn20.xml");
     for (int i = 1; i <= 5; i++) {
@@ -38,6 +41,7 @@ public class CustomDeploymentCacheTest extends ResourceActivitiTestCase {
               .addString("Process " + i + ".bpmn20.xml", MessageFormat.format(processDefinitionTemplate, i))
               .deploy();
       assertNotNull(customCache.getCachedProcessDefinition());
+      assertNotSame(previousProcessDefinition, customCache.getCachedProcessDefinition());
     }
     
     // Cleanup

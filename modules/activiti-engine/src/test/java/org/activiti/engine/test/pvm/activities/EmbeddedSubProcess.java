@@ -57,7 +57,7 @@ public class EmbeddedSubProcess implements CompositeActivityBehavior {
   public void timerFires(ActivityExecution execution, String signalName, Object signalData) throws Exception {
     PvmActivity timerActivity = execution.getActivity();
     boolean isInterrupting = (Boolean) timerActivity.getProperty("isInterrupting");
-    List<ActivityExecution> recyclableExecutions;
+    List<ActivityExecution> recyclableExecutions = null;
     if (isInterrupting) {
       recyclableExecutions = removeAllExecutions(execution);
     } else {

@@ -99,9 +99,7 @@ public class BusinessProcess implements Serializable {
     validateValidUsage();
     
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceById(processDefinitionId, getAndClearCachedVariables());
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -109,9 +107,7 @@ public class BusinessProcess implements Serializable {
     validateValidUsage();
     
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceById(processDefinitionId, businessKey, getAndClearCachedVariables());
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -121,9 +117,7 @@ public class BusinessProcess implements Serializable {
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
     cachedVariables.putAll(variables);
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceById(processDefinitionId, cachedVariables);
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -133,9 +127,7 @@ public class BusinessProcess implements Serializable {
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
     cachedVariables.putAll(variables);
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceById(processDefinitionId, businessKey, cachedVariables);
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -143,9 +135,7 @@ public class BusinessProcess implements Serializable {
     validateValidUsage();
     
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceByKey(key, getAndClearCachedVariables());
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -153,9 +143,7 @@ public class BusinessProcess implements Serializable {
     validateValidUsage();
     
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceByKey(key, businessKey, getAndClearCachedVariables());
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -165,9 +153,7 @@ public class BusinessProcess implements Serializable {
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
     cachedVariables.putAll(variables);
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceByKey(key, cachedVariables);
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -177,9 +163,7 @@ public class BusinessProcess implements Serializable {
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
     cachedVariables.putAll(variables);
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceByKey(key, businessKey, cachedVariables);
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -187,10 +171,8 @@ public class BusinessProcess implements Serializable {
     validateValidUsage();
     
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
-    ProcessInstance processInstance =  processEngine.getRuntimeService().startProcessInstanceByMessage(messageName, cachedVariables);
-    if(!processInstance.isEnded()) {
-    	setExecution(processInstance);
-    }
+    ProcessInstance processInstance =  processEngine.getRuntimeService().startProcessInstanceByMessage(messageName, cachedVariables); 
+    setExecution(processInstance);
     return processInstance;
   }
 
@@ -199,10 +181,8 @@ public class BusinessProcess implements Serializable {
     
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
     cachedVariables.putAll(processVariables);
-    ProcessInstance processInstance =  processEngine.getRuntimeService().startProcessInstanceByMessage(messageName, cachedVariables);
-    if(!processInstance.isEnded()) {
-    	setExecution(processInstance);
-    }
+    ProcessInstance processInstance =  processEngine.getRuntimeService().startProcessInstanceByMessage(messageName, cachedVariables); 
+    setExecution(processInstance);
     return processInstance;
   }
 
@@ -211,10 +191,8 @@ public class BusinessProcess implements Serializable {
     
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
     cachedVariables.putAll(processVariables);
-    ProcessInstance processInstance =  processEngine.getRuntimeService().startProcessInstanceByMessage(messageName, businessKey, cachedVariables);
-    if(!processInstance.isEnded()) {
-    	setExecution(processInstance);
-    }
+    ProcessInstance processInstance =  processEngine.getRuntimeService().startProcessInstanceByMessage(messageName, businessKey, cachedVariables); 
+    setExecution(processInstance);
     return processInstance;
   }
 
@@ -230,9 +208,7 @@ public class BusinessProcess implements Serializable {
       throw new ActivitiObjectNotFoundException("No process definition found for name: " + string, ProcessDefinition.class);
     }
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceById(definition.getId(), getAndClearCachedVariables());
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 
@@ -250,9 +226,7 @@ public class BusinessProcess implements Serializable {
     Map<String, Object> cachedVariables = getAndClearCachedVariables();
     cachedVariables.putAll(variables);
     ProcessInstance instance = processEngine.getRuntimeService().startProcessInstanceById(definition.getId(), cachedVariables);
-    if(!instance.isEnded()) {
-    	setExecution(instance);
-    }
+    setExecution(instance);
     return instance;
   }
 

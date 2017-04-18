@@ -19,6 +19,8 @@ import org.activiti.bpmn.model.Activity;
 import org.activiti.bpmn.model.BaseElement;
 import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.bpmn.model.DataAssociation;
+import org.activiti.bpmn.model.SendTask;
+import org.activiti.bpmn.model.ServiceTask;
 
 /**
  * @author Tijs Rademakers
@@ -26,17 +28,17 @@ import org.activiti.bpmn.model.DataAssociation;
 public class DataInputAssociationParser extends BaseChildElementParser {
 
   public String getElementName() {
-    return ELEMENT_INPUT_ASSOCIATION;
+    return ELEMENT_OUTPUT_ASSOCIATION;
   }
   
   public void parseChildElement(XMLStreamReader xtr, BaseElement parentElement, BpmnModel model) throws Exception {
     
-    if (parentElement instanceof Activity == false) return;
+    if (parentElement instanceof ServiceTask == false && parentElement instanceof SendTask == false) return;
     
     DataAssociation dataAssociation = new DataAssociation();
     BpmnXMLUtil.addXMLLocation(dataAssociation, xtr);
     DataAssociationParser.parseDataAssociation(dataAssociation, getElementName(), xtr);
     
-    ((Activity) parentElement).getDataInputAssociations().add(dataAssociation);
+    ((Activity) parentElement).getDataOutputAssociations().add(dataAssociation);
   }
 }

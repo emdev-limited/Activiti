@@ -15,35 +15,16 @@ package org.activiti.engine.impl.calendar;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.activiti.engine.ActivitiException;
-
 
 /**
- * @author martin.grofcik
+ * @author Tom Baeyens
  */
 public class MapBusinessCalendarManager implements BusinessCalendarManager {
   
-  private final Map<String, BusinessCalendar> businessCalendars;
-
-  public MapBusinessCalendarManager(){
-    this.businessCalendars = new HashMap<String, BusinessCalendar>();
-  }
-
-  public MapBusinessCalendarManager(Map<String, BusinessCalendar> businessCalendars) {
-    if (businessCalendars == null) {
-      throw new IllegalArgumentException("businessCalendars can not be null");
-    }
-
-    this.businessCalendars = new HashMap<String, BusinessCalendar>(businessCalendars);
-  }
+  private Map<String, BusinessCalendar> businessCalendars = new HashMap<String, BusinessCalendar>();
 
   public BusinessCalendar getBusinessCalendar(String businessCalendarRef) {
-    BusinessCalendar businessCalendar = businessCalendars.get(businessCalendarRef);
-    if (businessCalendar == null) {
-      throw new ActivitiException("Requested business calendar "+ businessCalendarRef +
-              " does not exist. Allowed calendars are "+ this.businessCalendars.keySet()+".");
-    }
-    return businessCalendar;
+    return businessCalendars.get(businessCalendarRef);
   }
   
   public BusinessCalendarManager addBusinessCalendar(String businessCalendarRef, BusinessCalendar businessCalendar) {

@@ -35,7 +35,6 @@ uniqueMember: uid=kermit, ou=users,o=activiti
 uniqueMember: uid=pepe, ou=users,o=activiti
 uniqueMember: uid=gonzo, ou=users,o=activiti
 uniqueMember: uid=fozzie, ou=users,o=activiti
-uniqueMember: cn=Dr\, Bunsen,ou=users,o=activiti
 
 dn: cn=Admin,ou=groups,o=activiti
 objectClass: groupOfUniqueNames
@@ -52,7 +51,6 @@ cn: Sales
 uid : sales
 uniqueMember: uid=pepe, ou=users,o=activiti
 uniqueMember: uid=gonzo, ou=users,o=activiti
-uniqueMember: cn=Dr\, Bunsen,ou=users,o=activiti
 
 # Actual users
 
@@ -104,14 +102,4 @@ objectClass: top
 cn: Gonzo
 sn: The Great
 uid: gonzo
-userPassword:: cGFzcw==
-
-dn: cn=Dr\, Bunsen,ou=users,o=activiti
-objectClass: organizationalPerson
-objectClass: person
-objectClass: inetOrgPerson
-objectClass: top
-cn: Dr\, Bunsen
-sn: Honeydew
-uid: bunsen
 userPassword:: cGFzcw==

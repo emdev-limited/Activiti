@@ -14,85 +14,93 @@
 package org.activiti.rest.service.api.identity;
 
 import java.io.ByteArrayOutputStream;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.List;
 
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
 import org.activiti.engine.identity.Picture;
 import org.activiti.engine.identity.User;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.io.IOUtils;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.restlet.data.MediaType;
+import org.restlet.data.Status;
+import org.restlet.ext.fileupload.RestletFileUpload;
+import org.restlet.representation.InputRepresentation;
+import org.restlet.representation.Representation;
+import org.restlet.resource.Get;
+import org.restlet.resource.Put;
+import org.restlet.resource.ResourceException;
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class UserPictureResource extends BaseUserResource {
 
-  @RequestMapping(value="/identity/users/{userId}/picture", method = RequestMethod.GET)
-  public ResponseEntity<byte[]> getUserPicture(@PathVariable String userId, HttpServletRequest request, HttpServletResponse response) {
-    User user = getUserFromRequest(userId);
-    Picture userPicture = identityService.getUserPicture(user.getId());
+  @Get
+  public InputRepresentation getUserPicture() {
+    if(!authenticate())
+      return null;
     
-    if (userPicture == null) {
+    User user = getUserFromRequest();
+    Picture userPicture = ActivitiUtil.getIdentityService().getUserPicture(user.getId());
+    
+    if(userPicture == null) {
       throw new ActivitiObjectNotFoundException("The user with id '" + user.getId() + "' does not have a picture.", Picture.class);
     }
     
-    HttpHeaders responseHeaders = new HttpHeaders();
-    if (userPicture.getMimeType() != null) {
-      responseHeaders.set("Content-Type", userPicture.getMimeType());
-    }else{
-      responseHeaders.set("Content-Type", "image/jpeg");
+    MediaType mediaType = MediaType.IMAGE_JPEG;
+    if(userPicture.getMimeType() != null) {
+      mediaType = MediaType.valueOf(userPicture.getMimeType());
     }
     
-    try {
-      return new ResponseEntity<byte[]>(IOUtils.toByteArray(userPicture.getInputStream()), responseHeaders, HttpStatus.OK);
-    } catch (Exception e) {
-      throw new ActivitiException("Error exporting picture: " + e.getMessage(), e);
-    }
+    return new InputRepresentation(userPicture.getInputStream(), mediaType);
   }
   
-  @RequestMapping(value="/identity/users/{userId}/picture", method = RequestMethod.PUT)
-  public void updateUserPicture(@PathVariable String userId, HttpServletRequest request, HttpServletResponse response) {
-    User user = getUserFromRequest(userId);
+  @Put
+  public void updateUserPicture(Representation representation) {
+    User user = getUserFromRequest();
     
-    if (request instanceof MultipartHttpServletRequest == false) {
-      throw new ActivitiIllegalArgumentException("Multipart request is required");
+    if(!MediaType.MULTIPART_FORM_DATA.isCompatible(representation.getMediaType())) {
+      throw new ResourceException(Status.CLIENT_ERROR_UNSUPPORTED_MEDIA_TYPE.getCode(), "The request should be of type 'multipart/form-data'.", null, null);
     }
     
-    MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
-    
-    if (multipartRequest.getFileMap().size() == 0) {
-      throw new ActivitiIllegalArgumentException("Multipart request with file content is required");
-    }
-    
-    MultipartFile file = multipartRequest.getFileMap().values().iterator().next();
-    
+    RestletFileUpload upload = new RestletFileUpload(new DiskFileItemFactory());
     try {
-      String mimeType = file.getContentType();
-      int size = ((Long) file.getSize()).intValue();
+      FileItem uploadItem = null;
+      List<FileItem> items = upload.parseRepresentation(representation);
+      String mimeType = MediaType.IMAGE_JPEG.toString();
+      
+      for (FileItem fileItem : items) {
+        if(fileItem.isFormField()) {
+          if("mimeType".equals(fileItem.getFieldName())) {
+            mimeType = fileItem.getString("UTF-8");
+          }
+        } else  if(fileItem.getName() != null) {
+          uploadItem = fileItem;
+        }
+      }
+      
+      if(uploadItem == null) {
+        throw new ActivitiIllegalArgumentException("No file content was found in request body.");
+      }
+      
+      int size = ((Long) uploadItem.getSize()).intValue();
       
       // Copy file-body in a bytearray as the engine requires this
       ByteArrayOutputStream bytesOutput = new ByteArrayOutputStream(size);
-      IOUtils.copy(file.getInputStream(), bytesOutput);
+      IOUtils.copy(uploadItem.getInputStream(), bytesOutput);
       
       Picture newPicture = new Picture(bytesOutput.toByteArray(), mimeType);
-      identityService.setUserPicture(user.getId(), newPicture);
+      ActivitiUtil.getIdentityService().setUserPicture(user.getId(), newPicture);
       
-      response.setStatus(HttpStatus.NO_CONTENT.value());
-      
-    } catch (Exception e) {
+    } catch (FileUploadException e) {
+      throw new ActivitiException("Error with uploaded file: " + e.getMessage(), e);
+    } catch (IOException e) {
       throw new ActivitiException("Error while reading uploaded file: " + e.getMessage(), e);
     }
   }

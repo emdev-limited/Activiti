@@ -3,13 +3,12 @@ package org.activiti.rest.service.api.management;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.activiti.rest.service.BaseSpringRestTestCase;
+import org.activiti.rest.service.BaseRestTestCase;
 import org.activiti.rest.service.api.RestUrls;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-
-import com.fasterxml.jackson.databind.JsonNode;
+import org.codehaus.jackson.JsonNode;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.resource.ClientResource;
 
 /**
  * Test for all REST-operations related to the Job collection and a single
@@ -17,30 +16,30 @@ import com.fasterxml.jackson.databind.JsonNode;
  * 
  * @author Frederik Heremans
  */
-public class PropertiesCollectionResourceTest extends BaseSpringRestTestCase {
+public class PropertiesCollectionResourceTest extends BaseRestTestCase {
 
   
   /**
    * Test getting the engine properties.
    */
   public void testGetProperties() throws Exception {
-  	CloseableHttpResponse response = executeRequest(new HttpGet(SERVER_URL_PREFIX + 
-        RestUrls.createRelativeResourceUrl(RestUrls.URL_PROPERTIES_COLLECTION)), HttpStatus.SC_OK);
+    ClientResource client = getAuthenticatedClient(RestUrls.createRelativeResourceUrl(RestUrls.URL_PROPERTIES_COLLECTION));
+    Representation response = client.get();
+    assertEquals(Status.SUCCESS_OK, client.getResponse().getStatus());
     
     Map<String, String> properties = managementService.getProperties();
     
-    JsonNode responseNode = objectMapper.readTree(response.getEntity().getContent());
-    closeResponse(response);
+    JsonNode responseNode = objectMapper.readTree(response.getStream());
     assertNotNull(responseNode);
     assertEquals(properties.size(), responseNode.size());
     
-    Iterator<Map.Entry<String, JsonNode>> nodes = responseNode.fields();
+    Iterator<Map.Entry<String, JsonNode>> nodes = responseNode.getFields();
     Map.Entry<String, JsonNode> node = null;
     while(nodes.hasNext()) {
       node = nodes.next();
       String propValue = properties.get(node.getKey());
       assertNotNull(propValue);
-      assertEquals(propValue, node.getValue().textValue());
+      assertEquals(propValue, node.getValue().getTextValue());
     }
   }
 }

@@ -38,7 +38,6 @@ import org.activiti.explorer.ExplorerApp;
 import org.activiti.explorer.I18nManager;
 import org.activiti.explorer.Messages;
 import org.activiti.explorer.ui.mainlayout.ExplorerLayout;
-import org.activiti.explorer.util.XmlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +105,7 @@ public class ProcessDefinitionInfoComponent extends VerticalLayout {
       }
     }
     
-    if (!suspensionStateJobs.isEmpty()) {
+    if (suspensionStateJobs.size() > 0) {
       
       // Header
       Label suspensionStateTitle = new Label(i18nManager.getMessage(Messages.PROCESS_HEADER_SUSPENSION_STATE));
@@ -145,11 +144,11 @@ public class ProcessDefinitionInfoComponent extends VerticalLayout {
         
         final InputStream definitionStream = repositoryService.getResourceAsStream(
             processDefinition.getDeploymentId(), processDefinition.getResourceName());
-        XMLInputFactory xif = XmlUtil.createSafeXmlInputFactory();
+        XMLInputFactory xif = XMLInputFactory.newInstance();
         XMLStreamReader xtr = xif.createXMLStreamReader(definitionStream);
         BpmnModel bpmnModel = new BpmnXMLConverter().convertToBpmnModel(xtr);
         
-        if (!bpmnModel.getFlowLocationMap().isEmpty()) {
+        if (bpmnModel.getFlowLocationMap().size() > 0) {
           
           int maxX = 0;
           int maxY = 0;

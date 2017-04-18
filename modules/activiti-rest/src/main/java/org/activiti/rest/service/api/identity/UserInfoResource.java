@@ -13,81 +13,84 @@
 
 package org.activiti.rest.service.api.identity;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.activiti.engine.ActivitiIllegalArgumentException;
-import org.activiti.engine.ActivitiObjectNotFoundException;
-import org.activiti.engine.IdentityService;
 import org.activiti.engine.identity.User;
-import org.activiti.rest.service.api.RestResponseFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Status;
+import org.restlet.resource.Delete;
+import org.restlet.resource.Get;
+import org.restlet.resource.Put;
+import org.restlet.resource.ResourceException;
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class UserInfoResource extends BaseUserResource {
 
-  @Autowired
-  protected RestResponseFactory restResponseFactory;
-  
-  @Autowired
-  protected IdentityService identityService;
-  
-  @RequestMapping(value="/identity/users/{userId}/info/{key}", method = RequestMethod.GET, produces = "application/json")
-  public UserInfoResponse getUserInfo(@PathVariable("userId") String userId, @PathVariable("key") String key, HttpServletRequest request) {
-    User user = getUserFromRequest(userId);
+  @Get
+  public UserInfoResponse getUserInfo() {
+    if(!authenticate())
+      return null;
     
-    String existingValue = identityService.getUserInfo(user.getId(), key);
-    if (existingValue == null) {
-      throw new ActivitiObjectNotFoundException("User info with key '" + key + "' does not exists for user '" + user.getId() + "'.", null);
+    User user = getUserFromRequest();
+    
+    String key = getAttribute("key");
+    if(key == null) {
+      throw new ActivitiIllegalArgumentException("Key cannot be null.");
     }
     
-    return restResponseFactory.createUserInfoResponse(key, existingValue, user.getId());
+    String existingValue = ActivitiUtil.getIdentityService().getUserInfo(user.getId(), key);
+    if(existingValue == null) {
+      throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND.getCode(), "User info with key '" + key + "' does not exists for user '" + user.getId() + "'.", null, null);
+    }
+    
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createUserInfoResponse(this, key, existingValue, user.getId());
   }
   
   
-  @RequestMapping(value="/identity/users/{userId}/info/{key}", method = RequestMethod.PUT, produces = "application/json")
-  public UserInfoResponse setUserInfo(@PathVariable("userId") String userId, @PathVariable("key") String key, 
-      @RequestBody UserInfoRequest userRequest, HttpServletRequest request) {
+  @Put
+  public UserInfoResponse setUserInfo(UserInfoRequest request) {
+    if(!authenticate())
+      return null;
     
-    User user = getUserFromRequest(userId);
-    String validKey = getValidKeyFromRequest(user, key);
+    User user = getUserFromRequest();
+    String key = getValidKeyFromRequest(user);
     
-    if (userRequest.getValue() == null) {
+    if(request.getValue() == null) {
       throw new ActivitiIllegalArgumentException("The value cannot be null.");
     }
     
-    if (userRequest.getKey() == null || validKey.equals(userRequest.getKey())) {
-      identityService.setUserInfo(user.getId(), key, userRequest.getValue());
+    if(request.getKey() == null || key.equals(request.getKey())) {
+      ActivitiUtil.getIdentityService().setUserInfo(user.getId(), key, request.getValue());
     } else {
       throw new ActivitiIllegalArgumentException("Key provided in request body doesn't match the key in the resource URL.");
     }
     
-    return restResponseFactory.createUserInfoResponse(key, userRequest.getValue(), user.getId());
+    return getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory()
+            .createUserInfoResponse(this, key, request.getValue(), user.getId());
   }
   
-  @RequestMapping(value="/identity/users/{userId}/info/{key}", method = RequestMethod.DELETE)
-  public void deleteUserInfo(@PathVariable("userId") String userId, @PathVariable("key") String key, HttpServletResponse response) {
-    User user = getUserFromRequest(userId);
-    String validKey = getValidKeyFromRequest(user, key);
+  @Delete
+  public void deleteUserInfo() {
+    User user = getUserFromRequest();
+    String key = getValidKeyFromRequest(user);
     
-    identityService.setUserInfo(user.getId(), validKey, null);
+    ActivitiUtil.getIdentityService().setUserInfo(user.getId(), key, null);
     
-    response.setStatus(HttpStatus.NO_CONTENT.value());
+    setStatus(Status.SUCCESS_NO_CONTENT);
   }
   
-  protected String getValidKeyFromRequest(User user, String key) {
-    String existingValue = identityService.getUserInfo(user.getId(), key);
-    if (existingValue == null) {
-      throw new ActivitiObjectNotFoundException("User info with key '" + key + "' does not exists for user '" + user.getId() + "'.", null);
+  protected String getValidKeyFromRequest(User user) {
+    String key = getAttribute("key");
+    if(key == null) {
+      throw new ActivitiIllegalArgumentException("Key cannot be null.");
+    }
+    
+    String existingValue = ActivitiUtil.getIdentityService().getUserInfo(user.getId(), key);
+    if(existingValue == null) {
+      throw new ResourceException(Status.CLIENT_ERROR_NOT_FOUND.getCode(), "User info with key '" + key + "' does not exists for user '" + user.getId() + "'.", null, null);
     }
     
     return key;

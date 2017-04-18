@@ -16,6 +16,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
+import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.interceptor.Command;
 import org.activiti.engine.impl.interceptor.CommandContext;
 
@@ -23,6 +24,7 @@ import org.activiti.engine.impl.interceptor.CommandContext;
 /**
  * @author Joram Barrez
  */
+@SuppressWarnings("unchecked")
 public class GetDeploymentResourceNamesCmd implements Command<List>, Serializable {
   
   private static final long serialVersionUID = 1L;
@@ -37,7 +39,8 @@ public class GetDeploymentResourceNamesCmd implements Command<List>, Serializabl
       throw new ActivitiIllegalArgumentException("deploymentId is null");
     }
     
-    return commandContext
+    return Context
+      .getCommandContext()
       .getDeploymentEntityManager()
       .getDeploymentResourceNames(deploymentId);
   }

@@ -21,8 +21,6 @@ import org.activiti.engine.form.AbstractFormType;
  * @author Tom Baeyens
  */
 public class StringFormType extends AbstractFormType {
-	
-  private static final long serialVersionUID = 1L;
 
   public String getName() {
     return "string";

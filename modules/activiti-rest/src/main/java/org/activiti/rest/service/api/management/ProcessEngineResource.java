@@ -13,41 +13,32 @@
 
 package org.activiti.rest.service.api.management;
 
-import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.ProcessEngineInfo;
-import org.activiti.engine.ProcessEngines;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.activiti.rest.common.api.ActivitiUtil;
+import org.activiti.rest.common.api.SecuredResource;
+import org.restlet.resource.Get;
 
 /**
  * @author Tijs Rademakers
  */
-@RestController
-public class ProcessEngineResource {
-  
-  @Autowired @Qualifier("processEngine")
-  protected ProcessEngine engine;
+public class ProcessEngineResource extends SecuredResource {
 
-  @RequestMapping(value="/management/engine", method = RequestMethod.GET, produces = "application/json")
+  @Get
   public ProcessEngineInfoResponse getEngineInfo() {
+    if(authenticate() == false) return null;
+    
     ProcessEngineInfoResponse response = new ProcessEngineInfoResponse();
     
-    try {
-      ProcessEngineInfo engineInfo = ProcessEngines.getProcessEngineInfo(engine.getName());
-      if (engineInfo != null) {
-        response.setName(engineInfo.getName());
-        response.setResourceUrl(engineInfo.getResourceUrl());
-        response.setException(engineInfo.getException());
-      } else {
-        // Revert to using process-engine directly
-        response.setName(engine.getName());
-      }
-    } catch (Exception e) {
-      throw new ActivitiException("Error retrieving process info", e);
+    ProcessEngineInfo engineInfo = ActivitiUtil.getProcessEngineInfo();
+    if(engineInfo != null) {
+      response.setName(engineInfo.getName());
+      response.setResourceUrl(engineInfo.getResourceUrl());
+      response.setException(engineInfo.getException());
+    } else {
+      // Revert to using process-engine directly
+      ProcessEngine engine = ActivitiUtil.getProcessEngine();
+      response.setName(engine.getName());
     }
    
     response.setVersion(ProcessEngine.VERSION);

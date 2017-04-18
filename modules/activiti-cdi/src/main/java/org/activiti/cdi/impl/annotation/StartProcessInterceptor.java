@@ -62,7 +62,7 @@ public class StartProcessInterceptor implements Serializable {
       return result;
     } catch (InvocationTargetException e) {
       Throwable cause = e.getCause();
-      if(cause instanceof Exception) {
+      if(cause != null && cause instanceof Exception) {
         throw (Exception) cause;
       } else {
         throw e;

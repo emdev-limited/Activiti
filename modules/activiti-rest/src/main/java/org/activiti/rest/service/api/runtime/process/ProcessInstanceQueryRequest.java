@@ -15,17 +15,15 @@ package org.activiti.rest.service.api.runtime.process;
 
 import java.util.List;
 
-import org.activiti.rest.common.api.PaginateRequest;
 import org.activiti.rest.service.api.engine.variable.QueryVariable;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.codehaus.jackson.annotate.JsonTypeInfo;
+import org.codehaus.jackson.annotate.JsonTypeInfo.Id;
 
 
 /**
  * @author Frederik Heremans
  */
-public class ProcessInstanceQueryRequest extends PaginateRequest {
+public class ProcessInstanceQueryRequest {
 
   private String processInstanceId;
   private String processBusinessKey;
@@ -38,9 +36,6 @@ public class ProcessInstanceQueryRequest extends PaginateRequest {
   private Boolean suspended;
   private Boolean includeProcessVariables;
   private List<QueryVariable> variables;
-  private String tenantId;
-  private String tenantIdLike;
-  private Boolean withoutTenantId;
   
   public String getProcessInstanceId() {
     return processInstanceId;
@@ -129,29 +124,5 @@ public class ProcessInstanceQueryRequest extends PaginateRequest {
   
   public void setVariables(List<QueryVariable> variables) {
     this.variables = variables;
-  }
-  
-  public void setTenantId(String tenantId) {
-	  this.tenantId = tenantId;
-  }
-  
-  public String getTenantId() {
-	  return tenantId;
-  }
-  
-  public void setWithoutTenantId(Boolean withoutTenantId) {
-	  this.withoutTenantId = withoutTenantId;
-  }
-  
-  public Boolean getWithoutTenantId() {
-	  return withoutTenantId;
-  }
-  
-  public String getTenantIdLike() {
-	  return tenantIdLike;
-  }
-  
-  public void setTenantIdLike(String tenantIdLike) {
-	  this.tenantIdLike = tenantIdLike;
   }
 }

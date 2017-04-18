@@ -21,10 +21,9 @@ import org.activiti.bpmn.model.CallActivity;
 import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.IOParameter;
 import org.apache.commons.lang3.StringUtils;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * @author Tijs Rademakers
@@ -46,21 +45,21 @@ public class CallActivityJsonConverter extends BaseBpmnJsonConverter {
     convertersToJsonMap.put(CallActivity.class, CallActivityJsonConverter.class);
   }
   
-  protected String getStencilId(BaseElement baseElement) {
+  protected String getStencilId(FlowElement flowElement) {
     return STENCIL_CALL_ACTIVITY;
   }
   
-  protected void convertElementToJson(ObjectNode propertiesNode, BaseElement baseElement) {
-    CallActivity callActivity = (CallActivity) baseElement;
+  protected void convertElementToJson(ObjectNode propertiesNode, FlowElement flowElement) {
+    CallActivity callActivity = (CallActivity) flowElement;
   	if (StringUtils.isNotEmpty(callActivity.getCalledElement())) {
   	  propertiesNode.put(PROPERTY_CALLACTIVITY_CALLEDELEMENT, callActivity.getCalledElement());
   	}
   	
-  	addJsonParameters(PROPERTY_CALLACTIVITY_IN, "inParameters", callActivity.getInParameters(), propertiesNode);
-  	addJsonParameters(PROPERTY_CALLACTIVITY_OUT, "outParameters", callActivity.getOutParameters(), propertiesNode);
+  	addJsonParameters(PROPERTY_CALLACTIVITY_IN, callActivity.getInParameters(), propertiesNode);
+  	addJsonParameters(PROPERTY_CALLACTIVITY_OUT, callActivity.getOutParameters(), propertiesNode);
   }
   
-  private void addJsonParameters(String propertyName, String valueName, List<IOParameter> parameterList, ObjectNode propertiesNode) {
+  private void addJsonParameters(String propertyName, List<IOParameter> parameterList, ObjectNode propertiesNode) {
     ObjectNode parametersNode = objectMapper.createObjectNode();
     ArrayNode itemsNode = objectMapper.createArrayNode();
     for (IOParameter parameter : parameterList) {
@@ -84,7 +83,8 @@ public class CallActivityJsonConverter extends BaseBpmnJsonConverter {
       itemsNode.add(parameterItemNode);
     }
     
-    parametersNode.put(valueName, itemsNode);
+    parametersNode.put("totalCount", itemsNode.size());
+    parametersNode.put(EDITOR_PROPERTIES_GENERAL_ITEMS, itemsNode);
     propertiesNode.put(propertyName, parametersNode);
   }
   
@@ -94,18 +94,17 @@ public class CallActivityJsonConverter extends BaseBpmnJsonConverter {
       callActivity.setCalledElement(getPropertyValueAsString(PROPERTY_CALLACTIVITY_CALLEDELEMENT, elementNode));
     } 
     
-    callActivity.getInParameters().addAll(convertToIOParameters(PROPERTY_CALLACTIVITY_IN, "inParameters", elementNode));
-    callActivity.getOutParameters().addAll(convertToIOParameters(PROPERTY_CALLACTIVITY_OUT, "outParameters", elementNode));
+    callActivity.getInParameters().addAll(convertToIOParameters(PROPERTY_CALLACTIVITY_IN, elementNode));
+    callActivity.getOutParameters().addAll(convertToIOParameters(PROPERTY_CALLACTIVITY_OUT, elementNode));
     
     return callActivity;
   }
   
-  private List<IOParameter> convertToIOParameters(String propertyName, String valueName, JsonNode elementNode) {
+  private List<IOParameter> convertToIOParameters(String propertyName, JsonNode elementNode) {
     List<IOParameter> ioParameters = new ArrayList<IOParameter>();
     JsonNode parametersNode = getProperty(propertyName, elementNode);
     if (parametersNode != null) {
-      parametersNode = BpmnJsonConverterUtil.validateIfNodeIsTextual(parametersNode);
-      JsonNode itemsArrayNode = parametersNode.get(valueName);
+      JsonNode itemsArrayNode = parametersNode.get(EDITOR_PROPERTIES_GENERAL_ITEMS);
       if (itemsArrayNode != null) {
         for (JsonNode itemNode : itemsArrayNode) {
           JsonNode sourceNode = itemNode.get(PROPERTY_IOPARAMETER_SOURCE);
@@ -116,7 +115,8 @@ public class CallActivityJsonConverter extends BaseBpmnJsonConverter {
             IOParameter parameter = new IOParameter();
             if (StringUtils.isNotEmpty(getValueAsString(PROPERTY_IOPARAMETER_SOURCE, itemNode))) {
               parameter.setSource(getValueAsString(PROPERTY_IOPARAMETER_SOURCE, itemNode));
-            } else if (StringUtils.isNotEmpty(getValueAsString(PROPERTY_IOPARAMETER_SOURCE_EXPRESSION, itemNode))) {
+            }
+            if (StringUtils.isNotEmpty(getValueAsString(PROPERTY_IOPARAMETER_SOURCE_EXPRESSION, itemNode))) {
               parameter.setSourceExpression(getValueAsString(PROPERTY_IOPARAMETER_SOURCE_EXPRESSION, itemNode));
             }
             if (StringUtils.isNotEmpty(getValueAsString(PROPERTY_IOPARAMETER_TARGET, itemNode))) {

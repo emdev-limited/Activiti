@@ -13,6 +13,7 @@
 
 package org.activiti.engine.impl.pvm.runtime;
 
+import org.activiti.engine.delegate.ExecutionListener;
 import org.activiti.engine.impl.pvm.process.ScopeImpl;
 
 

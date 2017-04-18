@@ -15,11 +15,12 @@ package org.activiti.editor.language.json.converter;
 import java.util.Map;
 
 import org.activiti.bpmn.model.BaseElement;
+import org.activiti.bpmn.model.FieldExtension;
 import org.activiti.bpmn.model.FlowElement;
 import org.activiti.bpmn.model.ServiceTask;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.lang3.StringUtils;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
 
 /**
  * @author Tijs Rademakers
@@ -41,11 +42,11 @@ public class MailTaskJsonConverter extends BaseBpmnJsonConverter {
     // will be handled by ServiceTaskJsonConverter
   }
   
-  protected String getStencilId(BaseElement baseElement) {
+  protected String getStencilId(FlowElement flowElement) {
     return STENCIL_TASK_MAIL;
   }
   
-  protected void convertElementToJson(ObjectNode propertiesNode, BaseElement baseElement) {
+  protected void convertElementToJson(ObjectNode propertiesNode, FlowElement flowElement) {
     // will be handled by ServiceTaskJsonConverter
   }
   
@@ -62,5 +63,19 @@ public class MailTaskJsonConverter extends BaseBpmnJsonConverter {
   	addField(PROPERTY_MAILTASK_CHARSET, elementNode, task);
     
     return task;
+  }
+  
+  protected void addField(String name, JsonNode elementNode, ServiceTask task) {
+    FieldExtension field = new FieldExtension();
+    field.setFieldName(name.substring(8));
+    String value = getPropertyValueAsString(name, elementNode);
+    if (StringUtils.isNotEmpty(value)) {
+      if ((value.contains("${") || value.contains("#{")) && value.contains("}")) {
+        field.setExpression(value);
+      } else {
+        field.setStringValue(value);
+      }
+      task.getFieldExtensions().add(field);
+    }
   }
 }

@@ -16,11 +16,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.activiti.engine.delegate.event.ActivitiEventType;
-import org.activiti.engine.delegate.event.ActivitiVariableEvent;
-import org.activiti.engine.delegate.event.impl.ActivitiEventBuilder;
 import org.activiti.engine.impl.context.Context;
-import org.activiti.engine.impl.db.BulkDeleteable;
+import org.activiti.engine.impl.db.HasRevision;
+import org.activiti.engine.impl.db.PersistentObject;
+import org.activiti.engine.impl.variable.ValueFields;
 import org.activiti.engine.impl.variable.VariableType;
 import org.apache.commons.lang3.StringUtils;
 
@@ -28,7 +27,7 @@ import org.apache.commons.lang3.StringUtils;
  * @author Tom Baeyens
  * @author Marcus Klimstra (CGI)
  */
-public class VariableInstanceEntity implements VariableInstance, BulkDeleteable, Serializable {
+public class VariableInstanceEntity implements ValueFields, PersistentObject, HasRevision, Serializable {
 
   private static final long serialVersionUID = 1L;
 
@@ -36,10 +35,7 @@ public class VariableInstanceEntity implements VariableInstance, BulkDeleteable,
   protected int revision;
 
   protected String name;
-  protected String localizedName;
-  protected String localizedDescription;
   protected VariableType type;
-  protected String typeName;
 
   protected String processInstanceId;
   protected String executionId;
@@ -73,7 +69,6 @@ public class VariableInstanceEntity implements VariableInstance, BulkDeleteable,
     VariableInstanceEntity variableInstance = new VariableInstanceEntity();
     variableInstance.name = name;
     variableInstance.type = type;
-    variableInstance.typeName = type.getTypeName();
     variableInstance.setValue(value);
     return variableInstance;
   }
@@ -95,20 +90,8 @@ public class VariableInstanceEntity implements VariableInstance, BulkDeleteable,
       .getDbSqlSession()
       .delete(this);
     
-    if (!deleted && Context.getProcessEngineConfiguration() != null && Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
-      Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
-          createVariableDeleteEvent(this)
-        );
-    }
-    
     byteArrayRef.delete();
     deleted = true; 
-    
-  }
-  
-  protected static ActivitiVariableEvent createVariableDeleteEvent(VariableInstanceEntity variableInstance) {
-    return ActivitiEventBuilder.createVariableEvent(ActivitiEventType.VARIABLE_DELETED, variableInstance.getName(), null, variableInstance.getType(),
-        variableInstance.getTaskId(), variableInstance.getExecutionId(), variableInstance.getProcessInstanceId(), null);
   }
 
   public Object getPersistentState() {
@@ -191,7 +174,6 @@ public class VariableInstanceEntity implements VariableInstance, BulkDeleteable,
 
   public void setValue(Object value) {
     type.setValue(value, this);
-    typeName = type.getTypeName();
     cachedValue = value;
   }
 
@@ -213,33 +195,6 @@ public class VariableInstanceEntity implements VariableInstance, BulkDeleteable,
 
   public String getName() {
     return name;
-  }
-  
-  public void setName(String name) {
-    this.name = name;
-  }
-
-  public String getLocalizedName() {
-    return localizedName;
-  }
-
-  public void setLocalizedName(String localizedName) {
-    this.localizedName = localizedName;
-  }
-
-  public String getLocalizedDescription() {
-    return localizedDescription;
-  }
-
-  public void setLocalizedDescription(String localizedDescription) {
-    this.localizedDescription = localizedDescription;
-  }
-  
-  public String getTypeName() {
-    return typeName;
-  }
-  public void setTypeName(String typeName) {
-    this.typeName = typeName;
   }
 
   public VariableType getType() {

@@ -14,8 +14,7 @@ package org.activiti.engine.impl.cmd;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.ActivitiObjectNotFoundException;
-import org.activiti.engine.delegate.event.ActivitiEventType;
-import org.activiti.engine.delegate.event.impl.ActivitiEventBuilder;
+import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.interceptor.Command;
 import org.activiti.engine.impl.interceptor.CommandContext;
 import org.activiti.engine.impl.persistence.deploy.DeploymentCache;
@@ -41,7 +40,8 @@ public class SetProcessDefinitionCategoryCmd implements Command<Void> {
       throw new ActivitiIllegalArgumentException("Process definition id is null");
     }
     
-    ProcessDefinitionEntity processDefinition = commandContext
+    ProcessDefinitionEntity processDefinition = Context
+            .getCommandContext()
             .getProcessDefinitionEntityManager()
             .findProcessDefinitionById(processDefinitionId);
 
@@ -54,14 +54,9 @@ public class SetProcessDefinitionCategoryCmd implements Command<Void> {
     
     // Remove process definition from cache, it will be refetched later
     DeploymentCache<ProcessDefinitionEntity> processDefinitionCache = 
-        commandContext.getProcessEngineConfiguration().getProcessDefinitionCache();
+            Context.getProcessEngineConfiguration().getProcessDefinitionCache();
     if (processDefinitionCache != null) {
       processDefinitionCache.remove(processDefinitionId);
-    }
-    
-    if (commandContext.getEventDispatcher().isEnabled()) {
-      commandContext.getEventDispatcher().dispatchEvent(
-    			ActivitiEventBuilder.createEntityEvent(ActivitiEventType.ENTITY_UPDATED, processDefinition));
     }
     
     return null;

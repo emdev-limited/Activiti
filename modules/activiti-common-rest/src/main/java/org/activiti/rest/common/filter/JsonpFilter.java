@@ -1,12 +1,30 @@
 package org.activiti.rest.common.filter;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
-public class JsonpFilter {
+import org.restlet.Context;
+import org.restlet.Request;
+import org.restlet.Response;
+import org.restlet.data.MediaType;
+import org.restlet.data.Status;
+import org.restlet.representation.Representation;
+import org.restlet.representation.StringRepresentation;
+import org.restlet.routing.Filter;
 
-  protected void afterHandle(HttpServletRequest request, HttpServletResponse response) {
-    /*String jsonp = request.getResourceRef().getQueryAsForm().getFirstValue("callback");
+public class JsonpFilter extends Filter {
+
+  public JsonpFilter(Context context) {
+    super(context);
+  }
+
+  public JsonpFilter() {
+  }
+
+  @Override
+  protected void afterHandle(Request request, Response response) {
+    String jsonp = request.getResourceRef().getQueryAsForm().getFirstValue("callback");
 
     if (jsonp != null) {
       StringBuilder stringBuilder = new StringBuilder(jsonp);
@@ -45,6 +63,6 @@ public class JsonpFilter {
       stringBuilder.append(");");
       response.setEntity(new StringRepresentation(stringBuilder.toString(),
           MediaType.TEXT_JAVASCRIPT));
-    }*/
+    }
   }
 }

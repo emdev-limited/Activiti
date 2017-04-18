@@ -18,19 +18,21 @@ import java.util.List;
 import java.util.Map;
 
 import org.activiti.engine.ActivitiIllegalArgumentException;
-import org.activiti.engine.HistoryService;
 import org.activiti.engine.history.HistoricVariableInstanceQuery;
 import org.activiti.engine.impl.HistoricVariableInstanceQueryProperty;
 import org.activiti.engine.query.QueryProperty;
+import org.activiti.rest.common.api.ActivitiUtil;
 import org.activiti.rest.common.api.DataResponse;
+import org.activiti.rest.common.api.SecuredResource;
 import org.activiti.rest.service.api.RestResponseFactory;
 import org.activiti.rest.service.api.engine.variable.QueryVariable;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.activiti.rest.service.application.ActivitiRestServicesApplication;
+import org.restlet.data.Form;
 
 /**
  * @author Tijs Rademakers
  */
-public class HistoricVariableInstanceBaseResource {
+public class HistoricVariableInstanceBaseResource extends SecuredResource {
 
   private static Map<String, QueryProperty> allowedSortProperties = new HashMap<String, QueryProperty>();
 
@@ -38,15 +40,9 @@ public class HistoricVariableInstanceBaseResource {
     allowedSortProperties.put("processInstanceId", HistoricVariableInstanceQueryProperty.PROCESS_INSTANCE_ID);
     allowedSortProperties.put("variableName", HistoricVariableInstanceQueryProperty.VARIABLE_NAME);
   }
-  
-  @Autowired
-  protected RestResponseFactory restResponseFactory;
-  
-  @Autowired
-  protected HistoryService historyService;
 
-  protected DataResponse getQueryResponse(HistoricVariableInstanceQueryRequest queryRequest, Map<String,String> allRequestParams) {
-    HistoricVariableInstanceQuery query = historyService.createHistoricVariableInstanceQuery();
+  protected DataResponse getQueryResponse(HistoricVariableInstanceQueryRequest queryRequest, Form urlQuery) {
+    HistoricVariableInstanceQuery query = ActivitiUtil.getHistoryService().createHistoricVariableInstanceQuery();
 
     // Populate query based on request
     if(queryRequest.getExcludeTaskVariables() != null) {
@@ -59,10 +55,6 @@ public class HistoricVariableInstanceBaseResource {
       query.taskId(queryRequest.getTaskId());
     }
     
-    if(queryRequest.getExecutionId() != null) {
-      query.executionId(queryRequest.getExecutionId());
-    }
-
     if (queryRequest.getProcessInstanceId() != null) {
       query.processInstanceId(queryRequest.getProcessInstanceId());
     }
@@ -79,11 +71,12 @@ public class HistoricVariableInstanceBaseResource {
       addVariables(query, queryRequest.getVariables());
     }
     
-    return new HistoricVariableInstancePaginateList(restResponseFactory).paginateList(
-        allRequestParams, query, "variableName", allowedSortProperties);
+    return new HistoricVariableInstancePaginateList(this).paginateList(urlQuery, query, "variableName", allowedSortProperties);
   }
   
   protected void addVariables(HistoricVariableInstanceQuery variableInstanceQuery, List<QueryVariable> variables) {
+    RestResponseFactory responseFactory = getApplication(ActivitiRestServicesApplication.class).getRestResponseFactory();
+    
     for (QueryVariable variable : variables) {
       if (variable.getVariableOperation() == null) {
         throw new ActivitiIllegalArgumentException("Variable operation is missing for variable: " + variable.getName());
@@ -94,7 +87,7 @@ public class HistoricVariableInstanceBaseResource {
 
       boolean nameLess = variable.getName() == null;
 
-      Object actualValue = restResponseFactory.getVariableValue(variable);
+      Object actualValue = responseFactory.getVariableValue(variable);
 
       // A value-only query is only possible using equals-operator
       if (nameLess) {

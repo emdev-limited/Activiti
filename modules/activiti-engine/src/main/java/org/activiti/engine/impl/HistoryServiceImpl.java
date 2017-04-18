@@ -28,8 +28,6 @@ import org.activiti.engine.history.NativeHistoricDetailQuery;
 import org.activiti.engine.history.NativeHistoricProcessInstanceQuery;
 import org.activiti.engine.history.NativeHistoricTaskInstanceQuery;
 import org.activiti.engine.history.NativeHistoricVariableInstanceQuery;
-import org.activiti.engine.history.ProcessInstanceHistoryLogQuery;
-import org.activiti.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.activiti.engine.impl.cmd.DeleteHistoricProcessInstanceCmd;
 import org.activiti.engine.impl.cmd.DeleteHistoricTaskInstanceCmd;
 import org.activiti.engine.impl.cmd.GetHistoricIdentityLinksForTaskCmd;
@@ -40,14 +38,6 @@ import org.activiti.engine.impl.cmd.GetHistoricIdentityLinksForTaskCmd;
  * @author Christian Stettler
  */
 public class HistoryServiceImpl extends ServiceImpl implements HistoryService {
-	
-	public HistoryServiceImpl() {
-		
-	}
-	
-	public HistoryServiceImpl(ProcessEngineConfigurationImpl processEngineConfiguration) {
-		super(processEngineConfiguration);
-	}
 
   public HistoricProcessInstanceQuery createHistoricProcessInstanceQuery() {
     return new HistoricProcessInstanceQueryImpl(commandExecutor);
@@ -58,7 +48,7 @@ public class HistoryServiceImpl extends ServiceImpl implements HistoryService {
   }
 
   public HistoricTaskInstanceQuery createHistoricTaskInstanceQuery() {
-    return new HistoricTaskInstanceQueryImpl(commandExecutor, processEngineConfiguration.getDatabaseType());
+    return new HistoricTaskInstanceQueryImpl(commandExecutor);
   }
 
   public HistoricDetailQuery createHistoricDetailQuery() {
@@ -108,10 +98,4 @@ public class HistoryServiceImpl extends ServiceImpl implements HistoryService {
   public List<HistoricIdentityLink> getHistoricIdentityLinksForTask(String taskId) {
     return commandExecutor.execute(new GetHistoricIdentityLinksForTaskCmd(taskId, null));
   }
-  
-  @Override
-  public ProcessInstanceHistoryLogQuery createProcessInstanceHistoryLogQuery(String processInstanceId) {
-  	return new ProcessInstanceHistoryLogQueryImpl(commandExecutor, processInstanceId);
-  }
-  
 }

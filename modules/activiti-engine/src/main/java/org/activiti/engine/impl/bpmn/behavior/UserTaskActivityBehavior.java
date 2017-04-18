@@ -12,47 +12,19 @@
  */
 package org.activiti.engine.impl.bpmn.behavior;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ActivitiIllegalArgumentException;
-import org.activiti.engine.DynamicBpmnConstants;
 import org.activiti.engine.delegate.Expression;
 import org.activiti.engine.delegate.TaskListener;
-import org.activiti.engine.delegate.event.ActivitiEventType;
-import org.activiti.engine.delegate.event.impl.ActivitiEventBuilder;
-import org.activiti.engine.identity.User;
-import org.activiti.engine.impl.bpmn.helper.SkipExpressionUtil;
-import org.activiti.engine.impl.calendar.BusinessCalendar;
-import org.activiti.engine.impl.context.Context;
-import org.activiti.engine.impl.el.ExpressionManager;
-import org.activiti.engine.impl.identity.Authentication;
-import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
+import org.activiti.engine.impl.calendar.DueDateBusinessCalendar;
 import org.activiti.engine.impl.persistence.entity.TaskEntity;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.impl.task.TaskDefinition;
-import org.apache.commons.lang3.ArrayUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.liferay.portal.kernel.json.JSONFactoryUtil;
-import com.liferay.portal.kernel.json.JSONObject;
-import com.liferay.portal.kernel.notifications.ChannelException;
-import com.liferay.portal.kernel.notifications.ChannelHubManagerUtil;
-import com.liferay.portal.kernel.notifications.NotificationEvent;
-import com.liferay.portal.kernel.notifications.NotificationEventFactoryUtil;
-import com.liferay.portal.kernel.util.StringPool;
-import com.liferay.portal.kernel.workflow.WorkflowTaskManagerUtil;
 
 /**
  * activity implementation for the user task.
@@ -60,121 +32,44 @@ import com.liferay.portal.kernel.workflow.WorkflowTaskManagerUtil;
  * @author Joram Barrez
  */
 public class UserTaskActivityBehavior extends TaskActivityBehavior {
-  
-  private static final long serialVersionUID = 1L;
-  
-  private static final Logger LOGGER = LoggerFactory.getLogger(UserTaskActivityBehavior.class);
-  
-  private static final String WORKFLOW_TASKS_PORTLET_ID = "150";
-  private static final String SO_PORTLET_ID				=  "6_WAR_soportlet";
 
-  protected String userTaskId;
   protected TaskDefinition taskDefinition;
 
-  public UserTaskActivityBehavior(String userTaskId, TaskDefinition taskDefinition) {
-    this.userTaskId = userTaskId;
+  public UserTaskActivityBehavior(TaskDefinition taskDefinition) {
     this.taskDefinition = taskDefinition;
   }
 
   public void execute(ActivityExecution execution) throws Exception {
     TaskEntity task = TaskEntity.createAndInsert(execution);
     task.setExecution(execution);
-    
-    Expression activeNameExpression = null;
-    Expression activeDescriptionExpression = null;
-    Expression activeDueDateExpression = null;
-    Expression activePriorityExpression = null;
-    Expression activeCategoryExpression = null;
-    Expression activeFormKeyExpression = null;
-    Expression activeSkipExpression = null;
-    Expression activeAssigneeExpression = null;
-    Expression activeOwnerExpression = null;
-    Set<Expression> activeCandidateUserExpressions = null;
-    Set<Expression> activeCandidateGroupExpressions = null;
-    
-    if (Context.getProcessEngineConfiguration().isEnableProcessDefinitionInfoCache()) {
-      ObjectNode taskElementProperties = Context.getBpmnOverrideElementProperties(userTaskId, execution.getProcessDefinitionId());
-      activeNameExpression = getActiveValue(taskDefinition.getNameExpression(), DynamicBpmnConstants.USER_TASK_NAME, taskElementProperties);
-      taskDefinition.setNameExpression(activeNameExpression);
-      activeDescriptionExpression = getActiveValue(taskDefinition.getDescriptionExpression(), DynamicBpmnConstants.USER_TASK_DESCRIPTION, taskElementProperties);
-      taskDefinition.setDescriptionExpression(activeDescriptionExpression);
-      activeDueDateExpression = getActiveValue(taskDefinition.getDueDateExpression(), DynamicBpmnConstants.USER_TASK_DUEDATE, taskElementProperties);
-      taskDefinition.setDueDateExpression(activeDueDateExpression);
-      activePriorityExpression = getActiveValue(taskDefinition.getPriorityExpression(), DynamicBpmnConstants.USER_TASK_PRIORITY, taskElementProperties);
-      taskDefinition.setPriorityExpression(activePriorityExpression);
-      activeCategoryExpression = getActiveValue(taskDefinition.getCategoryExpression(), DynamicBpmnConstants.USER_TASK_CATEGORY, taskElementProperties);
-      taskDefinition.setCategoryExpression(activeCategoryExpression);
-      activeFormKeyExpression = getActiveValue(taskDefinition.getFormKeyExpression(), DynamicBpmnConstants.USER_TASK_FORM_KEY, taskElementProperties);
-      taskDefinition.setFormKeyExpression(activeFormKeyExpression);
-      activeSkipExpression = getActiveValue(taskDefinition.getSkipExpression(), DynamicBpmnConstants.TASK_SKIP_EXPRESSION, taskElementProperties);
-      taskDefinition.setSkipExpression(activeSkipExpression);
-      activeAssigneeExpression = getActiveValue(taskDefinition.getAssigneeExpression(), DynamicBpmnConstants.USER_TASK_ASSIGNEE, taskElementProperties);
-      taskDefinition.setAssigneeExpression(activeAssigneeExpression);
-      activeOwnerExpression = getActiveValue(taskDefinition.getOwnerExpression(), DynamicBpmnConstants.USER_TASK_OWNER, taskElementProperties);
-      taskDefinition.setOwnerExpression(activeOwnerExpression);
-      activeCandidateUserExpressions = getActiveValueSet(taskDefinition.getCandidateUserIdExpressions(), DynamicBpmnConstants.USER_TASK_CANDIDATE_USERS, taskElementProperties);
-      taskDefinition.setCandidateUserIdExpressions(activeCandidateUserExpressions);
-      activeCandidateGroupExpressions = getActiveValueSet(taskDefinition.getCandidateGroupIdExpressions(), DynamicBpmnConstants.USER_TASK_CANDIDATE_GROUPS, taskElementProperties);
-      taskDefinition.setCandidateGroupIdExpressions(activeCandidateGroupExpressions);
-      
-    } else {
-      activeNameExpression = taskDefinition.getNameExpression();
-      activeDescriptionExpression = taskDefinition.getDescriptionExpression();
-      activeDueDateExpression = taskDefinition.getDueDateExpression();
-      activePriorityExpression = taskDefinition.getPriorityExpression();
-      activeCategoryExpression = taskDefinition.getCategoryExpression();
-      activeFormKeyExpression = taskDefinition.getFormKeyExpression();
-      activeSkipExpression = taskDefinition.getSkipExpression();
-      activeAssigneeExpression = taskDefinition.getAssigneeExpression();
-      activeOwnerExpression = taskDefinition.getOwnerExpression();
-      activeCandidateUserExpressions = taskDefinition.getCandidateUserIdExpressions();
-      activeCandidateGroupExpressions = taskDefinition.getCandidateGroupIdExpressions();
-    }
-    
     task.setTaskDefinition(taskDefinition);
 
-    if (activeNameExpression != null) {
-      String name = null;
-      try {
-        name = (String) activeNameExpression.getValue(execution);
-      } catch (ActivitiException e) {
-        name = activeNameExpression.getExpressionText();
-        LOGGER.warn("property not found in task name expression " + e.getMessage());
-      }
+    if (taskDefinition.getNameExpression() != null) {
+      String name = (String) taskDefinition.getNameExpression().getValue(execution);
       task.setName(name);
     }
 
-    if (activeDescriptionExpression != null) {
-      String description = null;
-      try {
-        description = (String) activeDescriptionExpression.getValue(execution);
-      } catch (ActivitiException e) {
-        description = activeDescriptionExpression.getExpressionText();
-        LOGGER.warn("property not found in task description expression " + e.getMessage());
-      }
+    if (taskDefinition.getDescriptionExpression() != null) {
+      String description = (String) taskDefinition.getDescriptionExpression().getValue(execution);
       task.setDescription(description);
     }
     
-    if (activeDueDateExpression != null) {
-      Object dueDate = activeDueDateExpression.getValue(execution);
-      if (dueDate != null) {
+    if(taskDefinition.getDueDateExpression() != null) {
+      Object dueDate = taskDefinition.getDueDateExpression().getValue(execution);
+      if(dueDate != null) {
         if (dueDate instanceof Date) {
           task.setDueDate((Date) dueDate);
         } else if (dueDate instanceof String) {
-          BusinessCalendar businessCalendar = Context
-            .getProcessEngineConfiguration()
-            .getBusinessCalendarManager()
-            .getBusinessCalendar(taskDefinition.getBusinessCalendarNameExpression().getValue(execution).toString());
-          task.setDueDate(businessCalendar.resolveDuedate((String) dueDate));
+          task.setDueDate(new DueDateBusinessCalendar().resolveDuedate((String) dueDate)); 
         } else {
           throw new ActivitiIllegalArgumentException("Due date expression does not resolve to a Date or Date string: " + 
-              activeDueDateExpression.getExpressionText());
+              taskDefinition.getDueDateExpression().getExpressionText());
         }
       }
     }
 
-    if (activePriorityExpression != null) {
-      final Object priority = activePriorityExpression.getValue(execution);
+    if (taskDefinition.getPriorityExpression() != null) {
+      final Object priority = taskDefinition.getPriorityExpression().getValue(execution);
       if (priority != null) {
         if (priority instanceof String) {
           try {
@@ -186,133 +81,47 @@ public class UserTaskActivityBehavior extends TaskActivityBehavior {
           task.setPriority(((Number) priority).intValue());
         } else {
           throw new ActivitiIllegalArgumentException("Priority expression does not resolve to a number: " + 
-              activePriorityExpression.getExpressionText());
+                  taskDefinition.getPriorityExpression().getExpressionText());
         }
       }
     }
     
-    if (activeCategoryExpression != null) {
-    	final Object category = activeCategoryExpression.getValue(execution);
-    	if (category != null) {
-    		if (category instanceof String) {
-    			task.setCategory((String) category);
-    		} else {
-    			 throw new ActivitiIllegalArgumentException("Category expression does not resolve to a string: " + 
-    			     activeCategoryExpression.getExpressionText());
-    		}
-    	}
-    }
-    
-    if (activeFormKeyExpression != null) {
-    	final Object formKey = activeFormKeyExpression.getValue(execution);
-    	if (formKey != null) {
-    		if (formKey instanceof String) {
-    			task.setFormKey((String) formKey);
-    		} else {
-    		  throw new ActivitiIllegalArgumentException("FormKey expression does not resolve to a string: " + 
-    		      activeFormKeyExpression.getExpressionText());
-    		}
-    	}
-    }
-    
-    boolean skipUserTask = SkipExpressionUtil.isSkipExpressionEnabled(execution, activeSkipExpression) &&
-        SkipExpressionUtil.shouldSkipFlowElement(execution, activeSkipExpression);
-    
-    if (!skipUserTask) {
-      handleAssignments(activeAssigneeExpression, activeOwnerExpression, activeCandidateUserExpressions, 
-        activeCandidateGroupExpressions, task, execution);
-    }
-
+    handleAssignments(task, execution);
+   
+    // All properties set, now firing 'create' event
     task.fireEvent(TaskListener.EVENTNAME_CREATE);
-
-    // All properties set, now firing 'create' events
-    if (Context.getProcessEngineConfiguration().getEventDispatcher().isEnabled()) {
-      Context.getProcessEngineConfiguration().getEventDispatcher().dispatchEvent(
-        ActivitiEventBuilder.createEntityEvent(ActivitiEventType.TASK_CREATED, task));
-    }
-
-    if (skipUserTask) {
-      task.complete(null, false);
-    }
   }
 
   public void signal(ActivityExecution execution, String signalName, Object signalData) throws Exception {
-    if (!((ExecutionEntity) execution).getTasks().isEmpty())
-      throw new ActivitiException("UserTask should not be signalled before complete");
     leave(execution);
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  protected void handleAssignments(Expression assigneeExpression, Expression ownerExpression, Set<Expression> candidateUserExpressions,
-      Set<Expression> candidateGroupExpressions, TaskEntity task, ActivityExecution execution) {
-	  
-	// to send SO notification we need to extract workflow context, get
-	// users to send to..
-	Map<String,Object> workflowContext = Context.getProcessEngineConfiguration().getRuntimeService().getVariables(execution.getId());
-	LOGGER.debug("User task for companyId = " + (String) workflowContext.get("companyId"));
-	long companyId = Long.valueOf((String) workflowContext.get("companyId"));  
-    
-    if (assigneeExpression != null) {
-    	String userId = (String) taskDefinition.getAssigneeExpression()
-				.getValue(execution);
-		task.setAssignee(userId, true, false);
-		try {
-			List<Long> receiverUserIds = new ArrayList<Long>();
-			receiverUserIds.add(Long.valueOf(userId));
-			sendPortalNotification(task, receiverUserIds, workflowContext, false);
-		} catch (ChannelException e) {
-			LOGGER.error("Could not send portal notification to user", e);
-		}
+  protected void handleAssignments(TaskEntity task, ActivityExecution execution) {
+    if (taskDefinition.getAssigneeExpression() != null) {
+      task.setAssignee((String) taskDefinition.getAssigneeExpression().getValue(execution));
     }
     
-    if (ownerExpression != null) {
-      Object ownerExpressionValue = ownerExpression.getValue(execution);
-      String ownerValue = null;
-      if (ownerExpressionValue != null) {
-        ownerValue = ownerExpressionValue.toString();
-      }
-      task.setOwner(ownerValue);
+    if (taskDefinition.getOwnerExpression() != null) {
+      task.setOwner((String) taskDefinition.getOwnerExpression().getValue(execution));
     }
 
-    if (candidateGroupExpressions != null && !candidateGroupExpressions.isEmpty()) {
-      List<User> users = new ArrayList<User>();
-      for (Expression groupIdExpr : candidateGroupExpressions) {
+    if (!taskDefinition.getCandidateGroupIdExpressions().isEmpty()) {
+      for (Expression groupIdExpr : taskDefinition.getCandidateGroupIdExpressions()) {
         Object value = groupIdExpr.getValue(execution);
         if (value instanceof String) {
-          List<String> candidates = extractCandidates((String) value);
-          task.addCandidateGroups(candidates);
-          users.addAll(resolveUsersForGroups(companyId, candidates));
+          List<String> candiates = extractCandidates((String) value);
+          task.addCandidateGroups(candiates);
         } else if (value instanceof Collection) {
           task.addCandidateGroups((Collection) value);
-          users.addAll(resolveUsersForGroups(companyId, (Collection) value));
         } else {
           throw new ActivitiIllegalArgumentException("Expression did not resolve to a string or collection of strings");
         }
       }
-      try {
-			long[] pooledActorsIds = WorkflowTaskManagerUtil.getPooledActorsIds(companyId, Long.valueOf(task.getId()));
-			List<Long> receiverUserIds = null;
-			if (pooledActorsIds == null || pooledActorsIds.length == 0) {
-				//try to use users list
-				receiverUserIds = new ArrayList<Long>(users.size());
-				for (User user : users) {
-					receiverUserIds.add(Long.valueOf(user.getId()));
-				}
-			} else {
-				receiverUserIds = new ArrayList<Long>(Arrays.asList(ArrayUtils.toObject(pooledActorsIds)));
-			}
-			try {
-				sendPortalNotification(task, receiverUserIds, workflowContext, true);
-			} catch (ChannelException e) {
-				LOGGER.error("Could not send portal notification to group", e);
-			}
-		} catch (Exception e) {
-			LOGGER.error("Could not send portal notification to group", e);
-		}
     }
 
-    if (candidateUserExpressions != null && !candidateUserExpressions.isEmpty()) {
-      for (Expression userIdExpr : candidateUserExpressions) {
+    if (!taskDefinition.getCandidateUserIdExpressions().isEmpty()) {
+      for (Expression userIdExpr : taskDefinition.getCandidateUserIdExpressions()) {
         Object value = userIdExpr.getValue(execution);
         if (value instanceof String) {
           List<String> candiates = extractCandidates((String) value);
@@ -324,51 +133,7 @@ public class UserTaskActivityBehavior extends TaskActivityBehavior {
         }
       }
     }
-
-    if (!taskDefinition.getCustomUserIdentityLinkExpressions().isEmpty()) {
-      Map<String, Set<Expression>> identityLinks = taskDefinition.getCustomUserIdentityLinkExpressions();
-      for (String identityLinkType : identityLinks.keySet()) {
-        for (Expression idExpression : identityLinks.get(identityLinkType) ) {
-          Object value = idExpression.getValue(execution);
-          if (value instanceof String) {
-            List<String> userIds = extractCandidates((String) value);
-            for (String userId : userIds) {
-              task.addUserIdentityLink(userId, identityLinkType);
-            }
-          } else if (value instanceof Collection) {
-            Iterator userIdSet = ((Collection) value).iterator();
-            while (userIdSet.hasNext()) {
-              task.addUserIdentityLink((String)userIdSet.next(), identityLinkType);
-            }
-          } else {
-            throw new ActivitiException("Expression did not resolve to a string or collection of strings");
-          }
-        }
-      }
-    }
-
-    if (!taskDefinition.getCustomGroupIdentityLinkExpressions().isEmpty()) {
-      Map<String, Set<Expression>> identityLinks = taskDefinition.getCustomGroupIdentityLinkExpressions();
-      for (String identityLinkType : identityLinks.keySet()) {
-        for (Expression idExpression : identityLinks.get(identityLinkType) ) {
-          Object value = idExpression.getValue(execution);
-          if (value instanceof String) {
-            List<String> groupIds = extractCandidates((String) value);
-            for (String groupId : groupIds) {
-              task.addGroupIdentityLink(groupId, identityLinkType);
-            }
-          } else if (value instanceof Collection) {
-            Iterator groupIdSet = ((Collection) value).iterator();
-            while (groupIdSet.hasNext()) {
-              task.addGroupIdentityLink((String)groupIdSet.next(), identityLinkType);
-            }
-          } else {
-            throw new ActivitiException("Expression did not resolve to a string or collection of strings");
-          }
-        }
-      }
-    }
-}
+  }
 
   /**
    * Extract a candidate list from a string. 
@@ -379,91 +144,6 @@ public class UserTaskActivityBehavior extends TaskActivityBehavior {
   protected List<String> extractCandidates(String str) {
     return Arrays.asList(str.split("[\\s]*,[\\s]*"));
   }
-  
-  protected Expression getActiveValue(Expression originalValue, String propertyName, ObjectNode taskElementProperties) {
-    Expression activeValue = originalValue;
-    if (taskElementProperties != null) {
-      JsonNode overrideValueNode = taskElementProperties.get(propertyName);
-      if (overrideValueNode != null) {
-        if (overrideValueNode.isNull()) {
-          activeValue = null;
-        } else {
-          activeValue = Context.getProcessEngineConfiguration().getExpressionManager().createExpression(overrideValueNode.asText());
-        }
-      }
-    }
-    return activeValue;
-  }
-  
-  protected Set<Expression> getActiveValueSet(Set<Expression> originalValues, String propertyName, ObjectNode taskElementProperties) {
-    Set<Expression> activeValues = originalValues;
-    if (taskElementProperties != null) {
-      JsonNode overrideValuesNode = taskElementProperties.get(propertyName);
-      if (overrideValuesNode != null) {
-        if (overrideValuesNode.isNull() || overrideValuesNode.isArray() == false || overrideValuesNode.size() == 0) {
-          activeValues = null;
-        } else {
-          ExpressionManager expressionManager = Context.getProcessEngineConfiguration().getExpressionManager();
-          activeValues = new HashSet<Expression>();
-          for (JsonNode valueNode : overrideValuesNode) {
-            activeValues.add(expressionManager.createExpression(valueNode.asText()));
-          }
-        }
-      }
-    }
-    return activeValues;
-  }
-  
-  protected void sendPortalNotification(TaskEntity task, List<Long> receiverUserIds, Map<String,Object> workflowContext, boolean isGroup) throws ChannelException {
-		String currentUserId = Authentication.getAuthenticatedUserId();
-		JSONObject notificationEventJSONObject = JSONFactoryUtil.createJSONObject();
-		
-		long companyId = Long.valueOf((String) workflowContext.get("companyId"));
-
-		notificationEventJSONObject.put("body", task.getName());
-      notificationEventJSONObject.put("groupId", (String) workflowContext.get("groupId"));
-      notificationEventJSONObject.put("entryClassName", (String) workflowContext.get("entryClassName"));
-		notificationEventJSONObject.put("entryId", (String) workflowContext.get("entryClassPK"));
-		// workflow tasks portlet id
-		notificationEventJSONObject.put("portletId", WORKFLOW_TASKS_PORTLET_ID);
-		notificationEventJSONObject.put("userId", currentUserId);
-		notificationEventJSONObject.put("taskId", task.getId());
-		notificationEventJSONObject.put("taskName", task.getName());
-		notificationEventJSONObject.put("isGroup", isGroup);
-		
-		String title = StringPool.BLANK;
-		if (isGroup) {
-			title = "New workflow task \"" + task.getName() + "\" has been assigned to your role";
-		} else {
-			title = "New workflow task \"" + task.getName() + "\" has been assigned to you";
-		}
-		// FIXME localize notifications
-		for (Long receiverUserId : receiverUserIds) {
-			if (receiverUserId.toString().equals(currentUserId)) {
-				// do not send notification in case action was performed by same user
-				LOGGER.debug("User " + receiverUserId + " skipped from sending notification since it is current user");
-				continue;
-			}
-			
-			LOGGER.debug("Before sending notification receiverUserId = " + receiverUserId);
-			notificationEventJSONObject.put("title", title);
-			NotificationEvent notificationEvent = NotificationEventFactoryUtil.createNotificationEvent(
-					System.currentTimeMillis(), SO_PORTLET_ID, notificationEventJSONObject);
-			notificationEvent.setDeliveryRequired(0);
-			ChannelHubManagerUtil.sendNotificationEvent(companyId, receiverUserId, notificationEvent);
-			LOGGER.debug("Notification for receiverUserId = " + receiverUserId + " sent");
-		}
-	}
-  
-  private List<User> resolveUsersForGroups(long companyId, Collection groupNames) {
-		List<User> users = new ArrayList<User>();
-		for (Object name : groupNames) {
-			String groupName = (String) name;
-			users.addAll(org.activiti.engine.impl.util.WorkflowUtil.findUsersByGroup(companyId, groupName));
-		}
-		return users;
-		
-	}
   
   // getters and setters //////////////////////////////////////////////////////
   

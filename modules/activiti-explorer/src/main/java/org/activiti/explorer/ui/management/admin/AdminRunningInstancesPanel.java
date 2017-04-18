@@ -21,13 +21,11 @@ import java.util.TreeMap;
 
 import org.activiti.engine.HistoryService;
 import org.activiti.engine.IdentityService;
-import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.ProcessEngines;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.history.HistoricProcessInstance;
 import org.activiti.engine.history.HistoricTaskInstance;
-import org.activiti.engine.impl.ProcessEngineImpl;
 import org.activiti.engine.impl.RepositoryServiceImpl;
 import org.activiti.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.activiti.engine.repository.ProcessDefinition;
@@ -42,7 +40,6 @@ import org.activiti.explorer.ui.custom.UserProfileLink;
 import org.activiti.explorer.ui.mainlayout.ExplorerLayout;
 import org.activiti.explorer.ui.process.ProcessDefinitionImageStreamResourceBuilder;
 import org.activiti.explorer.ui.variable.VariableRendererManager;
-import org.activiti.image.ProcessDiagramGenerator;
 
 import com.vaadin.data.Item;
 import com.vaadin.data.Property;
@@ -142,7 +139,7 @@ public class AdminRunningInstancesPanel extends DetailPanel {
   }
   
   protected void initDefinitionsTable() {
-    if(instanceList == null || instanceList.isEmpty()) {
+    if(instanceList == null || instanceList.size() == 0) {
     	noMembersTable = new Label(i18nManager.getMessage(Messages.ADMIN_RUNNING_NONE_FOUND));
       definitionsLayout.addComponent(noMembersTable);
     
@@ -307,13 +304,10 @@ public class AdminRunningInstancesPanel extends DetailPanel {
 	    	imageHeader.addStyleName(ExplorerLayout.STYLE_NO_LINE);
 	    	addDetailComponent(imageHeader);
     	}
-
-    	ProcessEngineConfiguration processEngineConfig = ((ProcessEngineImpl) ProcessEngines.getDefaultProcessEngine()).getProcessEngineConfiguration();
-      ProcessDiagramGenerator diagramGenerator = processEngineConfig.getProcessDiagramGenerator();
-
+      
       StreamResource diagram = new ProcessDefinitionImageStreamResourceBuilder()
         	.buildStreamResource(processInstance.getId(), processInstance.getProcessDefinitionId(), 
-        			repositoryService, runtimeService, diagramGenerator, processEngineConfig);
+        			repositoryService, runtimeService);
 
       currentEmbedded = new Embedded(null, diagram);
       currentEmbedded.setType(Embedded.TYPE_IMAGE);
@@ -366,10 +360,10 @@ public class AdminRunningInstancesPanel extends DetailPanel {
     List<HistoricTaskInstance> tasks = historyService.createHistoricTaskInstanceQuery()
       .processInstanceId(processInstance.getId())
       .orderByHistoricTaskInstanceEndTime().desc()
-      .orderByTaskCreateTime().desc()
+      .orderByHistoricTaskInstanceStartTime().desc()
       .list();
     
-    if(!tasks.isEmpty()) {
+    if(tasks.size() > 0) {
       
       // Finished icon
       taskTable.addContainerProperty("finished", Component.class, null, i18nManager.getMessage(Messages.ADMIN_FINISHED), null, Table.ALIGN_CENTER);
@@ -465,7 +459,7 @@ public class AdminRunningInstancesPanel extends DetailPanel {
     // variable sorting is done in-memory (which is ok, since normally there aren't that many vars)
     Map<String, Object> variables = new TreeMap<String, Object>(runtimeService.getVariables(processInstance.getId())); 
     
-    if(!variables.isEmpty()) {
+    if(variables.size() > 0) {
       
       variablesTable = new Table();
       variablesTable.setWidth(60, UNITS_PERCENTAGE);

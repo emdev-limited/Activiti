@@ -19,9 +19,8 @@ import java.util.List;
 import org.activiti.workflow.simple.definition.HumanStepAssignment.HumanStepAssignmentType;
 import org.activiti.workflow.simple.definition.form.FormDefinition;
 import org.activiti.workflow.simple.exception.SimpleWorkflowException;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.codehaus.jackson.annotate.JsonIgnore;
+import org.codehaus.jackson.annotate.JsonTypeName;
 
 /**
  * Defines a step that must be executed by a human actor.
@@ -29,7 +28,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
  * @author Joram Barrez
  */
 @JsonTypeName("human-step")
-public class HumanStepDefinition extends AbstractNamedStepDefinition implements FormStepDefinition {
+public class HumanStepDefinition extends AbstractNamedStepDefinition {
 
   private static final long serialVersionUID = 1L;
   
@@ -72,13 +71,9 @@ public class HumanStepDefinition extends AbstractNamedStepDefinition implements 
     return form;
   }
 
-  public HumanStepDefinition addForm(FormDefinition form) {
+  public HumanStepDefinition setForm(FormDefinition form) {
     this.form = form;
     return this;
-  }
-  
-  public void setForm(FormDefinition form) {
-    this.form = form;
   }
   
   public HumanStepAssignment getAssignment() {
@@ -111,10 +106,10 @@ public class HumanStepDefinition extends AbstractNamedStepDefinition implements 
     
     HumanStepDefinition stepDefinition = (HumanStepDefinition) otherDefinition;
     setAssignee(stepDefinition.getAssignee());
-    if (stepDefinition.getCandidateGroups() != null && !stepDefinition.getCandidateGroups().isEmpty()) {
+    if (stepDefinition.getCandidateGroups() != null && stepDefinition.getCandidateGroups().size() > 0) {
       setCandidateGroups(new ArrayList<String>(stepDefinition.getCandidateGroups()));
     }
-    if (stepDefinition.getCandidateUsers() != null && !stepDefinition.getCandidateUsers().isEmpty()) {
+    if (stepDefinition.getCandidateUsers() != null && stepDefinition.getCandidateUsers().size() > 0) {
       setCandidateUsers(new ArrayList<String>(stepDefinition.getCandidateUsers()));
     }
     setDescription(stepDefinition.getDescription());

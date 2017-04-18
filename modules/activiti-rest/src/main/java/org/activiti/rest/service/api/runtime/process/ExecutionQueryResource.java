@@ -13,30 +13,18 @@
 
 package org.activiti.rest.service.api.runtime.process;
 
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-
 import org.activiti.rest.common.api.DataResponse;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.restlet.resource.Post;
 
 
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class ExecutionQueryResource extends ExecutionBaseResource {
 
-  @RequestMapping(value="/query/executions", method = RequestMethod.POST, produces="application/json")
-  public DataResponse queryProcessInstances(@RequestBody ExecutionQueryRequest queryRequest,
-      @RequestParam Map<String,String> allRequestParams, HttpServletRequest request) {
-    
-    return getQueryResponse(queryRequest, allRequestParams, 
-        request.getRequestURL().toString().replace("/query/executions", ""));
+  @Post
+  public DataResponse queryProcessInstances(ExecutionQueryRequest queryRequest) {
+    return getQueryResponse(queryRequest, getQuery());
   }
 }

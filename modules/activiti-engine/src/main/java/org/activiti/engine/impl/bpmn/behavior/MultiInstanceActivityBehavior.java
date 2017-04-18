@@ -13,7 +13,6 @@
 
 package org.activiti.engine.impl.bpmn.behavior;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -28,15 +27,12 @@ import org.activiti.engine.impl.bpmn.helper.ErrorPropagation;
 import org.activiti.engine.impl.bpmn.helper.ScopeUtil;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.delegate.ExecutionListenerInvocation;
-import org.activiti.engine.impl.history.handler.ActivityInstanceStartHandler;
 import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
 import org.activiti.engine.impl.pvm.delegate.ActivityBehavior;
 import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.impl.pvm.delegate.CompositeActivityBehavior;
 import org.activiti.engine.impl.pvm.delegate.SubProcessActivityBehavior;
 import org.activiti.engine.impl.pvm.process.ActivityImpl;
-import org.activiti.engine.impl.pvm.runtime.AtomicOperation;
-import org.activiti.engine.impl.pvm.runtime.InterpretableExecution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +60,9 @@ public abstract class MultiInstanceActivityBehavior extends FlowNodeActivityBeha
   protected final String NUMBER_OF_ACTIVE_INSTANCES = "nrOfActiveInstances";
   protected final String NUMBER_OF_COMPLETED_INSTANCES = "nrOfCompletedInstances";
   
+  // Variable names for inner instances (as described in the spec)
+  protected final String LOOP_COUNTER = "loopCounter";
+  
   // Instance members
   protected ActivityImpl activity;
   protected AbstractBpmnActivityBehavior innerActivityBehavior;
@@ -72,9 +71,7 @@ public abstract class MultiInstanceActivityBehavior extends FlowNodeActivityBeha
   protected Expression collectionExpression;
   protected String collectionVariable;
   protected String collectionElementVariable;
-  // default variable name for loop counter for inner instances (as described in the spec)
-  protected String collectionElementIndexVariable="loopCounter";
-
+  
   /**
    * @param innerActivityBehavior The original {@link ActivityBehavior} of the activity 
    *                         that will be wrapped inside this behavior.
@@ -87,15 +84,11 @@ public abstract class MultiInstanceActivityBehavior extends FlowNodeActivityBeha
   }
   
   public void execute(ActivityExecution execution) throws Exception {
-    if (getLocalLoopVariable(execution, getCollectionElementIndexVariable()) == null) {
+    if (getLocalLoopVariable(execution, LOOP_COUNTER) == null) {
       try {
         createInstances(execution);
       } catch (BpmnError error) {
         ErrorPropagation.propagateError(error, execution);
-      }
-
-      if (resolveNrOfInstances(execution) == 0) {
-        leave(execution);
       }
     } else {
         innerActivityBehavior.execute(execution);
@@ -175,7 +168,6 @@ public abstract class MultiInstanceActivityBehavior extends FlowNodeActivityBeha
     // If loopcounter == 1, then historic activity instance already created, no need to
     // pass through executeActivity again since it will create a new historic activity
     if (loopCounter == 0) {
-    	callCustomActivityStartListeners(execution);
       innerActivityBehavior.execute(execution);
     } else {
       execution.executeActivity(activity);
@@ -233,7 +225,7 @@ public abstract class MultiInstanceActivityBehavior extends FlowNodeActivityBeha
       value = parent.getVariableLocal(variableName);
       parent = parent.getParent();
     }
-    return (Integer) (value != null ? value : 0);
+    return (Integer) value;
   }
 
   protected Integer getLocalLoopVariable(ActivityExecution execution, String variableName) {
@@ -241,36 +233,21 @@ public abstract class MultiInstanceActivityBehavior extends FlowNodeActivityBeha
   }
   
   /**
-   * Since the first loop of the multi instance is not executed as a regular activity,
-   * it is needed to call the start listeners yourself.
-   */
-  protected void callCustomActivityStartListeners(ActivityExecution execution) {
-    List<ExecutionListener> listeners = activity.getExecutionListeners(org.activiti.engine.impl.pvm.PvmEvent.EVENTNAME_START);
-    
-    List<ExecutionListener> filteredExecutionListeners = new ArrayList<ExecutionListener>(listeners.size());
-    if (listeners != null) {
-	    // Sad that we have to do this, but it's the only way I could find (which is also safe for backwards compatibility)
-	    
-	    for (ExecutionListener executionListener : listeners) {
-	    	if (!(executionListener instanceof ActivityInstanceStartHandler)) {
-	    		filteredExecutionListeners.add(executionListener);
-	    	}
-	    }
-	    
-	    CallActivityListenersOperation atomicOperation = new CallActivityListenersOperation(filteredExecutionListeners);
-	    Context.getCommandContext().performOperation(atomicOperation, (InterpretableExecution)execution);
-    }
-    
-  }
-  
-  /**
    * Since no transitions are followed when leaving the inner activity,
    * it is needed to call the end listeners yourself.
    */
   protected void callActivityEndListeners(ActivityExecution execution) {
+    // TODO: This is currently done without a proper {@link AtomicOperation} causing problems, see http://jira.codehaus.org/browse/ACT-1339
     List<ExecutionListener> listeners = activity.getExecutionListeners(org.activiti.engine.impl.pvm.PvmEvent.EVENTNAME_END);
-    CallActivityListenersOperation atomicOperation = new CallActivityListenersOperation(listeners);
-    Context.getCommandContext().performOperation(atomicOperation, (InterpretableExecution)execution);
+    for (ExecutionListener executionListener : listeners) {
+      try {
+        Context.getProcessEngineConfiguration()
+          .getDelegateInterceptor()
+          .handleInvocation(new ExecutionListenerInvocation(executionListener, execution));
+      } catch (Exception e) {
+        throw new ActivitiException("Couldn't execute end listener", e);
+      }
+    }
   }
   
   protected void logLoopDetails(ActivityExecution execution, String custom, int loopCounter, 
@@ -314,53 +291,11 @@ public abstract class MultiInstanceActivityBehavior extends FlowNodeActivityBeha
   public void setCollectionElementVariable(String collectionElementVariable) {
     this.collectionElementVariable = collectionElementVariable;
   }
-  public String getCollectionElementIndexVariable() {
-    return collectionElementIndexVariable;
-  }
-  public void setCollectionElementIndexVariable(String collectionElementIndexVariable) {
-    this.collectionElementIndexVariable = collectionElementIndexVariable;
-  }
   public void setInnerActivityBehavior(AbstractBpmnActivityBehavior innerActivityBehavior) {
     this.innerActivityBehavior = innerActivityBehavior;
     this.innerActivityBehavior.setMultiInstanceActivityBehavior(this);
   }
   public AbstractBpmnActivityBehavior getInnerActivityBehavior() {
 	  return innerActivityBehavior;
-  }
-  
-  /**
-   * ACT-1339. Calling ActivityEndListeners within an {@link AtomicOperation} 
-   * so that an executionContext is present.
-   * 
-   * @author Aris Tzoumas
-   * @author Joram Barrez
-   *
-   */
-  private static final class CallActivityListenersOperation implements AtomicOperation {
-
-	private List<ExecutionListener> listeners;
-	
-	private CallActivityListenersOperation(List<ExecutionListener> listeners) {
-		this.listeners = listeners;
-	}
-	
-	@Override
-	public void execute(InterpretableExecution execution) {
-		for (ExecutionListener executionListener : listeners) {
-      try {
-        Context.getProcessEngineConfiguration()
-          .getDelegateInterceptor()
-          .handleInvocation(new ExecutionListenerInvocation(executionListener, execution));
-      } catch (Exception e) {
-        throw new ActivitiException("Couldn't execute listener", e);
-      }
-    }
-	}
-
-	@Override
-	public boolean isAsync(InterpretableExecution execution) {
-		return false;
-	}
-	  
   }
 }

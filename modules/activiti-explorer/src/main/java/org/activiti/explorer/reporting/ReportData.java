@@ -17,10 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.activiti.engine.ActivitiException;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
 
 
 /**
@@ -69,9 +67,9 @@ public class ReportData {
   public byte[] toBytes() {
     try {
       ObjectMapper objectMapper = new ObjectMapper();
-      objectMapper.configure(SerializationFeature.FLUSH_AFTER_WRITE_VALUE, false);
-      objectMapper.configure(SerializationFeature.WRITE_NULL_MAP_VALUES, false);
-      objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+      objectMapper.configure(SerializationConfig.Feature.FLUSH_AFTER_WRITE_VALUE, false);
+      objectMapper.configure(SerializationConfig.Feature.WRITE_NULL_MAP_VALUES, false);
+      objectMapper.configure(SerializationConfig.Feature.WRITE_NULL_PROPERTIES, false);
       return objectMapper.writeValueAsBytes(this);
     } catch (Exception e) {
       throw new ActivitiException("Could not convert report data to json", e);

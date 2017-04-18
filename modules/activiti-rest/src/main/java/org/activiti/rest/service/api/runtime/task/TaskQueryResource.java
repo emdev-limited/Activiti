@@ -13,28 +13,17 @@
 
 package org.activiti.rest.service.api.runtime.task;
 
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-
 import org.activiti.rest.common.api.DataResponse;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.restlet.resource.Post;
 
 
 /**
  * @author Frederik Heremans
  */
-@RestController
 public class TaskQueryResource extends TaskBaseResource {
 
-  @RequestMapping(value="/query/tasks", method = RequestMethod.POST, produces="application/json")
-  public DataResponse getQueryResult(@RequestBody TaskQueryRequest request, 
-      @RequestParam Map<String, String> requestParams, HttpServletRequest httpRequest) {
-    
-    return getTasksFromQueryRequest(request, requestParams);
+  @Post
+  public DataResponse getQueryResult(TaskQueryRequest request) {
+    return getTasksFromQueryRequest(request);
   }
 }

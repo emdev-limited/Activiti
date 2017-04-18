@@ -13,8 +13,6 @@
 
 package org.activiti.engine.test.history;
 
-import java.util.List;
-
 import org.activiti.engine.ActivitiIllegalArgumentException;
 import org.activiti.engine.history.HistoricActivityInstance;
 import org.activiti.engine.history.HistoricProcessInstance;
@@ -205,7 +203,7 @@ public class HistoricActivityInstanceTest extends PluggableActivitiTestCase {
   public void testSorting() {
     runtimeService.startProcessInstanceByKey("process");
 
-    int expectedActivityInstances;
+    int expectedActivityInstances = -1;
     if (processEngineConfiguration.getHistoryLevel().isAtLeast(HistoryLevel.ACTIVITY)) {
       expectedActivityInstances = 2;
     } else {
@@ -335,34 +333,6 @@ public class HistoricActivityInstanceTest extends PluggableActivitiTestCase {
   			.singleResult();
   	
   	assertNotNull(historicActivityInstance);
-  }
-  
-  /**
-   * Test to validate fix for ACT-1549: endTime of joining parallel gateway is not set
-   */
-  @Deployment
-  public void testParallelJoinEndTime() {
-ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("forkJoin");
-  	
-  	List<Task> tasksToComplete = taskService.createTaskQuery().processInstanceId(processInstance.getId()).list();
-  	assertEquals(2, tasksToComplete.size());
-  	
-  	// Complete both tasks, second task-complete should end the fork-gateway and set time
-  	taskService.complete(tasksToComplete.get(0).getId());
-  	taskService.complete(tasksToComplete.get(1).getId());
-  	
-  	List<HistoricActivityInstance> historicActivityInstance = historyService
-  			.createHistoricActivityInstanceQuery()
-  			.activityId("join")
-  			.processInstanceId(processInstance.getId())
-  			.list();
-  	
-  	assertNotNull(historicActivityInstance);
-  	
-  	// History contains 2 entries for parallel join (one for each path arriving in the join), should contain end-time
-  	assertEquals(2, historicActivityInstance.size());
-  	assertNotNull(historicActivityInstance.get(0).getEndTime());
-  	assertNotNull(historicActivityInstance.get(1).getEndTime());
   }
   
   

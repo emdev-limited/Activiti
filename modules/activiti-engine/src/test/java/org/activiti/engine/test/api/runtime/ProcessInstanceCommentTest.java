@@ -36,12 +36,6 @@ public class ProcessInstanceCommentTest extends PluggableActivitiTestCase {
       
       List<Comment> comments = taskService.getProcessInstanceComments(processInstance.getId());
       assertEquals(1, comments.size());
-
-      List<Comment> commentsByType = taskService.getProcessInstanceComments(processInstance.getId(), "comment");
-      assertEquals(1, commentsByType.size());
-
-      commentsByType = taskService.getProcessInstanceComments(processInstance.getId(), "noThisType");
-      assertEquals(0, commentsByType.size());
       
       // Suspend process instance
       runtimeService.suspendProcessInstanceById(processInstance.getId());

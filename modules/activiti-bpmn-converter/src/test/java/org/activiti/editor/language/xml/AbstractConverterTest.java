@@ -17,7 +17,8 @@ public abstract class AbstractConverterTest {
     XMLInputFactory xif = XMLInputFactory.newInstance();
     InputStreamReader in = new InputStreamReader(xmlStream, "UTF-8");
     XMLStreamReader xtr = xif.createXMLStreamReader(in);
-    return new BpmnXMLConverter().convertToBpmnModel(xtr);
+    BpmnModel bpmnModel = new BpmnXMLConverter().convertToBpmnModel(xtr);
+    return bpmnModel;
   }
   
   protected BpmnModel exportAndReadXMLFile(BpmnModel bpmnModel) throws Exception {
@@ -26,7 +27,8 @@ public abstract class AbstractConverterTest {
     XMLInputFactory xif = XMLInputFactory.newInstance();
     InputStreamReader in = new InputStreamReader(new ByteArrayInputStream(xml), "UTF-8");
     XMLStreamReader xtr = xif.createXMLStreamReader(in);
-    return new BpmnXMLConverter().convertToBpmnModel(xtr);
+    BpmnModel parsedModel = new BpmnXMLConverter().convertToBpmnModel(xtr);
+    return parsedModel;
   }
   
   protected void deployProcess(BpmnModel bpmnModel)  {

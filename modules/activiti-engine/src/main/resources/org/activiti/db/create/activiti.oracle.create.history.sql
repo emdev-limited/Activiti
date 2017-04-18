@@ -11,8 +11,6 @@ create table ACT_HI_PROCINST (
     END_ACT_ID_ NVARCHAR2(255),
     SUPER_PROCESS_INSTANCE_ID_ NVARCHAR2(64),
     DELETE_REASON_ NVARCHAR2(2000),
-    TENANT_ID_ NVARCHAR2(255) default '',
-    NAME_ NVARCHAR2(255),
     primary key (ID_),
     unique (PROC_INST_ID_)
 );
@@ -31,7 +29,6 @@ create table ACT_HI_ACTINST (
     START_TIME_ TIMESTAMP(6) not null,
     END_TIME_ TIMESTAMP(6),
     DURATION_ NUMBER(19,0),
-    TENANT_ID_ NVARCHAR2(255) default '',
     primary key (ID_)
 );
 
@@ -54,8 +51,6 @@ create table ACT_HI_TASKINST (
     PRIORITY_ INTEGER,
     DUE_DATE_ TIMESTAMP(6),
     FORM_KEY_ NVARCHAR2(255),
-    CATEGORY_ NVARCHAR2(255),
-    TENANT_ID_ NVARCHAR2(255) default '',
     primary key (ID_)
 );
 
@@ -72,8 +67,6 @@ create table ACT_HI_VARINST (
     LONG_ NUMBER(19,0),
     TEXT_ NVARCHAR2(2000),
     TEXT2_ NVARCHAR2(2000),
-    CREATE_TIME_ TIMESTAMP(6),
-    LAST_UPDATED_TIME_ TIMESTAMP(6),
     primary key (ID_)
 );
 
@@ -120,7 +113,6 @@ create table ACT_HI_ATTACHMENT (
     PROC_INST_ID_ NVARCHAR2(64),
     URL_ NVARCHAR2(2000),
     CONTENT_ID_ NVARCHAR2(64),
-    TIME_ TIMESTAMP(6),
     primary key (ID_)
 );
 
@@ -145,11 +137,14 @@ create index ACT_IDX_HI_DETAIL_NAME on ACT_HI_DETAIL(NAME_);
 create index ACT_IDX_HI_DETAIL_TASK_ID on ACT_HI_DETAIL(TASK_ID_);
 create index ACT_IDX_HI_PROCVAR_PROC_INST on ACT_HI_VARINST(PROC_INST_ID_);
 create index ACT_IDX_HI_PROCVAR_NAME_TYPE on ACT_HI_VARINST(NAME_, VAR_TYPE_);
-create index ACT_IDX_HI_PROCVAR_TASK_ID on ACT_HI_VARINST(TASK_ID_);
 create index ACT_IDX_HI_IDENT_LNK_USER on ACT_HI_IDENTITYLINK(USER_ID_);
 create index ACT_IDX_HI_IDENT_LNK_TASK on ACT_HI_IDENTITYLINK(TASK_ID_);
 create index ACT_IDX_HI_IDENT_LNK_PROCINST on ACT_HI_IDENTITYLINK(PROC_INST_ID_);
 
+-- see http://stackoverflow.com/questions/675398/how-can-i-constrain-multiple-columns-to-prevent-duplicates-but-ignore-null-value
+create unique index ACT_UNIQ_HI_BUS_KEY on ACT_HI_PROCINST
+   (case when BUSINESS_KEY_ is null then null else PROC_DEF_ID_ end,
+    case when BUSINESS_KEY_ is null then null else BUSINESS_KEY_ end);
+
 create index ACT_IDX_HI_ACT_INST_PROCINST on ACT_HI_ACTINST(PROC_INST_ID_, ACT_ID_);
 create index ACT_IDX_HI_ACT_INST_EXEC on ACT_HI_ACTINST(EXECUTION_ID_, ACT_ID_);
-create index ACT_IDX_HI_TASK_INST_PROCINST on ACT_HI_TASKINST(PROC_INST_ID_);

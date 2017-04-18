@@ -22,8 +22,6 @@ import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
  */
 public class TransformationDataOutputAssociation extends AbstractDataAssociation {
 
-  private static final long serialVersionUID = 1L;
-  
   protected Expression transformation;
   
   public TransformationDataOutputAssociation(String sourceRef, String targetRef, Expression transformation) {

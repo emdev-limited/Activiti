@@ -25,7 +25,6 @@ import org.activiti.engine.impl.db.PersistentObject;
 
 /**
  * @author Tom Baeyens
- * @author Arkadiy Gornovoy
  */
 public class UserEntity implements User, Serializable, PersistentObject, HasRevision {
 
@@ -52,7 +51,7 @@ public class UserEntity implements User, Serializable, PersistentObject, HasRevi
       .getDbSqlSession()
       .delete(this);
 
-    deletePicture();
+    pictureByteArrayRef.delete();
   }
   
   public Object getPersistentState() {
@@ -77,20 +76,9 @@ public class UserEntity implements User, Serializable, PersistentObject, HasRevi
   }
   
   public void setPicture(Picture picture) {
-    if(picture != null) {
-      savePicture(picture);
-    } else {
-      deletePicture();
-    }      
-  }
-
-  protected void savePicture(Picture picture) {
     pictureByteArrayRef.setValue(picture.getMimeType(), picture.getBytes());
   }
-  
-  protected void deletePicture() {
-    pictureByteArrayRef.delete();
-  }
+
 
   public String getId() {
     return id;
@@ -127,10 +115,6 @@ public class UserEntity implements User, Serializable, PersistentObject, HasRevi
   }
   public void setRevision(int revision) {
     this.revision = revision;
-  }
-  
-  public boolean isPictureSet() {
-    return pictureByteArrayRef.getId() != null;
   }
 
 }
